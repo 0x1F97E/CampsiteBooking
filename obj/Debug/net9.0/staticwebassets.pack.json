@@ -13,6 +13,10 @@
       "PackagePath": "staticwebassets/favicon.png"
     },
     {
+      "Id": "/home/pc/Documents/CampsiteBooking/wwwroot/js/maps.js",
+      "PackagePath": "staticwebassets/js/maps.js"
+    },
+    {
       "Id": "/home/pc/Documents/CampsiteBooking/wwwroot/lib/bootstrap/dist/css/bootstrap-grid.css",
       "PackagePath": "staticwebassets/lib/bootstrap/dist/css/bootstrap-grid.css"
     },

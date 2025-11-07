@@ -1,0 +1,140 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_isValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        Configure accommodation type for <strong>@CampsiteName</strong>
+                    </MudAlert>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="AccommodationType.Type"
+                                  Label="Accommodation Type"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  RequiredError="Type is required"
+                                  Placeholder="e.g., Cabin, Tent Site, Glamping, RV Spot" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudNumericField @bind-Value="AccommodationType.AvailableUnits"
+                                     Label="Available Units"
+                                     Variant="Variant.Outlined"
+                                     Required="true"
+                                     Min="1"
+                                     RequiredError="Number of units is required"
+                                     HelperText="Total number of this accommodation type" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudNumericField @bind-Value="AccommodationType.Price"
+                                     Label="Price per Night"
+                                     Variant="Variant.Outlined"
+                                     Required="true"
+                                     Min="0"
+                                     Format="N2"
+                                     RequiredError="Price is required"
+                                     Adornment="Adornment.Start"
+                                     AdornmentText="$"
+                                     HelperText="Base price per night" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudNumericField @bind-Value="AccommodationType.MaxGuests"
+                                     Label="Max Guests per Unit"
+                                     Variant="Variant.Outlined"
+                                     Required="true"
+                                     Min="1"
+                                     RequiredError="Max guests is required"
+                                     HelperText="Maximum guests per accommodation" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudSwitch @bind-Value="AccommodationType.IsActive"
+                              Color="Color.Success"
+                              Label="Active"
+                              UnCheckedColor="Color.Default">
+                        @(AccommodationType.IsActive ? "This accommodation type is active and available for booking" : "This accommodation type is inactive and not available for booking")
+                    </MudSwitch>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudDivider />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudPaper Elevation="0" Class="pa-3" Style="background-color: #f5f5f5;">
+                        <MudText Typo="Typo.subtitle2" GutterBottom="true">Summary</MudText>
+                        <MudGrid>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Total Units:</MudText>
+                                <MudText Typo="Typo.body1"><strong>@AccommodationType.AvailableUnits</strong></MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Total Capacity:</MudText>
+                                <MudText Typo="Typo.body1"><strong>@(AccommodationType.AvailableUnits * AccommodationType.MaxGuests) guests</strong></MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Price per Night:</MudText>
+                                <MudText Typo="Typo.body1" Color="Color.Success"><strong>$@AccommodationType.Price.ToString("N2")</strong></MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Status:</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@(AccommodationType.IsActive ? Color.Success : Color.Default)">
+                                    @(AccommodationType.IsActive ? "Active" : "Inactive")
+                                </MudChip>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="!_isValid">
+            @(IsEdit ? "Update" : "Add")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public string CampsiteName { get; set; } = string.Empty;
+
+    [Parameter]
+    public BasePricingDto AccommodationType { get; set; } = new();
+
+    [Parameter]
+    public bool IsEdit { get; set; }
+
+    private MudForm _form = null!;
+    private bool _isValid;
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(AccommodationType));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    public class BasePricingDto
+    {
+        public int Id { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public int AvailableUnits { get; set; }
+        public int MaxGuests { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+}
+

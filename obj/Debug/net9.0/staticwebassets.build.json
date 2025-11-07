@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "UpTYV0Pjt3dVnMwcLLpH7sWpLh2xqmmbkZxD6nNZW64=",
+  "Hash": "1N4Tiy+FqcCS9I9Z61hNpDUxzV872muKh5kWxULlt7I=",
   "Source": "CampsiteBooking",
   "BasePath": "_content/CampsiteBooking",
   "Mode": "Default",
@@ -16,6 +16,69 @@
     }
   ],
   "Assets": [
+    {
+      "Identity": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/MudBlazor.min.css",
+      "SourceId": "MudBlazor",
+      "SourceType": "Package",
+      "ContentRoot": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/",
+      "BasePath": "_content/MudBlazor",
+      "RelativePath": "MudBlazor.min.css",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "Fingerprint": "jk5eo7zo4m",
+      "Integrity": "TSgzDIY4qdWvjvfBaUSrnerVt2+FjH4cXGlPrxEz1C0=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/MudBlazor.min.css"
+    },
+    {
+      "Identity": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/MudBlazor.min.js",
+      "SourceId": "MudBlazor",
+      "SourceType": "Package",
+      "ContentRoot": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/",
+      "BasePath": "_content/MudBlazor",
+      "RelativePath": "MudBlazor.min.js",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "Fingerprint": "tjzqk7tnel",
+      "Integrity": "hylTyzoFC8Kp1f0FRqBY1LUV5GLhjEZGZbvrFnkZ1Tw=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/MudBlazor.min.js"
+    },
+    {
+      "Identity": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/0wz98yz2xy-tjzqk7tnel.gz",
+      "SourceId": "MudBlazor",
+      "SourceType": "Package",
+      "ContentRoot": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/",
+      "BasePath": "_content/MudBlazor",
+      "RelativePath": "MudBlazor.min.js.gz",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Alternative",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/MudBlazor.min.js",
+      "AssetTraitName": "Content-Encoding",
+      "AssetTraitValue": "gzip",
+      "Fingerprint": "mj1kqmfthn",
+      "Integrity": "0uauGFy2xtU3w/Ctxo2NGHk2dbYZsA4uCZvm8C9NIpw=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/MudBlazor.min.js"
+    },
     {
       "Identity": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/0y48xpjsoh-06098lyss8.gz",
       "SourceId": "CampsiteBooking",
@@ -626,6 +689,27 @@
       "OriginalItemSpec": "/home/pc/Documents/CampsiteBooking/wwwroot/lib/bootstrap/dist/css/bootstrap-grid.rtl.min.css"
     },
     {
+      "Identity": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/qexyx9p8uj-g7rsstt5bg.gz",
+      "SourceId": "CampsiteBooking",
+      "SourceType": "Discovered",
+      "ContentRoot": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/",
+      "BasePath": "_content/CampsiteBooking",
+      "RelativePath": "js/maps#[.{fingerprint=g7rsstt5bg}]?.js.gz",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Alternative",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "/home/pc/Documents/CampsiteBooking/wwwroot/js/maps.js",
+      "AssetTraitName": "Content-Encoding",
+      "AssetTraitValue": "gzip",
+      "Fingerprint": "s5pux6gmce",
+      "Integrity": "4PNh/loehLsHtQzldr/dlMgUmZS3bFdbUFql5pL7k7U=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "/home/pc/Documents/CampsiteBooking/wwwroot/js/maps.js"
+    },
+    {
       "Identity": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/r0rlvjf87f-khv3u5hwcm.gz",
       "SourceId": "CampsiteBooking",
       "SourceType": "Discovered",
@@ -834,6 +918,27 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "/home/pc/Documents/CampsiteBooking/wwwroot/lib/bootstrap/dist/js/bootstrap.min.js.map"
+    },
+    {
+      "Identity": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/tzxjg6is5z-jk5eo7zo4m.gz",
+      "SourceId": "MudBlazor",
+      "SourceType": "Package",
+      "ContentRoot": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/",
+      "BasePath": "_content/MudBlazor",
+      "RelativePath": "MudBlazor.min.css.gz",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Alternative",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/MudBlazor.min.css",
+      "AssetTraitName": "Content-Encoding",
+      "AssetTraitValue": "gzip",
+      "Fingerprint": "436r1wx36c",
+      "Integrity": "kEgDh08Yu0NbPcDaRDc4UlMw4Bv9VR5KyPuFvdUp90I=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/MudBlazor.min.css"
     },
     {
       "Identity": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/v73q9divsg-aexeepp0ev.gz",
@@ -1086,6 +1191,27 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot/favicon.png"
+    },
+    {
+      "Identity": "/home/pc/Documents/CampsiteBooking/wwwroot/js/maps.js",
+      "SourceId": "CampsiteBooking",
+      "SourceType": "Discovered",
+      "ContentRoot": "/home/pc/Documents/CampsiteBooking/wwwroot/",
+      "BasePath": "_content/CampsiteBooking",
+      "RelativePath": "js/maps#[.{fingerprint}]?.js",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "Fingerprint": "g7rsstt5bg",
+      "Integrity": "REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/js/maps.js"
     },
     {
       "Identity": "/home/pc/Documents/CampsiteBooking/wwwroot/lib/bootstrap/dist/css/bootstrap-grid.css",
@@ -2014,6 +2140,370 @@
   ],
   "Endpoints": [
     {
+      "Route": "_content/MudBlazor/MudBlazor.min.css",
+      "AssetFile": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/MudBlazor.min.css",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "606250"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/css"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"TSgzDIY4qdWvjvfBaUSrnerVt2+FjH4cXGlPrxEz1C0=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 01 Oct 2025 21:51:05 GMT"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-TSgzDIY4qdWvjvfBaUSrnerVt2+FjH4cXGlPrxEz1C0="
+        }
+      ]
+    },
+    {
+      "Route": "_content/MudBlazor/MudBlazor.min.css",
+      "AssetFile": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/tzxjg6is5z-jk5eo7zo4m.gz",
+      "Selectors": [
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip",
+          "Quality": "0.000015264845"
+        }
+      ],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "65509"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"kEgDh08Yu0NbPcDaRDc4UlMw4Bv9VR5KyPuFvdUp90I=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 01 Oct 2025 21:51:04 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        },
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip"
+        },
+        {
+          "Name": "Vary",
+          "Value": "Content-Encoding"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/css"
+        },
+        {
+          "Name": "ETag",
+          "Value": "W/\"TSgzDIY4qdWvjvfBaUSrnerVt2+FjH4cXGlPrxEz1C0=\""
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-TSgzDIY4qdWvjvfBaUSrnerVt2+FjH4cXGlPrxEz1C0="
+        }
+      ]
+    },
+    {
+      "Route": "_content/MudBlazor/MudBlazor.min.css.gz",
+      "AssetFile": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/tzxjg6is5z-jk5eo7zo4m.gz",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "65509"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/css"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"kEgDh08Yu0NbPcDaRDc4UlMw4Bv9VR5KyPuFvdUp90I=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 01 Oct 2025 21:51:04 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        },
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip"
+        },
+        {
+          "Name": "Vary",
+          "Value": "Content-Encoding"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-kEgDh08Yu0NbPcDaRDc4UlMw4Bv9VR5KyPuFvdUp90I="
+        }
+      ]
+    },
+    {
+      "Route": "_content/MudBlazor/MudBlazor.min.jk5eo7zo4m.css",
+      "AssetFile": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/MudBlazor.min.css",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "606250"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/css"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"TSgzDIY4qdWvjvfBaUSrnerVt2+FjH4cXGlPrxEz1C0=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 01 Oct 2025 21:51:05 GMT"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "jk5eo7zo4m"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-TSgzDIY4qdWvjvfBaUSrnerVt2+FjH4cXGlPrxEz1C0="
+        },
+        {
+          "Name": "label",
+          "Value": "_content/MudBlazor/MudBlazor.min.css"
+        }
+      ]
+    },
+    {
+      "Route": "_content/MudBlazor/MudBlazor.min.js",
+      "AssetFile": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/MudBlazor.min.js",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "75165"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"hylTyzoFC8Kp1f0FRqBY1LUV5GLhjEZGZbvrFnkZ1Tw=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 01 Oct 2025 21:51:05 GMT"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-hylTyzoFC8Kp1f0FRqBY1LUV5GLhjEZGZbvrFnkZ1Tw="
+        }
+      ]
+    },
+    {
+      "Route": "_content/MudBlazor/MudBlazor.min.js",
+      "AssetFile": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/0wz98yz2xy-tjzqk7tnel.gz",
+      "Selectors": [
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip",
+          "Quality": "0.000061150859"
+        }
+      ],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "16352"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"0uauGFy2xtU3w/Ctxo2NGHk2dbYZsA4uCZvm8C9NIpw=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 01 Oct 2025 21:51:04 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        },
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip"
+        },
+        {
+          "Name": "Vary",
+          "Value": "Content-Encoding"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "W/\"hylTyzoFC8Kp1f0FRqBY1LUV5GLhjEZGZbvrFnkZ1Tw=\""
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-hylTyzoFC8Kp1f0FRqBY1LUV5GLhjEZGZbvrFnkZ1Tw="
+        }
+      ]
+    },
+    {
+      "Route": "_content/MudBlazor/MudBlazor.min.js.gz",
+      "AssetFile": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/0wz98yz2xy-tjzqk7tnel.gz",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "16352"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"0uauGFy2xtU3w/Ctxo2NGHk2dbYZsA4uCZvm8C9NIpw=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 01 Oct 2025 21:51:04 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        },
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip"
+        },
+        {
+          "Name": "Vary",
+          "Value": "Content-Encoding"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-0uauGFy2xtU3w/Ctxo2NGHk2dbYZsA4uCZvm8C9NIpw="
+        }
+      ]
+    },
+    {
+      "Route": "_content/MudBlazor/MudBlazor.min.tjzqk7tnel.js",
+      "AssetFile": "/home/pc/.nuget/packages/mudblazor/8.13.0/staticwebassets/MudBlazor.min.js",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "75165"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"hylTyzoFC8Kp1f0FRqBY1LUV5GLhjEZGZbvrFnkZ1Tw=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 01 Oct 2025 21:51:05 GMT"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "tjzqk7tnel"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-hylTyzoFC8Kp1f0FRqBY1LUV5GLhjEZGZbvrFnkZ1Tw="
+        },
+        {
+          "Name": "label",
+          "Value": "_content/MudBlazor/MudBlazor.min.js"
+        }
+      ]
+    },
+    {
       "Route": "app.css",
       "AssetFile": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/r15crycqs5-w7mf952350.gz",
       "Selectors": [
@@ -2336,7 +2826,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 03 Nov 2025 12:32:35 GMT"
+          "Value": "Tue, 04 Nov 2025 13:08:43 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2389,7 +2879,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 03 Nov 2025 12:32:35 GMT"
+          "Value": "Tue, 04 Nov 2025 13:08:43 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2426,7 +2916,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 03 Nov 2025 12:32:35 GMT"
+          "Value": "Tue, 04 Nov 2025 13:08:43 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2473,7 +2963,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 03 Nov 2025 12:32:35 GMT"
+          "Value": "Tue, 04 Nov 2025 13:08:43 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2534,7 +3024,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 03 Nov 2025 12:32:35 GMT"
+          "Value": "Tue, 04 Nov 2025 13:08:43 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2579,7 +3069,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 03 Nov 2025 12:32:35 GMT"
+          "Value": "Tue, 04 Nov 2025 13:08:43 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2634,7 +3124,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 03 Nov 2025 12:32:35 GMT"
+          "Value": "Tue, 04 Nov 2025 13:08:43 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2695,7 +3185,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 03 Nov 2025 12:32:35 GMT"
+          "Value": "Tue, 04 Nov 2025 13:08:43 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2740,7 +3230,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 03 Nov 2025 12:32:35 GMT"
+          "Value": "Tue, 04 Nov 2025 13:08:43 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2795,7 +3285,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 03 Nov 2025 12:32:35 GMT"
+          "Value": "Tue, 04 Nov 2025 13:08:43 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2848,7 +3338,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 03 Nov 2025 12:32:35 GMT"
+          "Value": "Tue, 04 Nov 2025 13:08:43 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2885,7 +3375,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 03 Nov 2025 12:32:35 GMT"
+          "Value": "Tue, 04 Nov 2025 13:08:43 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2986,6 +3476,304 @@
         {
           "Name": "integrity",
           "Value": "sha256-4mWsDy3aHl36ZbGt8zByK7Pvd4kRUoNgTYzRnwmPHwg="
+        }
+      ]
+    },
+    {
+      "Route": "js/maps.g7rsstt5bg.js",
+      "AssetFile": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/qexyx9p8uj-g7rsstt5bg.gz",
+      "Selectors": [
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip",
+          "Quality": "0.001072961373"
+        }
+      ],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "931"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"4PNh/loehLsHtQzldr/dlMgUmZS3bFdbUFql5pL7k7U=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Mon, 03 Nov 2025 15:46:19 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        },
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip"
+        },
+        {
+          "Name": "Vary",
+          "Value": "Content-Encoding"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "W/\"REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8=\""
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "g7rsstt5bg"
+        },
+        {
+          "Name": "label",
+          "Value": "js/maps.js"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8="
+        }
+      ]
+    },
+    {
+      "Route": "js/maps.g7rsstt5bg.js",
+      "AssetFile": "/home/pc/Documents/CampsiteBooking/wwwroot/js/maps.js",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "2633"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Mon, 03 Nov 2025 15:46:19 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "g7rsstt5bg"
+        },
+        {
+          "Name": "label",
+          "Value": "js/maps.js"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8="
+        }
+      ]
+    },
+    {
+      "Route": "js/maps.g7rsstt5bg.js.gz",
+      "AssetFile": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/qexyx9p8uj-g7rsstt5bg.gz",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "931"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"4PNh/loehLsHtQzldr/dlMgUmZS3bFdbUFql5pL7k7U=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Mon, 03 Nov 2025 15:46:19 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        },
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip"
+        },
+        {
+          "Name": "Vary",
+          "Value": "Content-Encoding"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "g7rsstt5bg"
+        },
+        {
+          "Name": "label",
+          "Value": "js/maps.js.gz"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-4PNh/loehLsHtQzldr/dlMgUmZS3bFdbUFql5pL7k7U="
+        }
+      ]
+    },
+    {
+      "Route": "js/maps.js",
+      "AssetFile": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/qexyx9p8uj-g7rsstt5bg.gz",
+      "Selectors": [
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip",
+          "Quality": "0.001072961373"
+        }
+      ],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "931"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"4PNh/loehLsHtQzldr/dlMgUmZS3bFdbUFql5pL7k7U=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Mon, 03 Nov 2025 15:46:19 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        },
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip"
+        },
+        {
+          "Name": "Vary",
+          "Value": "Content-Encoding"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "W/\"REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8=\""
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8="
+        }
+      ]
+    },
+    {
+      "Route": "js/maps.js",
+      "AssetFile": "/home/pc/Documents/CampsiteBooking/wwwroot/js/maps.js",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "2633"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Mon, 03 Nov 2025 15:46:19 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8="
+        }
+      ]
+    },
+    {
+      "Route": "js/maps.js.gz",
+      "AssetFile": "/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/compressed/qexyx9p8uj-g7rsstt5bg.gz",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "931"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/javascript"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"4PNh/loehLsHtQzldr/dlMgUmZS3bFdbUFql5pL7k7U=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Mon, 03 Nov 2025 15:46:19 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        },
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip"
+        },
+        {
+          "Name": "Vary",
+          "Value": "Content-Encoding"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-4PNh/loehLsHtQzldr/dlMgUmZS3bFdbUFql5pL7k7U="
         }
       ]
     },

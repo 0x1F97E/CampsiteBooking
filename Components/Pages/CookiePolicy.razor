@@ -1,0 +1,169 @@
+@page "/cookie-policy"
+
+<PageTitle>Cookie Policy - Campsite Booking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-8">
+    <MudText Typo="Typo.h3" Class="mb-4">Cookie Policy</MudText>
+    <MudText Typo="Typo.body2" Class="mb-6">Last updated: @DateTime.Now.ToString("MMMM dd, yyyy")</MudText>
+
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudText Typo="Typo.h5" Class="mb-3">1. What Are Cookies?</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            Cookies are small text files that are placed on your computer or mobile device when you visit a website. 
+            They are widely used to make websites work more efficiently and provide information to the owners of the site.
+        </MudText>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">2. How We Use Cookies</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            We use cookies to improve your experience on our website, to understand how you use our site, and to provide 
+            personalized content and advertisements. Cookies help us remember your preferences and settings.
+        </MudText>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">3. Types of Cookies We Use</MudText>
+
+        <MudExpansionPanels MultiExpansion="true" Class="mb-4">
+            <MudExpansionPanel Text="Strictly Necessary Cookies" InitiallyExpanded="true">
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    These cookies are essential for the website to function properly. They enable core functionality such as 
+                    security, network management, and accessibility.
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Cookie">Session cookies for user authentication</MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Cookie">Security cookies to prevent fraud</MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Cookie">Load balancing cookies</MudListItem>
+                </MudList>
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                    These cookies cannot be disabled as they are necessary for the website to work.
+                </MudAlert>
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="Performance Cookies">
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    These cookies collect information about how visitors use our website, such as which pages are visited most often.
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Cookie">Google Analytics cookies</MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Cookie">Page load time tracking</MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Cookie">Error tracking cookies</MudListItem>
+                </MudList>
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="Functional Cookies">
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    These cookies allow the website to remember choices you make and provide enhanced, more personalized features.
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Cookie">Language preference cookies</MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Cookie">Region selection cookies</MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Cookie">User interface customization</MudListItem>
+                </MudList>
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="Targeting/Advertising Cookies">
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    These cookies are used to deliver advertisements more relevant to you and your interests.
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Cookie">Social media cookies (Facebook, Instagram)</MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Cookie">Advertising network cookies</MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Cookie">Retargeting cookies</MudListItem>
+                </MudList>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">4. Third-Party Cookies</MudText>
+        <MudText Typo="Typo.body1" Class="mb-2">
+            In addition to our own cookies, we may also use various third-party cookies to report usage statistics of the website:
+        </MudText>
+        <MudSimpleTable Class="my-4" Elevation="0" Dense="true">
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Purpose</th>
+                    <th>Duration</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Google Analytics</td>
+                    <td>Website analytics and performance tracking</td>
+                    <td>Up to 2 years</td>
+                </tr>
+                <tr>
+                    <td>Google Maps</td>
+                    <td>Display interactive maps</td>
+                    <td>Session</td>
+                </tr>
+                <tr>
+                    <td>Payment Processors</td>
+                    <td>Secure payment processing</td>
+                    <td>Session</td>
+                </tr>
+            </tbody>
+        </MudSimpleTable>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">5. Managing Cookies</MudText>
+        <MudText Typo="Typo.body1" Class="mb-2">
+            You can control and/or delete cookies as you wish. You can delete all cookies that are already on your computer 
+            and you can set most browsers to prevent them from being placed.
+        </MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            However, if you do this, you may have to manually adjust some preferences every time you visit a site and some 
+            services and functionalities may not work.
+        </MudText>
+
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            <MudText Typo="Typo.body2" Class="mb-2"><strong>How to manage cookies in your browser:</strong></MudText>
+            <MudList T="string" Dense="true">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Language">
+                    <strong>Chrome:</strong> Settings → Privacy and security → Cookies and other site data
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Language">
+                    <strong>Firefox:</strong> Options → Privacy & Security → Cookies and Site Data
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Language">
+                    <strong>Safari:</strong> Preferences → Privacy → Manage Website Data
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Language">
+                    <strong>Edge:</strong> Settings → Cookies and site permissions → Cookies and site data
+                </MudListItem>
+            </MudList>
+        </MudAlert>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">6. Cookie Consent</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            When you first visit our website, you will be asked to consent to our use of cookies. You can change your 
+            cookie preferences at any time by clicking the "Cookie Settings" link in the footer of our website.
+        </MudText>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">7. Updates to This Policy</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            We may update this Cookie Policy from time to time to reflect changes in technology, legislation, or our 
+            business operations. Please check this page regularly to stay informed about our use of cookies.
+        </MudText>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">8. Contact Us</MudText>
+        <MudText Typo="Typo.body1" Class="mb-2">
+            If you have any questions about our use of cookies, please contact us:
+        </MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Email">Email: privacy@campsitebooking.dk</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Phone">Phone: +45 12 34 56 78</MudListItem>
+        </MudList>
+    </MudPaper>
+</MudContainer>
+

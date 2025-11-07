@@ -1,0 +1,255 @@
+@page "/register"
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+
+<PageTitle>Register - Campsite Booking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudPaper Elevation="4" Class="pa-8">
+        <div class="d-flex flex-column align-center mb-6">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+            <MudText Typo="Typo.h4" Align="Align.Center">Create Account</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                Join us to book your perfect campsite in Denmark
+            </MudText>
+        </div>
+
+        <MudForm @ref="_form" @bind-IsValid="@_isFormValid">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_firstName"
+                                  Label="First Name"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  RequiredError="First name is required" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_lastName"
+                                  Label="Last Name"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  RequiredError="Last name is required" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_email"
+                                  Label="Email"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Email"
+                                  Required="true"
+                                  RequiredError="Email is required"
+                                  Validation="@(new Func<string, string>(ValidateEmail))"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Email" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_phone"
+                                  Label="Phone Number"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Telephone"
+                                  Required="true"
+                                  RequiredError="Phone number is required"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Phone" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudSelect T="string" @bind-Value="_country" Label="Country" Variant="Variant.Outlined" Required="true">
+                        <MudSelectItem T="string" Value="@("Denmark")">Denmark</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Sweden")">Sweden</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Norway")">Norway</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Germany")">Germany</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Netherlands")">Netherlands</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Other")">Other</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_password"
+                                  Label="Password"
+                                  Variant="Variant.Outlined"
+                                  InputType="@_passwordInputType"
+                                  Required="true"
+                                  RequiredError="Password is required"
+                                  Validation="@(new Func<string, string>(ValidatePassword))"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@_passwordIcon"
+                                  OnAdornmentClick="TogglePasswordVisibility" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_confirmPassword"
+                                  Label="Confirm Password"
+                                  Variant="Variant.Outlined"
+                                  InputType="@_confirmPasswordInputType"
+                                  Required="true"
+                                  RequiredError="Please confirm your password"
+                                  Validation="@(new Func<string, string>(ValidateConfirmPassword))"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@_confirmPasswordIcon"
+                                  OnAdornmentClick="ToggleConfirmPasswordVisibility" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudCheckBox @bind-Value="_agreeToTerms" Label="I agree to the Terms of Service and Privacy Policy" Color="Color.Primary" Required="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudCheckBox @bind-Value="_subscribeNewsletter" Label="Subscribe to newsletter for special offers and updates" Color="Color.Primary" />
+                </MudItem>
+
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+                    </MudItem>
+                }
+
+                @if (!string.IsNullOrEmpty(_successMessage))
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Success">@_successMessage</MudAlert>
+                    </MudItem>
+                }
+
+                <MudItem xs="12">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Size="Size.Large"
+                               OnClick="HandleRegister"
+                               Disabled="@(!_isFormValid || !_agreeToTerms || _isLoading)">
+                        @if (_isLoading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Creating account...</span>
+                        }
+                        else
+                        {
+                            <span>Create Account</span>
+                        }
+                    </MudButton>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudDivider />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                        Already have an account?
+                        <MudLink Href="/login" Typo="Typo.body2" Color="Color.Primary">Sign in</MudLink>
+                    </MudText>
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private MudForm _form = null!;
+    private bool _isFormValid;
+    private bool _isLoading;
+    private string _firstName = "";
+    private string _lastName = "";
+    private string _email = "";
+    private string _phone = "";
+    private string _country = "Denmark";
+    private string _password = "";
+    private string _confirmPassword = "";
+    private bool _agreeToTerms = false;
+    private bool _subscribeNewsletter = false;
+    private string _errorMessage = "";
+    private string _successMessage = "";
+
+    private InputType _passwordInputType = InputType.Password;
+    private string _passwordIcon = Icons.Material.Filled.VisibilityOff;
+    private InputType _confirmPasswordInputType = InputType.Password;
+    private string _confirmPasswordIcon = Icons.Material.Filled.VisibilityOff;
+
+    private void TogglePasswordVisibility()
+    {
+        if (_passwordInputType == InputType.Password)
+        {
+            _passwordInputType = InputType.Text;
+            _passwordIcon = Icons.Material.Filled.Visibility;
+        }
+        else
+        {
+            _passwordInputType = InputType.Password;
+            _passwordIcon = Icons.Material.Filled.VisibilityOff;
+        }
+    }
+
+    private void ToggleConfirmPasswordVisibility()
+    {
+        if (_confirmPasswordInputType == InputType.Password)
+        {
+            _confirmPasswordInputType = InputType.Text;
+            _confirmPasswordIcon = Icons.Material.Filled.Visibility;
+        }
+        else
+        {
+            _confirmPasswordInputType = InputType.Password;
+            _confirmPasswordIcon = Icons.Material.Filled.VisibilityOff;
+        }
+    }
+
+    private string ValidateEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return "Email is required";
+
+        if (!email.Contains("@") || !email.Contains("."))
+            return "Please enter a valid email address";
+
+        return string.Empty;
+    }
+
+    private string ValidatePassword(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+            return "Password is required";
+
+        if (password.Length < 8)
+            return "Password must be at least 8 characters long";
+
+        if (!password.Any(char.IsUpper))
+            return "Password must contain at least one uppercase letter";
+
+        if (!password.Any(char.IsDigit))
+            return "Password must contain at least one number";
+
+        return string.Empty;
+    }
+
+    private string ValidateConfirmPassword(string confirmPassword)
+    {
+        if (string.IsNullOrWhiteSpace(confirmPassword))
+            return "Please confirm your password";
+
+        if (confirmPassword != _password)
+            return "Passwords do not match";
+
+        return string.Empty;
+    }
+
+    private async Task HandleRegister()
+    {
+        _isLoading = true;
+        _errorMessage = "";
+        _successMessage = "";
+        StateHasChanged();
+
+        await Task.Delay(1500); // Simulate API call
+
+        // Demo registration logic
+        if (_email == "admin@campsite.dk" || _email == "guest@campsite.dk")
+        {
+            _errorMessage = "This email is already registered. Please use a different email or sign in.";
+            _isLoading = false;
+        }
+        else
+        {
+            _successMessage = "Account created successfully! Redirecting to login...";
+            StateHasChanged();
+            await Task.Delay(2000);
+            Navigation.NavigateTo("/login");
+        }
+    }
+}
+

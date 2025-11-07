@@ -1,0 +1,232 @@
+@page "/admin/dashboard"
+@rendermode InteractiveServer
+
+<PageTitle>Admin Dashboard - Campsite Booking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h3" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
+        Admin Dashboard
+    </MudText>
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-6">
+        Overview of your campsite booking system
+    </MudText>
+
+    <!-- Key Metrics Cards -->
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="3">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Total Bookings</MudText>
+                            <MudText Typo="Typo.h4">@_totalBookings</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Success">
+                                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" />
+                                +12% from last month
+                            </MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.BookOnline" Color="Color.Primary" Size="Size.Large" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="3">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Revenue (This Month)</MudText>
+                            <MudText Typo="Typo.h4">$@_revenue.ToString("N0")</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Success">
+                                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" />
+                                +8% from last month
+                            </MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Success" Size="Size.Large" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="3">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Occupancy Rate</MudText>
+                            <MudText Typo="Typo.h4">@_occupancyRate%</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Info">
+                                <MudIcon Icon="@Icons.Material.Filled.TrendingFlat" Size="Size.Small" />
+                                Same as last month
+                            </MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Hotel" Color="Color.Info" Size="Size.Large" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="3">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Active Campsites</MudText>
+                            <MudText Typo="Typo.h4">@_activeCampsites</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Default">
+                                <MudIcon Icon="@Icons.Material.Filled.Landscape" Size="Size.Small" />
+                                Across Denmark
+                            </MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Terrain" Color="Color.Warning" Size="Size.Large" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Charts and Recent Activity -->
+    <MudGrid Class="mt-6">
+        <!-- Booking Trends Chart -->
+        <MudItem xs="12" md="8">
+            <MudCard Elevation="3">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Booking Trends (Last 6 Months)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <div style="height: 300px; display: flex; align-items: center; justify-content: center; background: #f5f5f5; border-radius: 4px;">
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Filled.ShowChart" Class="mr-2" />
+                            Chart visualization will be added with backend integration
+                        </MudText>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Quick Stats -->
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="3">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Quick Stats</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudList T="string" Dense="true">
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
+                            <MudText>Confirmed: <strong>@_confirmedBookings</strong></MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Pending" IconColor="Color.Warning">
+                            <MudText>Pending: <strong>@_pendingBookings</strong></MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Cancel" IconColor="Color.Error">
+                            <MudText>Cancelled: <strong>@_cancelledBookings</strong></MudText>
+                        </MudListItem>
+                        <MudDivider Class="my-2" />
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.People" IconColor="Color.Primary">
+                            <MudText>Total Users: <strong>@_totalUsers</strong></MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.PersonAdd" IconColor="Color.Info">
+                            <MudText>New This Month: <strong>@_newUsers</strong></MudText>
+                        </MudListItem>
+                    </MudList>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Recent Activity -->
+    <MudGrid Class="mt-6">
+        <MudItem xs="12">
+            <MudCard Elevation="3">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Recent Bookings</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/admin/bookings">View All</MudButton>
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudTable Items="@_recentBookings" Hover="true" Dense="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>Booking ID</MudTh>
+                            <MudTh>Guest</MudTh>
+                            <MudTh>Campsite</MudTh>
+                            <MudTh>Check-in</MudTh>
+                            <MudTh>Check-out</MudTh>
+                            <MudTh>Status</MudTh>
+                            <MudTh>Amount</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Booking ID">#@context.Id</MudTd>
+                            <MudTd DataLabel="Guest">@context.GuestName</MudTd>
+                            <MudTd DataLabel="Campsite">@context.CampsiteName</MudTd>
+                            <MudTd DataLabel="Check-in">@context.CheckIn.ToString("MMM dd, yyyy")</MudTd>
+                            <MudTd DataLabel="Check-out">@context.CheckOut.ToString("MMM dd, yyyy")</MudTd>
+                            <MudTd DataLabel="Status">
+                                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">
+                                    @context.Status
+                                </MudChip>
+                            </MudTd>
+                            <MudTd DataLabel="Amount">$@context.Amount.ToString("N2")</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+</MudContainer>
+
+@code {
+    private int _totalBookings = 1247;
+    private decimal _revenue = 45680;
+    private int _occupancyRate = 78;
+    private int _activeCampsites = 8;
+    private int _confirmedBookings = 892;
+    private int _pendingBookings = 45;
+    private int _cancelledBookings = 310;
+    private int _totalUsers = 3456;
+    private int _newUsers = 234;
+
+    private List<RecentBookingDto> _recentBookings = new();
+
+    protected override void OnInitialized()
+    {
+        // Sample data - will be replaced with actual data from backend
+        _recentBookings = new List<RecentBookingDto>
+        {
+            new() { Id = 1247, GuestName = "John Doe", CampsiteName = "Copenhagen Beach Camp", CheckIn = DateTime.Now.AddDays(5), CheckOut = DateTime.Now.AddDays(8), Status = "Confirmed", Amount = 450 },
+            new() { Id = 1246, GuestName = "Jane Smith", CampsiteName = "Skagen North Point", CheckIn = DateTime.Now.AddDays(3), CheckOut = DateTime.Now.AddDays(7), Status = "Confirmed", Amount = 680 },
+            new() { Id = 1245, GuestName = "Mike Johnson", CampsiteName = "Aarhus Forest Retreat", CheckIn = DateTime.Now.AddDays(10), CheckOut = DateTime.Now.AddDays(12), Status = "Pending", Amount = 320 },
+            new() { Id = 1244, GuestName = "Sarah Williams", CampsiteName = "Odense Family Camp", CheckIn = DateTime.Now.AddDays(1), CheckOut = DateTime.Now.AddDays(4), Status = "Confirmed", Amount = 540 },
+            new() { Id = 1243, GuestName = "David Brown", CampsiteName = "Bornholm Island Camp", CheckIn = DateTime.Now.AddDays(15), CheckOut = DateTime.Now.AddDays(20), Status = "Confirmed", Amount = 890 }
+        };
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Confirmed" => Color.Success,
+        "Pending" => Color.Warning,
+        "Cancelled" => Color.Error,
+        _ => Color.Default
+    };
+
+    private class RecentBookingDto
+    {
+        public int Id { get; set; }
+        public string GuestName { get; set; } = string.Empty;
+        public string CampsiteName { get; set; } = string.Empty;
+        public DateTime CheckIn { get; set; }
+        public DateTime CheckOut { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+    }
+}
+

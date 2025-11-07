@@ -1,0 +1,122 @@
+@using MudBlazor
+@inject IDialogService DialogService
+@rendermode InteractiveServer
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            Select which add-ons are available for <strong>@AccommodationType?.Type</strong>
+        </MudText>
+
+        @if (AvailableAddOns == null || !AvailableAddOns.Any())
+        {
+            <MudAlert Severity="Severity.Info">
+                No add-ons available. Create add-ons in the Add-ons Library section first.
+            </MudAlert>
+        }
+        else
+        {
+            <MudList T="string" Clickable="true">
+                @foreach (var addOn in AvailableAddOns.Where(a => a.IsActive))
+                {
+                    var isSelected = _selectedAddOnIds.Contains(addOn.Id);
+                    <MudListItem T="string" OnClick="@(() => ToggleAddOn(addOn.Id))">
+                        <div class="d-flex align-center justify-space-between">
+                            <div class="d-flex align-center">
+                                <MudCheckBox Value="@isSelected" Color="Color.Primary" Class="mr-2" />
+                                <MudIcon Icon="@GetAddOnIcon(addOn.Type)" Size="Size.Small" Class="mr-2" Color="Color.Primary" />
+                                <div>
+                                    <MudText Typo="Typo.body1"><strong>@addOn.Name</strong></MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@addOn.Description</MudText>
+                                </div>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@addOn.Price.ToString("C")</MudChip>
+                        </div>
+                    </MudListItem>
+                    <MudDivider />
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Save Selection</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public AccommodationTypeDto? AccommodationType { get; set; }
+
+    [Parameter]
+    public List<AddOnDto> AvailableAddOns { get; set; } = new();
+
+    [Parameter]
+    public List<AddOnDto> SelectedAddOns { get; set; } = new();
+
+    private HashSet<int> _selectedAddOnIds = new();
+
+    protected override void OnInitialized()
+    {
+        _selectedAddOnIds = SelectedAddOns.Select(a => a.Id).ToHashSet();
+    }
+
+    private void ToggleAddOn(int addOnId)
+    {
+        if (_selectedAddOnIds.Contains(addOnId))
+        {
+            _selectedAddOnIds.Remove(addOnId);
+        }
+        else
+        {
+            _selectedAddOnIds.Add(addOnId);
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Submit()
+    {
+        var selectedAddOns = AvailableAddOns.Where(a => _selectedAddOnIds.Contains(a.Id)).ToList();
+        MudDialog.Close(DialogResult.Ok(selectedAddOns));
+    }
+
+    private string GetAddOnIcon(string type)
+    {
+        return type.ToLower() switch
+        {
+            "cleaning" => Icons.Material.Filled.CleaningServices,
+            "electricity" => Icons.Material.Filled.ElectricBolt,
+            "firewood" => Icons.Material.Filled.LocalFireDepartment,
+            "parking" => Icons.Material.Filled.LocalParking,
+            "wifi" => Icons.Material.Filled.Wifi,
+            "breakfast" => Icons.Material.Filled.FreeBreakfast,
+            "linen" => Icons.Material.Filled.Bed,
+            "towels" => Icons.Material.Filled.Shower,
+            _ => Icons.Material.Filled.ShoppingCart
+        };
+    }
+
+    public class AccommodationTypeDto
+    {
+        public int Id { get; set; }
+        public string Type { get; set; } = string.Empty;
+    }
+
+    public class AddOnDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
+    }
+}
+

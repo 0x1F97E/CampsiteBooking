@@ -16,13 +16,13 @@
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\CampsiteBooking.hnxpnvm2o5.bundle.scp.css'))</AssetFile>
       <Selectors><![CDATA[[]]]></Selectors>
       <EndpointProperties><![CDATA[[{"Name":"integrity","Value":"sha256-Y1ZilRdAcuXHVeGLd4GRtOAfo4Edftn\u002BmO9xIkqtQdM="}]]]></EndpointProperties>
-      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"5772"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022Y1ZilRdAcuXHVeGLd4GRtOAfo4Edftn\u002BmO9xIkqtQdM=\u0022"},{"Name":"Last-Modified","Value":"Mon, 03 Nov 2025 12:32:35 GMT"}]]]></ResponseHeaders>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"5772"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022Y1ZilRdAcuXHVeGLd4GRtOAfo4Edftn\u002BmO9xIkqtQdM=\u0022"},{"Name":"Last-Modified","Value":"Tue, 04 Nov 2025 13:08:43 GMT"}]]]></ResponseHeaders>
     </StaticWebAssetEndpoint>
     <StaticWebAssetEndpoint Include="_content/CampsiteBooking/CampsiteBooking.hnxpnvm2o5.bundle.scp.css">
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\CampsiteBooking.hnxpnvm2o5.bundle.scp.css'))</AssetFile>
       <Selectors><![CDATA[[]]]></Selectors>
       <EndpointProperties><![CDATA[[{"Name":"fingerprint","Value":"hnxpnvm2o5"},{"Name":"integrity","Value":"sha256-Y1ZilRdAcuXHVeGLd4GRtOAfo4Edftn\u002BmO9xIkqtQdM="},{"Name":"label","Value":"_content/CampsiteBooking/CampsiteBooking.bundle.scp.css"}]]]></EndpointProperties>
-      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"5772"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022Y1ZilRdAcuXHVeGLd4GRtOAfo4Edftn\u002BmO9xIkqtQdM=\u0022"},{"Name":"Last-Modified","Value":"Mon, 03 Nov 2025 12:32:35 GMT"}]]]></ResponseHeaders>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"5772"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022Y1ZilRdAcuXHVeGLd4GRtOAfo4Edftn\u002BmO9xIkqtQdM=\u0022"},{"Name":"Last-Modified","Value":"Tue, 04 Nov 2025 13:08:43 GMT"}]]]></ResponseHeaders>
     </StaticWebAssetEndpoint>
     <StaticWebAssetEndpoint Include="_content/CampsiteBooking/favicon.ifv42okdf2.png">
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\favicon.png'))</AssetFile>
@@ -35,6 +35,18 @@
       <Selectors><![CDATA[[]]]></Selectors>
       <EndpointProperties><![CDATA[[{"Name":"integrity","Value":"sha256-4mWsDy3aHl36ZbGt8zByK7Pvd4kRUoNgTYzRnwmPHwg="}]]]></EndpointProperties>
       <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=3600, must-revalidate"},{"Name":"Content-Length","Value":"1148"},{"Name":"Content-Type","Value":"image/png"},{"Name":"ETag","Value":"\u00224mWsDy3aHl36ZbGt8zByK7Pvd4kRUoNgTYzRnwmPHwg=\u0022"},{"Name":"Last-Modified","Value":"Mon, 03 Nov 2025 12:26:43 GMT"}]]]></ResponseHeaders>
+    </StaticWebAssetEndpoint>
+    <StaticWebAssetEndpoint Include="_content/CampsiteBooking/js/maps.g7rsstt5bg.js">
+      <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\js\maps.js'))</AssetFile>
+      <Selectors><![CDATA[[]]]></Selectors>
+      <EndpointProperties><![CDATA[[{"Name":"fingerprint","Value":"g7rsstt5bg"},{"Name":"integrity","Value":"sha256-REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8="},{"Name":"label","Value":"_content/CampsiteBooking/js/maps.js"}]]]></EndpointProperties>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"2633"},{"Name":"Content-Type","Value":"text/javascript"},{"Name":"ETag","Value":"\u0022REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8=\u0022"},{"Name":"Last-Modified","Value":"Mon, 03 Nov 2025 15:46:19 GMT"}]]]></ResponseHeaders>
+    </StaticWebAssetEndpoint>
+    <StaticWebAssetEndpoint Include="_content/CampsiteBooking/js/maps.js">
+      <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\js\maps.js'))</AssetFile>
+      <Selectors><![CDATA[[]]]></Selectors>
+      <EndpointProperties><![CDATA[[{"Name":"integrity","Value":"sha256-REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8="}]]]></EndpointProperties>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"2633"},{"Name":"Content-Type","Value":"text/javascript"},{"Name":"ETag","Value":"\u0022REdix9lTnAmSFSNKl79Zyz3PgMQdeX9/YMD208A5bf8=\u0022"},{"Name":"Last-Modified","Value":"Mon, 03 Nov 2025 15:46:19 GMT"}]]]></ResponseHeaders>
     </StaticWebAssetEndpoint>
     <StaticWebAssetEndpoint Include="_content/CampsiteBooking/lib/bootstrap/dist/css/bootstrap-grid.bqjiyaj88i.css">
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\lib\bootstrap\dist\css\bootstrap-grid.css'))</AssetFile>

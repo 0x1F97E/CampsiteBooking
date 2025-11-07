@@ -1,0 +1,572 @@
+@page "/admin/information"
+@rendermode InteractiveServer
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Information & Newsletter Management - Campsite Booking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-6">
+        <div>
+            <MudText Typo="Typo.h3" GutterBottom="true">
+                <MudIcon Icon="@Icons.Material.Filled.Newspaper" Class="mr-2" />
+                Information & Newsletter Management
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Manage campsite information, events, activities, and send newsletters to subscribers
+            </MudText>
+        </div>
+    </div>
+
+    <MudGrid>
+        <!-- Newsletter Composer -->
+        <MudItem xs="12" lg="8">
+            <MudPaper Elevation="3" Class="pa-4">
+                <MudText Typo="Typo.h5" GutterBottom="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Email" Class="mr-2" />
+                    Daily Newsletter Composer
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    Create and send daily news about events and activities to campsite subscribers
+                </MudText>
+
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudSelect T="int" 
+                                  @bind-Value="_selectedCampsiteId" 
+                                  Label="Select Campsite" 
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  HelperText="Choose which campsite this newsletter is for">
+                            <MudSelectItem T="int" Value="0">All Campsites</MudSelectItem>
+                            @foreach (var campsite in _campsites)
+                            {
+                                <MudSelectItem T="int" Value="@campsite.Id">@campsite.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_newsletterSubject" 
+                                     Label="Email Subject" 
+                                     Variant="Variant.Outlined"
+                                     Required="true"
+                                     Placeholder="e.g., Today's Events & Activities at Copenhagen Beach Camp" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_newsletterContent" 
+                                     Label="Newsletter Content" 
+                                     Variant="Variant.Outlined"
+                                     Lines="12"
+                                     Required="true"
+                                     Placeholder="Write your newsletter content here...&#10;&#10;Example:&#10;🎉 Today's Events:&#10;- 10:00 AM: Beach Volleyball Tournament&#10;- 2:00 PM: Kids' Craft Workshop&#10;- 7:00 PM: Campfire Stories & S'mores&#10;&#10;🏊 Activities Available:&#10;- Swimming Pool (Open 8 AM - 8 PM)&#10;- Kayak Rentals&#10;- Guided Nature Walk (3 PM)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudDatePicker @bind-Date="_scheduledDate" 
+                                      Label="Schedule Date" 
+                                      Variant="Variant.Outlined"
+                                      MinDate="DateTime.Today"
+                                      HelperText="Leave empty to send immediately" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTimePicker @bind-Time="_scheduledTime" 
+                                      Label="Schedule Time" 
+                                      Variant="Variant.Outlined"
+                                      HelperText="Time to send the newsletter" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudCheckBox @bind-Value="_sendTestEmail" 
+                                    Label="Send test email to myself first" 
+                                    Color="Color.Primary" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Outlined" 
+                                      Color="Color.Default"
+                                      StartIcon="@Icons.Material.Filled.Preview"
+                                      OnClick="PreviewNewsletter">
+                                Preview
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" 
+                                      Color="Color.Secondary"
+                                      StartIcon="@Icons.Material.Filled.Save"
+                                      OnClick="SaveDraft">
+                                Save as Draft
+                            </MudButton>
+                            <MudSpacer />
+                            @if (_sendTestEmail)
+                            {
+                                <MudButton Variant="Variant.Filled" 
+                                          Color="Color.Info"
+                                          StartIcon="@Icons.Material.Filled.Send"
+                                          OnClick="SendTestNewsletter">
+                                    Send Test Email
+                                </MudButton>
+                            }
+                            <MudButton Variant="Variant.Filled" 
+                                      Color="Color.Primary"
+                                      StartIcon="@Icons.Material.Filled.Send"
+                                      OnClick="SendNewsletter"
+                                      Disabled="@(!IsNewsletterValid())">
+                                @(_scheduledDate.HasValue ? "Schedule Newsletter" : "Send Now")
+                            </MudButton>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Subscriber Statistics -->
+        <MudItem xs="12" lg="4">
+            <MudStack Spacing="3">
+                <!-- Subscriber Count Card -->
+                <MudPaper Elevation="3" Class="pa-4">
+                    <MudText Typo="Typo.h6" GutterBottom="true">
+                        <MudIcon Icon="@Icons.Material.Filled.People" Class="mr-2" />
+                        Subscribers
+                    </MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary">@_totalSubscribers</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Total newsletter subscribers</MudText>
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.body2">
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Color="Color.Success" />
+                        +@_newSubscribersThisWeek new this week
+                    </MudText>
+                </MudPaper>
+
+                <!-- Campsite Breakdown -->
+                <MudPaper Elevation="3" Class="pa-4">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Subscribers by Campsite</MudText>
+                    <MudList T="string" Dense="true">
+                        @foreach (var campsite in _campsites.Take(5))
+                        {
+                            <MudListItem T="string">
+                                <div class="d-flex justify-space-between align-center" style="width: 100%;">
+                                    <MudText Typo="Typo.body2">@campsite.Name</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">@campsite.SubscriberCount</MudChip>
+                                </div>
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudPaper>
+
+                <!-- Recent Activity -->
+                <MudPaper Elevation="3" Class="pa-4">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Recent Newsletters</MudText>
+                    <MudList T="string" Dense="true">
+                        @foreach (var newsletter in _recentNewsletters)
+                        {
+                            <MudListItem T="string">
+                                <div>
+                                    <MudText Typo="Typo.body2"><strong>@newsletter.Subject</strong></MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @newsletter.SentDate.ToString("MMM dd, yyyy") • @newsletter.RecipientCount recipients
+                                    </MudText>
+                                </div>
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudPaper>
+            </MudStack>
+        </MudItem>
+
+        <!-- Events & Activities Management -->
+        <MudItem xs="12">
+            <MudPaper Elevation="3" Class="pa-4">
+                <div class="d-flex justify-space-between align-center mb-4">
+                    <MudText Typo="Typo.h5">
+                        <MudIcon Icon="@Icons.Material.Filled.Event" Class="mr-2" />
+                        Events & Activities
+                    </MudText>
+                    <MudButton Variant="Variant.Filled"
+                              Color="Color.Primary"
+                              StartIcon="@Icons.Material.Filled.Add"
+                              OnClick="OpenAddEventDialog">
+                        Add Event
+                    </MudButton>
+                </div>
+
+                <MudTable Items="@_events" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Event Name</MudTh>
+                        <MudTh>Campsite</MudTh>
+                        <MudTh>Date & Time</MudTh>
+                        <MudTh>Category</MudTh>
+                        <MudTh>Capacity</MudTh>
+                        <MudTh>Registered</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Event Name">
+                            <div>
+                                <MudText Typo="Typo.body2"><strong>@context.Name</strong></MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Campsite">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@context.CampsiteName</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Date & Time">
+                            <MudText Typo="Typo.body2">@context.EventDate.ToString("MMM dd, yyyy")</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.EventTime</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Category">
+                            <MudChip T="string" Size="Size.Small" Icon="@GetCategoryIcon(context.Category)">
+                                @context.Category
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Capacity">
+                            @if (context.MaxCapacity > 0)
+                            {
+                                <MudText Typo="Typo.body2">@context.MaxCapacity</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Unlimited</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Registered">
+                            <MudText Typo="Typo.body2" Color="@(context.RegisteredCount >= context.MaxCapacity && context.MaxCapacity > 0 ? Color.Error : Color.Default)">
+                                @context.RegisteredCount
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Size="Size.Small" Color="@GetEventStatusColor(context.Status)">
+                                @context.Status
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                          Color="Color.Primary"
+                                          Size="Size.Small"
+                                          OnClick="@(() => EditEvent(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                          Color="Color.Error"
+                                          Size="Size.Small"
+                                          OnClick="@(() => DeleteEvent(context))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Newsletter History -->
+        <MudItem xs="12">
+            <MudPaper Elevation="3" Class="pa-4">
+                <MudText Typo="Typo.h5" GutterBottom="true">
+                    <MudIcon Icon="@Icons.Material.Filled.History" Class="mr-2" />
+                    Newsletter History
+                </MudText>
+
+                <MudTable Items="@_newsletterHistory" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Subject</MudTh>
+                        <MudTh>Campsite</MudTh>
+                        <MudTh>Sent Date</MudTh>
+                        <MudTh>Recipients</MudTh>
+                        <MudTh>Opened</MudTh>
+                        <MudTh>Clicked</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Subject">
+                            <MudText Typo="Typo.body2"><strong>@context.Subject</strong></MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Campsite">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@context.CampsiteName</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Sent Date">
+                            <MudText Typo="Typo.body2">@context.SentDate.ToString("MMM dd, yyyy HH:mm")</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Recipients">
+                            <MudText Typo="Typo.body2">@context.RecipientCount</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Opened">
+                            <MudText Typo="Typo.body2">@context.OpenedCount (@context.OpenRate%)</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Clicked">
+                            <MudText Typo="Typo.body2">@context.ClickedCount (@context.ClickRate%)</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Size="Size.Small" Color="@(context.Status == "Sent" ? Color.Success : Color.Warning)">
+                                @context.Status
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                          Color="Color.Primary"
+                                          Size="Size.Small"
+                                          OnClick="@(() => ViewNewsletter(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                          Color="Color.Secondary"
+                                          Size="Size.Small"
+                                          OnClick="@(() => DuplicateNewsletter(context))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    // Newsletter fields
+    private int _selectedCampsiteId = 0;
+    private string _newsletterSubject = "";
+    private string _newsletterContent = "";
+    private DateTime? _scheduledDate = null;
+    private TimeSpan? _scheduledTime = null;
+    private bool _sendTestEmail = false;
+
+    // Statistics
+    private int _totalSubscribers = 2847;
+    private int _newSubscribersThisWeek = 156;
+
+    // Data lists
+    private List<CampsiteSubscriberDto> _campsites = new();
+    private List<NewsletterDto> _recentNewsletters = new();
+    private List<EventDto> _events = new();
+    private List<NewsletterHistoryDto> _newsletterHistory = new();
+
+    protected override void OnInitialized()
+    {
+        LoadData();
+    }
+
+    private void LoadData()
+    {
+        // Load campsites with subscriber counts
+        _campsites = new List<CampsiteSubscriberDto>
+        {
+            new() { Id = 1, Name = "Copenhagen Beach Camp", SubscriberCount = 892 },
+            new() { Id = 2, Name = "Skagen North Point", SubscriberCount = 645 },
+            new() { Id = 3, Name = "Aarhus Forest Retreat", SubscriberCount = 523 },
+            new() { Id = 4, Name = "Odense Family Camp", SubscriberCount = 412 },
+            new() { Id = 5, Name = "Bornholm Island Camp", SubscriberCount = 375 }
+        };
+
+        // Load recent newsletters
+        _recentNewsletters = new List<NewsletterDto>
+        {
+            new() { Subject = "Weekend Beach Volleyball Tournament", SentDate = DateTime.Now.AddDays(-1), RecipientCount = 892 },
+            new() { Subject = "Kids' Summer Camp Activities", SentDate = DateTime.Now.AddDays(-2), RecipientCount = 645 },
+            new() { Subject = "Evening Campfire & Live Music", SentDate = DateTime.Now.AddDays(-3), RecipientCount = 523 }
+        };
+
+        // Load events
+        _events = new List<EventDto>
+        {
+            new() { Id = 1, Name = "Beach Volleyball Tournament", Description = "Friendly competition for all ages", CampsiteName = "Copenhagen Beach Camp", EventDate = DateTime.Today.AddDays(1), EventTime = "10:00 AM", Category = "Sports", MaxCapacity = 32, RegisteredCount = 28, Status = "Open" },
+            new() { Id = 2, Name = "Kids' Craft Workshop", Description = "Make your own camping souvenirs", CampsiteName = "Copenhagen Beach Camp", EventDate = DateTime.Today, EventTime = "2:00 PM", Category = "Kids", MaxCapacity = 20, RegisteredCount = 15, Status = "Open" },
+            new() { Id = 3, Name = "Campfire Stories & S'mores", Description = "Evening storytelling by the fire", CampsiteName = "Copenhagen Beach Camp", EventDate = DateTime.Today, EventTime = "7:00 PM", Category = "Entertainment", MaxCapacity = 0, RegisteredCount = 45, Status = "Open" },
+            new() { Id = 4, Name = "Guided Nature Walk", Description = "Explore local flora and fauna", CampsiteName = "Aarhus Forest Retreat", EventDate = DateTime.Today.AddDays(2), EventTime = "3:00 PM", Category = "Nature", MaxCapacity = 15, RegisteredCount = 15, Status = "Full" },
+            new() { Id = 5, Name = "Yoga at Sunrise", Description = "Start your day with mindfulness", CampsiteName = "Bornholm Island Camp", EventDate = DateTime.Today.AddDays(1), EventTime = "6:00 AM", Category = "Wellness", MaxCapacity = 25, RegisteredCount = 18, Status = "Open" }
+        };
+
+        // Load newsletter history
+        _newsletterHistory = new List<NewsletterHistoryDto>
+        {
+            new() { Id = 1, Subject = "Weekend Beach Volleyball Tournament", CampsiteName = "Copenhagen Beach Camp", SentDate = DateTime.Now.AddDays(-1), RecipientCount = 892, OpenedCount = 645, ClickedCount = 234, OpenRate = 72, ClickRate = 26, Status = "Sent" },
+            new() { Id = 2, Subject = "Kids' Summer Camp Activities", CampsiteName = "Skagen North Point", SentDate = DateTime.Now.AddDays(-2), RecipientCount = 645, OpenedCount = 512, ClickedCount = 189, OpenRate = 79, ClickRate = 29, Status = "Sent" },
+            new() { Id = 3, Subject = "Evening Campfire & Live Music", CampsiteName = "Aarhus Forest Retreat", SentDate = DateTime.Now.AddDays(-3), RecipientCount = 523, OpenedCount = 398, ClickedCount = 145, OpenRate = 76, ClickRate = 28, Status = "Sent" },
+            new() { Id = 4, Subject = "Weekly Activities Schedule", CampsiteName = "All Campsites", SentDate = DateTime.Now.AddDays(-7), RecipientCount = 2847, OpenedCount = 2105, ClickedCount = 856, OpenRate = 74, ClickRate = 30, Status = "Sent" }
+        };
+    }
+
+    private bool IsNewsletterValid()
+    {
+        return !string.IsNullOrWhiteSpace(_newsletterSubject) &&
+               !string.IsNullOrWhiteSpace(_newsletterContent);
+    }
+
+    private async Task PreviewNewsletter()
+    {
+        var parameters = new DialogParameters
+        {
+            { "Subject", _newsletterSubject },
+            { "Content", _newsletterContent },
+            { "CampsiteName", GetCampsiteName(_selectedCampsiteId) }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        await DialogService.ShowAsync<NewsletterPreviewDialog>("Newsletter Preview", parameters, options);
+    }
+
+    private async Task SaveDraft()
+    {
+        // TODO: Save newsletter as draft
+        Snackbar.Add("Newsletter saved as draft", Severity.Success);
+        await Task.CompletedTask;
+    }
+
+    private async Task SendTestNewsletter()
+    {
+        // TODO: Send test email to admin
+        Snackbar.Add("Test email sent to your inbox", Severity.Info);
+        await Task.CompletedTask;
+    }
+
+    private async Task SendNewsletter()
+    {
+        if (!IsNewsletterValid())
+        {
+            Snackbar.Add("Please fill in all required fields", Severity.Warning);
+            return;
+        }
+
+        var recipientCount = _selectedCampsiteId == 0 ? _totalSubscribers : _campsites.FirstOrDefault(c => c.Id == _selectedCampsiteId)?.SubscriberCount ?? 0;
+
+        var message = _scheduledDate.HasValue
+            ? $"Newsletter scheduled for {_scheduledDate.Value:MMM dd, yyyy} at {_scheduledTime?.ToString(@"hh\:mm")} to {recipientCount} subscribers"
+            : $"Newsletter sent to {recipientCount} subscribers";
+
+        bool? result = await DialogService.ShowMessageBox(
+            "Confirm Send",
+            message,
+            yesText: "Confirm", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            // TODO: Send newsletter via email service
+            Snackbar.Add(_scheduledDate.HasValue ? "Newsletter scheduled successfully" : "Newsletter sent successfully", Severity.Success);
+
+            // Clear form
+            _newsletterSubject = "";
+            _newsletterContent = "";
+            _scheduledDate = null;
+            _scheduledTime = null;
+            _sendTestEmail = false;
+
+            LoadData(); // Refresh history
+        }
+    }
+
+    private string GetCampsiteName(int campsiteId)
+    {
+        if (campsiteId == 0) return "All Campsites";
+        return _campsites.FirstOrDefault(c => c.Id == campsiteId)?.Name ?? "Unknown";
+    }
+
+    private async Task OpenAddEventDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<EventDialog>("Add New Event", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            LoadData();
+            Snackbar.Add("Event added successfully", Severity.Success);
+        }
+    }
+
+    private async Task EditEvent(EventDto eventDto)
+    {
+        var parameters = new DialogParameters { { "Event", eventDto } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<EventDialog>("Edit Event", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            LoadData();
+            Snackbar.Add("Event updated successfully", Severity.Success);
+        }
+    }
+
+    private async Task DeleteEvent(EventDto eventDto)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete '{eventDto.Name}'?",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            _events.Remove(eventDto);
+            Snackbar.Add("Event deleted successfully", Severity.Success);
+        }
+    }
+
+    private void ViewNewsletter(NewsletterHistoryDto newsletter)
+    {
+        // TODO: Show newsletter details/preview
+        Snackbar.Add($"Viewing newsletter: {newsletter.Subject}", Severity.Info);
+    }
+
+    private void DuplicateNewsletter(NewsletterHistoryDto newsletter)
+    {
+        _newsletterSubject = newsletter.Subject + " (Copy)";
+        // TODO: Load content from history
+        Snackbar.Add("Newsletter duplicated to composer", Severity.Success);
+    }
+
+    private string GetCategoryIcon(string category) => category switch
+    {
+        "Sports" => Icons.Material.Filled.SportsBasketball,
+        "Kids" => Icons.Material.Filled.ChildFriendly,
+        "Entertainment" => Icons.Material.Filled.MusicNote,
+        "Nature" => Icons.Material.Filled.Nature,
+        "Wellness" => Icons.Material.Filled.SelfImprovement,
+        _ => Icons.Material.Filled.Event
+    };
+
+    private Color GetEventStatusColor(string status) => status switch
+    {
+        "Open" => Color.Success,
+        "Full" => Color.Error,
+        "Cancelled" => Color.Default,
+        _ => Color.Info
+    };
+
+    // DTOs
+    private class CampsiteSubscriberDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int SubscriberCount { get; set; }
+    }
+
+    private class NewsletterDto
+    {
+        public string Subject { get; set; } = string.Empty;
+        public DateTime SentDate { get; set; }
+        public int RecipientCount { get; set; }
+    }
+
+    private class EventDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string CampsiteName { get; set; } = string.Empty;
+        public DateTime EventDate { get; set; }
+        public string EventTime { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public int MaxCapacity { get; set; }
+        public int RegisteredCount { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
+
+    private class NewsletterHistoryDto
+    {
+        public int Id { get; set; }
+        public string Subject { get; set; } = string.Empty;
+        public string CampsiteName { get; set; } = string.Empty;
+        public DateTime SentDate { get; set; }
+        public int RecipientCount { get; set; }
+        public int OpenedCount { get; set; }
+        public int ClickedCount { get; set; }
+        public int OpenRate { get; set; }
+        public int ClickRate { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
+}
+

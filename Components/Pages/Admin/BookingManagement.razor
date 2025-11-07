@@ -1,0 +1,246 @@
+@page "/admin/bookings"
+@rendermode InteractiveServer
+@inject IDialogService DialogService
+
+<PageTitle>Booking Management - Campsite Booking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-6">
+        <div>
+            <MudText Typo="Typo.h3" GutterBottom="true">
+                <MudIcon Icon="@Icons.Material.Filled.BookOnline" Class="mr-2" />
+                Booking Management
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                View and manage all campsite bookings
+            </MudText>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FileDownload">
+            Export to CSV
+        </MudButton>
+    </div>
+
+    <!-- Filters -->
+    <MudPaper Elevation="3" Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudTextField @bind-Value="_searchText" Label="Search" Variant="Variant.Outlined" 
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
+                              Immediate="true" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudSelect T="string" @bind-Value="_filterStatus" Label="Status" Variant="Variant.Outlined">
+                    <MudSelectItem T="string" Value="@("All")">All Status</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Confirmed")">Confirmed</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Pending")">Pending</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Cancelled")">Cancelled</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Completed")">Completed</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudSelect T="string" @bind-Value="_filterCampsite" Label="Campsite" Variant="Variant.Outlined">
+                    <MudSelectItem T="string" Value="@("All")">All Campsites</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Copenhagen Beach Camp")">Copenhagen Beach Camp</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Skagen North Point")">Skagen North Point</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Aarhus Forest Retreat")">Aarhus Forest Retreat</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudDateRangePicker @bind-DateRange="_dateRange" Label="Date Range" Variant="Variant.Outlined" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Bookings Table -->
+    <MudPaper Elevation="3">
+        <MudTable Items="@GetFilteredBookings()" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" 
+                  Dense="true" @bind-SelectedItem="_selectedBooking">
+            <HeaderContent>
+                <MudTh>Booking ID</MudTh>
+                <MudTh>Guest</MudTh>
+                <MudTh>Campsite</MudTh>
+                <MudTh>Accommodation</MudTh>
+                <MudTh>Check-in</MudTh>
+                <MudTh>Check-out</MudTh>
+                <MudTh>Guests</MudTh>
+                <MudTh>Amount</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Booking ID">
+                    <MudText Typo="Typo.body2"><strong>#@context.Id</strong></MudText>
+                </MudTd>
+                <MudTd DataLabel="Guest">
+                    <div>
+                        <MudText Typo="Typo.body2">@context.GuestName</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@context.GuestEmail</MudText>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="Campsite">@context.CampsiteName</MudTd>
+                <MudTd DataLabel="Accommodation">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.AccommodationType</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Check-in">@context.CheckIn.ToString("MMM dd, yyyy")</MudTd>
+                <MudTd DataLabel="Check-out">@context.CheckOut.ToString("MMM dd, yyyy")</MudTd>
+                <MudTd DataLabel="Guests">@context.NumberOfGuests</MudTd>
+                <MudTd DataLabel="Amount">
+                    <MudText Typo="Typo.body2"><strong>$@context.TotalAmount.ToString("N2")</strong></MudText>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">
+                        @context.Status
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
+                        <MudMenuItem Icon="@Icons.Material.Filled.Visibility" OnClick="@(() => ViewBookingDetails(context))">
+                            View Details
+                        </MudMenuItem>
+                        @if (context.Status == "Pending")
+                        {
+                            <MudMenuItem Icon="@Icons.Material.Filled.CheckCircle" OnClick="@(() => ConfirmBooking(context))">
+                                Confirm
+                            </MudMenuItem>
+                        }
+                        @if (context.Status != "Cancelled" && context.Status != "Completed")
+                        {
+                            <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="@(() => EditBooking(context))">
+                                Edit
+                            </MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Cancel" OnClick="@(() => CancelBooking(context))">
+                                Cancel
+                            </MudMenuItem>
+                        }
+                    </MudMenu>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private bool _loading = false;
+    private string _searchText = "";
+    private string _filterStatus = "All";
+    private string _filterCampsite = "All";
+    private DateRange? _dateRange = null;
+    private BookingManagementDto? _selectedBooking = null;
+    private List<BookingManagementDto> _bookings = new();
+
+    protected override void OnInitialized()
+    {
+        LoadBookings();
+    }
+
+    private void LoadBookings()
+    {
+        // Sample data - will be replaced with actual data from backend
+        _bookings = new List<BookingManagementDto>
+        {
+            new() { Id = 1247, GuestName = "John Doe", GuestEmail = "john@example.com", CampsiteName = "Copenhagen Beach Camp", AccommodationType = "Cabin", CheckIn = DateTime.Now.AddDays(5), CheckOut = DateTime.Now.AddDays(8), NumberOfGuests = 4, TotalAmount = 450, Status = "Confirmed" },
+            new() { Id = 1246, GuestName = "Jane Smith", GuestEmail = "jane@example.com", CampsiteName = "Skagen North Point", AccommodationType = "Glamping", CheckIn = DateTime.Now.AddDays(3), CheckOut = DateTime.Now.AddDays(7), NumberOfGuests = 2, TotalAmount = 680, Status = "Confirmed" },
+            new() { Id = 1245, GuestName = "Mike Johnson", GuestEmail = "mike@example.com", CampsiteName = "Aarhus Forest Retreat", AccommodationType = "Tent Site", CheckIn = DateTime.Now.AddDays(10), CheckOut = DateTime.Now.AddDays(12), NumberOfGuests = 3, TotalAmount = 320, Status = "Pending" },
+            new() { Id = 1244, GuestName = "Sarah Williams", GuestEmail = "sarah@example.com", CampsiteName = "Odense Family Camp", AccommodationType = "RV Spot", CheckIn = DateTime.Now.AddDays(1), CheckOut = DateTime.Now.AddDays(4), NumberOfGuests = 5, TotalAmount = 540, Status = "Confirmed" },
+            new() { Id = 1243, GuestName = "David Brown", GuestEmail = "david@example.com", CampsiteName = "Bornholm Island Camp", AccommodationType = "Cabin", CheckIn = DateTime.Now.AddDays(15), CheckOut = DateTime.Now.AddDays(20), NumberOfGuests = 2, TotalAmount = 890, Status = "Confirmed" },
+            new() { Id = 1242, GuestName = "Emily Davis", GuestEmail = "emily@example.com", CampsiteName = "Copenhagen Beach Camp", AccommodationType = "Tent Site", CheckIn = DateTime.Now.AddDays(-5), CheckOut = DateTime.Now.AddDays(-2), NumberOfGuests = 2, TotalAmount = 280, Status = "Completed" },
+            new() { Id = 1241, GuestName = "Robert Wilson", GuestEmail = "robert@example.com", CampsiteName = "Skagen North Point", AccommodationType = "Cabin", CheckIn = DateTime.Now.AddDays(7), CheckOut = DateTime.Now.AddDays(10), NumberOfGuests = 4, TotalAmount = 620, Status = "Cancelled" },
+            new() { Id = 1240, GuestName = "Lisa Anderson", GuestEmail = "lisa@example.com", CampsiteName = "Aarhus Forest Retreat", AccommodationType = "Glamping", CheckIn = DateTime.Now.AddDays(20), CheckOut = DateTime.Now.AddDays(25), NumberOfGuests = 2, TotalAmount = 750, Status = "Pending" }
+        };
+    }
+
+    private IEnumerable<BookingManagementDto> GetFilteredBookings()
+    {
+        var filtered = _bookings.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            filtered = filtered.Where(b =>
+                b.GuestName.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                b.GuestEmail.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                b.Id.ToString().Contains(_searchText));
+        }
+
+        if (_filterStatus != "All")
+        {
+            filtered = filtered.Where(b => b.Status == _filterStatus);
+        }
+
+        if (_filterCampsite != "All")
+        {
+            filtered = filtered.Where(b => b.CampsiteName == _filterCampsite);
+        }
+
+        if (_dateRange?.Start != null && _dateRange?.End != null)
+        {
+            filtered = filtered.Where(b => b.CheckIn >= _dateRange.Start && b.CheckOut <= _dateRange.End);
+        }
+
+        return filtered.OrderByDescending(b => b.Id);
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Confirmed" => Color.Success,
+        "Pending" => Color.Warning,
+        "Cancelled" => Color.Error,
+        "Completed" => Color.Info,
+        _ => Color.Default
+    };
+
+    private void ViewBookingDetails(BookingManagementDto booking)
+    {
+        // Navigate to booking details page or show dialog
+    }
+
+    private async Task ConfirmBooking(BookingManagementDto booking)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Confirm Booking",
+            $"Confirm booking #{booking.Id} for {booking.GuestName}?",
+            yesText: "Confirm", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            booking.Status = "Confirmed";
+            StateHasChanged();
+        }
+    }
+
+    private void EditBooking(BookingManagementDto booking)
+    {
+        // Open edit dialog
+    }
+
+    private async Task CancelBooking(BookingManagementDto booking)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Cancel Booking",
+            $"Are you sure you want to cancel booking #{booking.Id}? This will notify the guest.",
+            yesText: "Cancel Booking", cancelText: "Keep Booking");
+
+        if (result == true)
+        {
+            booking.Status = "Cancelled";
+            StateHasChanged();
+        }
+    }
+
+    private class BookingManagementDto
+    {
+        public int Id { get; set; }
+        public string GuestName { get; set; } = string.Empty;
+        public string GuestEmail { get; set; } = string.Empty;
+        public string CampsiteName { get; set; } = string.Empty;
+        public string AccommodationType { get; set; } = string.Empty;
+        public DateTime CheckIn { get; set; }
+        public DateTime CheckOut { get; set; }
+        public int NumberOfGuests { get; set; }
+        public decimal TotalAmount { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
+}
+

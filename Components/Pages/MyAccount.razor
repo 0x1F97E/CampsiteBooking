@@ -1,0 +1,157 @@
+@page "/my-account"
+@rendermode InteractiveServer
+@inject IDialogService DialogService
+
+<PageTitle>My Account - Campsite Booking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Class="mr-2" />
+        My Account
+    </MudText>
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-6">
+        Manage your personal information and account settings
+    </MudText>
+
+    <MudGrid>
+        <!-- Profile Information Card -->
+        <MudItem xs="12" md="8">
+            <MudCard Elevation="3">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Profile Information</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="EditProfile">
+                            Edit
+                        </MudButton>
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">First Name</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-4">@_firstName</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Last Name</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-4">@_lastName</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Email</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-4">@_email</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Phone</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-4">@_phone</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Country</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-4">@_country</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Member Since</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-4">@_memberSince.ToString("MMMM dd, yyyy")</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+
+            <!-- Password & Security Card -->
+            <MudCard Elevation="3" Class="mt-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Password & Security</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Lock" OnClick="ChangePassword">
+                        Change Password
+                    </MudButton>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                        Last changed: @_lastPasswordChange.ToString("MMMM dd, yyyy")
+                    </MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Account Summary Sidebar -->
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="3">
+                <MudCardContent>
+                    <div class="text-center mb-4">
+                        <MudAvatar Color="Color.Primary" Size="Size.Large" Class="mx-auto mb-3">
+                            @_firstName.Substring(0, 1)@_lastName.Substring(0, 1)
+                        </MudAvatar>
+                        <MudText Typo="Typo.h6">@_firstName @_lastName</MudText>
+                    </div>
+                    <MudDivider Class="my-4" />
+                    <MudText Typo="Typo.h6" Class="mb-3">Account Statistics</MudText>
+                    <div class="mb-3">
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Total Bookings</MudText>
+                            <MudText Typo="Typo.body1"><strong>@_totalBookings</strong></MudText>
+                        </div>
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Upcoming Trips</MudText>
+                            <MudText Typo="Typo.body1"><strong>@_upcomingTrips</strong></MudText>
+                        </div>
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Favorite Campsite</MudText>
+                            <MudText Typo="Typo.body2">@_favoriteCampsite</MudText>
+                        </div>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+
+            <!-- Preferences Card -->
+            <MudCard Elevation="3" Class="mt-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Preferences</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudSwitch @bind-Value="_emailNotifications" Color="Color.Primary" Label="Email Notifications" />
+                    <MudSwitch @bind-Value="_smsNotifications" Color="Color.Primary" Label="SMS Notifications" Class="mt-2" />
+                    <MudSwitch @bind-Value="_newsletter" Color="Color.Primary" Label="Newsletter Subscription" Class="mt-2" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private string _firstName = "John";
+    private string _lastName = "Anderson";
+    private string _email = "john.anderson@email.com";
+    private string _phone = "+45 12 34 56 78";
+    private string _country = "Denmark";
+    private DateTime _memberSince = new DateTime(2023, 3, 15);
+    private DateTime _lastPasswordChange = new DateTime(2024, 1, 10);
+
+    private int _totalBookings = 12;
+    private int _upcomingTrips = 2;
+    private string _favoriteCampsite = "Lakeside Haven";
+
+    private bool _emailNotifications = true;
+    private bool _smsNotifications = false;
+    private bool _newsletter = true;
+
+    private async Task EditProfile()
+    {
+        await DialogService.ShowMessageBox(
+            "Edit Profile",
+            "Profile editing functionality will be implemented here. You can update your personal information.",
+            yesText: "OK");
+    }
+
+    private async Task ChangePassword()
+    {
+        await DialogService.ShowMessageBox(
+            "Change Password",
+            "Password change functionality will be implemented here. You will need to enter your current password and a new password.",
+            yesText: "OK");
+    }
+}
+

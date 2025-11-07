@@ -1,0 +1,151 @@
+@using MudBlazor
+@rendermode InteractiveServer
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Style="max-height: 70vh; overflow-y: auto;">
+            <MudText Typo="Typo.h6" Class="mb-4">@Title</MudText>
+
+            <!-- Add New Image URL -->
+            <MudPaper Elevation="2" Class="pa-4 mb-4">
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Add New Image</MudText>
+                <MudGrid>
+                    <MudItem xs="12" md="9">
+                        <MudTextField @bind-Value="_newImageUrl"
+                                      Label="Image URL"
+                                      Variant="Variant.Outlined"
+                                      Placeholder="https://example.com/image.jpg"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Image" />
+                    </MudItem>
+                    <MudItem xs="12" md="3" Class="d-flex align-center">
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   FullWidth="true"
+                                   OnClick="AddImage"
+                                   Disabled="@string.IsNullOrWhiteSpace(_newImageUrl)">
+                            Add
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            <!-- Gallery Images List -->
+            @if (_galleryImages.Any())
+            {
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Gallery Images (@_galleryImages.Count)</MudText>
+                <MudGrid>
+                    @foreach (var (imageUrl, index) in _galleryImages.Select((url, i) => (url, i)))
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudCard>
+                                <MudCardMedia Image="@imageUrl" Height="150" />
+                                <MudCardActions>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Color="Color.Error"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => RemoveImage(index))"
+                                                   Title="Remove image" />
+                                    @if (index > 0)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward"
+                                                       Color="Color.Primary"
+                                                       Size="Size.Small"
+                                                       OnClick="@(() => MoveImageUp(index))"
+                                                       Title="Move up" />
+                                    }
+                                    @if (index < _galleryImages.Count - 1)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward"
+                                                       Color="Color.Primary"
+                                                       Size="Size.Small"
+                                                       OnClick="@(() => MoveImageDown(index))"
+                                                       Title="Move down" />
+                                    }
+                                </MudCardActions>
+                            </MudCard>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-4">
+                    No images in the gallery. Add images using the form above.
+                </MudAlert>
+            }
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Save Gallery</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public string Title { get; set; } = "Manage Photo Gallery";
+
+    [Parameter]
+    public List<string> GalleryImages { get; set; } = new();
+
+    private List<string> _galleryImages = new();
+    private string _newImageUrl = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _galleryImages = new List<string>(GalleryImages);
+    }
+
+    private void AddImage()
+    {
+        if (!string.IsNullOrWhiteSpace(_newImageUrl))
+        {
+            _galleryImages.Add(_newImageUrl.Trim());
+            _newImageUrl = string.Empty;
+        }
+    }
+
+    private void RemoveImage(int index)
+    {
+        if (index >= 0 && index < _galleryImages.Count)
+        {
+            _galleryImages.RemoveAt(index);
+        }
+    }
+
+    private void MoveImageUp(int index)
+    {
+        if (index > 0 && index < _galleryImages.Count)
+        {
+            var temp = _galleryImages[index];
+            _galleryImages[index] = _galleryImages[index - 1];
+            _galleryImages[index - 1] = temp;
+        }
+    }
+
+    private void MoveImageDown(int index)
+    {
+        if (index >= 0 && index < _galleryImages.Count - 1)
+        {
+            var temp = _galleryImages[index];
+            _galleryImages[index] = _galleryImages[index + 1];
+            _galleryImages[index + 1] = temp;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(_galleryImages));
+    }
+}
+

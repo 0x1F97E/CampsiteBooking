@@ -1,0 +1,572 @@
+@page "/booking/{accommodationId:int}"
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@using CampsiteBooking.Models
+
+<PageTitle>Book Accommodation - Campsite Booking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">Complete Your Booking</MudText>
+    
+    @if (_accommodation != null)
+    {
+        <MudGrid>
+            <MudItem xs="12" md="5">
+                <MudCard Elevation="3">
+                    <MudCardMedia Image="@_accommodation.ImageUrl" Height="200" />
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6">@_accommodation.Name</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info">@_accommodation.Type</MudChip>
+                        <MudText Typo="Typo.body2" Class="mt-2">@_accommodation.Description</MudText>
+
+                        <MudDivider Class="my-3" />
+
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2">Base price per night:</MudText>
+                                <MudText Typo="Typo.body1"><b>$@_accommodation.PricePerNight</b></MudText>
+                            </MudStack>
+                            @if (_selectedSpot != null && _selectedSpot.PriceModifier != 1.0m)
+                            {
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2">Spot modifier (@_selectedSpot.SpotId):</MudText>
+                                    <MudText Typo="Typo.body1" Color="Color.Warning"><b>×@_selectedSpot.PriceModifier</b></MudText>
+                                </MudStack>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2">Adjusted price per night:</MudText>
+                                    <MudText Typo="Typo.body1" Color="Color.Primary"><b>$@_spotPrice</b></MudText>
+                                </MudStack>
+                            }
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2">Number of nights:</MudText>
+                                <MudText Typo="Typo.body1"><b>@_numberOfNights</b></MudText>
+                            </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2">Accommodation subtotal:</MudText>
+                                <MudText Typo="Typo.body1"><b>$@(_spotPrice * _numberOfNights)</b></MudText>
+                            </MudStack>
+                            @if (_selectedServices.Any())
+                            {
+                                <MudDivider Class="my-2" />
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">Additional Services:</MudText>
+                                @foreach (var service in _selectedServices)
+                                {
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudText Typo="Typo.body2" Class="ml-3">@service.Name:</MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info"><b>$@service.Price.ToString("N2")</b></MudText>
+                                    </MudStack>
+                                }
+                            }
+
+                            <MudDivider Class="my-2" />
+
+                            <!-- Discount Code Section -->
+                            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End">
+                                <MudTextField @bind-Value="_discountCode"
+                                             Label="Discount Code"
+                                             Variant="Variant.Outlined"
+                                             Placeholder="Enter code"
+                                             Dense="true"
+                                             Style="flex: 1;" />
+                                <MudButton Variant="Variant.Filled"
+                                          Color="@(_discountApplied ? Color.Success : Color.Primary)"
+                                          OnClick="ApplyDiscount"
+                                          Disabled="@(string.IsNullOrWhiteSpace(_discountCode) || _discountApplied)"
+                                          Size="Size.Small">
+                                    @(_discountApplied ? "Applied" : "Apply")
+                                </MudButton>
+                            </MudStack>
+
+                            @if (_discountApplied && _discountAmount > 0)
+                            {
+                                <MudAlert Severity="Severity.Success" Dense="true" Class="mt-2">
+                                    Discount "@_appliedDiscountCode" applied: @_discountPercentage% off!
+                                </MudAlert>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2">Subtotal:</MudText>
+                                    <MudText Typo="Typo.body1"><b>$@_subtotalPrice.ToString("N2")</b></MudText>
+                                </MudStack>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2" Color="Color.Success">Discount (@_discountPercentage%):</MudText>
+                                    <MudText Typo="Typo.body1" Color="Color.Success"><b>-$@_discountAmount.ToString("N2")</b></MudText>
+                                </MudStack>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(_discountError))
+                            {
+                                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2" CloseIcon="@Icons.Material.Filled.Close" CloseIconClicked="@(() => _discountError = string.Empty)">
+                                    @_discountError
+                                </MudAlert>
+                            }
+
+                            <MudDivider />
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.h6">Total:</MudText>
+                                <MudText Typo="Typo.h6" Color="Color.Primary">$@_totalPrice.ToString("N2")</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" md="7">
+                <MudPaper Elevation="3" Class="pa-4">
+                    <MudForm @ref="_form" @bind-IsValid="@_formValid">
+                        <MudText Typo="Typo.h6" GutterBottom="true">Booking Details</MudText>
+                        
+                        <MudDateRangePicker Label="Check-in / Check-out" 
+                                           @bind-DateRange="_dateRange"
+                                           MinDate="DateTime.Today"
+                                           Required="true"
+                                           RequiredError="Please select dates"
+                                           Editable="true" />
+                        
+                        <MudNumericField @bind-Value="_numberOfGuests"
+                                        Label="Number of Guests"
+                                        Variant="Variant.Outlined"
+                                        Min="1"
+                                        Max="@_accommodation.Capacity"
+                                        Required="true"
+                                        Class="mt-3" />
+
+                        <MudSelect T="CampingSpot"
+                                  @bind-Value="_selectedSpot"
+                                  Label="Select Camping Spot"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  RequiredError="Please select a camping spot"
+                                  Class="mt-3"
+                                  AnchorOrigin="Origin.BottomCenter">
+                            @foreach (var spot in _campingSpots.Where(s => s.Status == "Available"))
+                            {
+                                <MudSelectItem T="CampingSpot" Value="@spot">
+                                    @spot.SpotId - @spot.Type
+                                    @if (spot.PriceModifier > 1.0m)
+                                    {
+                                        <text> (Premium +@(((spot.PriceModifier - 1) * 100).ToString("0"))%)</text>
+                                    }
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+
+                        <MudDivider Class="my-4" />
+                        
+                        <MudText Typo="Typo.h6" GutterBottom="true">Guest Information</MudText>
+                        
+                        <MudTextField @bind-Value="_guestName" 
+                                     Label="Full Name" 
+                                     Variant="Variant.Outlined"
+                                     Required="true"
+                                     RequiredError="Name is required" />
+                        
+                        <MudTextField @bind-Value="_guestEmail" 
+                                     Label="Email" 
+                                     Variant="Variant.Outlined"
+                                     InputType="InputType.Email"
+                                     Required="true"
+                                     RequiredError="Email is required"
+                                     Class="mt-3" />
+                        
+                        <MudTextField @bind-Value="_guestPhone" 
+                                     Label="Phone Number" 
+                                     Variant="Variant.Outlined"
+                                     InputType="InputType.Telephone"
+                                     Required="true"
+                                     RequiredError="Phone is required"
+                                     Class="mt-3" />
+                        
+                        <MudTextField @bind-Value="_specialRequests" 
+                                     Label="Special Requests (Optional)" 
+                                     Variant="Variant.Outlined"
+                                     Lines="3"
+                                     Class="mt-3" />
+                        
+                        <MudStack Row="true" Class="mt-4" Spacing="2">
+                            <MudButton Variant="Variant.Outlined" 
+                                      Color="Color.Default"
+                                      OnClick="Cancel">
+                                Cancel
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled"
+                                      Color="Color.Primary"
+                                      Disabled="@(!_formValid || _selectedSpot == null)"
+                                      OnClick="SubmitBooking"
+                                      FullWidth="true">
+                                Confirm Booking
+                            </MudButton>
+                        </MudStack>
+
+                        @if (_selectedSpot == null)
+                        {
+                            <MudAlert Severity="Severity.Warning" Class="mt-3">
+                                Please select a camping spot to continue.
+                            </MudAlert>
+                        }
+                    </MudForm>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudPaper Elevation="3" Class="pa-4">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Additional Services</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-3">
+                        Optional services to enhance your stay.
+                    </MudText>
+
+                    @if (_accommodationPeripheralPurchases.Any())
+                    {
+                        <MudText Typo="Typo.subtitle2" Class="mt-3 mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.HomeWork" Size="Size.Small" Class="mr-1" />
+                            Accommodation Services
+                        </MudText>
+                        @foreach (var service in _accommodationPeripheralPurchases)
+                        {
+                            <MudCheckBox @bind-Value="@service.IsSelected"
+                                         Color="Color.Primary"
+                                         Dense="true"
+                                         Class="mb-2">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudText Typo="Typo.body1">@service.Name (+$@service.Price.ToString("N2"))</MudText>
+                                </MudStack>
+                                <MudText Typo="Typo.body2" Class="ml-2" Color="Color.Secondary">
+                                    @service.Description
+                                </MudText>
+                            </MudCheckBox>
+                        }
+                    }
+
+                    @if (_campsitePeripheralPurchases.Any())
+                    {
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.LocalActivity" Size="Size.Small" Class="mr-1" />
+                            Campsite Activities & Services
+                        </MudText>
+                        @foreach (var service in _campsitePeripheralPurchases)
+                        {
+                            <MudCheckBox @bind-Value="@service.IsSelected"
+                                         Color="Color.Primary"
+                                         Dense="true"
+                                         Class="mb-2">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudText Typo="Typo.body1">@service.Name (+$@service.Price.ToString("N2"))</MudText>
+                                </MudStack>
+                                <MudText Typo="Typo.body2" Class="ml-2" Color="Color.Secondary">
+                                    @service.Description
+                                </MudText>
+                            </MudCheckBox>
+                        }
+                    }
+
+                    @if (!_accommodationPeripheralPurchases.Any() && !_campsitePeripheralPurchases.Any())
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            No additional services available for this accommodation.
+                        </MudAlert>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudPaper Elevation="3" Class="pa-4">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Campsite Map</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-3">
+                        Reference map showing campsite layout and available spots.
+                    </MudText>
+
+                    @if (!string.IsNullOrWhiteSpace(_campsiteMapUrl))
+                    {
+                        <div style="width: 100%; border-radius: 8px; overflow: hidden;">
+                            <img src="@_campsiteMapUrl" alt="Campsite Layout Map" style="width: 100%; height: auto; display: block;" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="height: 400px; width: 100%; border-radius: 8px; overflow: hidden; background-color: #f5f5f5; display: flex; align-items: center; justify-content: center;">
+                            <MudText Typo="Typo.h6" Color="Color.Secondary">
+                                Campsite Layout Map - Coming Soon
+                            </MudText>
+                        </div>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+    else
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int AccommodationId { get; set; }
+
+    private MudForm? _form;
+    private bool _formValid;
+    private AccommodationDto? _accommodation;
+    private DateRange? _dateRange = new DateRange(DateTime.Today.AddDays(1), DateTime.Today.AddDays(3));
+    private int _numberOfGuests = 2;
+    private string _guestName = string.Empty;
+    private string _guestEmail = string.Empty;
+    private string _guestPhone = string.Empty;
+    private string _specialRequests = string.Empty;
+
+    private List<CampingSpot> _campingSpots = new();
+    private CampingSpot? _selectedSpot = null;
+    private List<PeripheralPurchaseDto> _accommodationPeripheralPurchases = new();
+    private List<PeripheralPurchaseDto> _campsitePeripheralPurchases = new();
+    private string _campsiteMapUrl = string.Empty;
+
+    // Discount code fields
+    private string _discountCode = string.Empty;
+    private bool _discountApplied = false;
+    private string _appliedDiscountCode = string.Empty;
+    private int _discountPercentage = 0;
+    private string _discountError = string.Empty;
+
+    private int _numberOfNights => _dateRange?.End != null && _dateRange?.Start != null
+        ? (_dateRange.End.Value - _dateRange.Start.Value).Days
+        : 0;
+
+    private decimal _spotPrice => _selectedSpot != null && _accommodation != null
+        ? _accommodation.PricePerNight * _selectedSpot.PriceModifier
+        : (_accommodation?.PricePerNight ?? 0);
+
+    private List<PeripheralPurchaseDto> _selectedServices =>
+        _accommodationPeripheralPurchases.Where(s => s.IsSelected)
+            .Concat(_campsitePeripheralPurchases.Where(s => s.IsSelected))
+            .ToList();
+
+    private decimal _servicesTotal => _selectedServices.Sum(s => s.Price);
+
+    private decimal _subtotalPrice => (_spotPrice * _numberOfNights) + _servicesTotal;
+
+    private decimal _discountAmount => _discountApplied ? (_subtotalPrice * _discountPercentage / 100m) : 0;
+
+    private decimal _totalPrice => _subtotalPrice - _discountAmount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(300); // Simulate API call
+
+        // Mock data - will be replaced with actual API call
+        _accommodation = new AccommodationDto
+        {
+            Id = AccommodationId,
+            Name = "Lakeside Cabin",
+            Type = "Cabin",
+            Description = "Cozy cabin with beautiful lake view and modern amenities",
+            Capacity = 4,
+            PricePerNight = 120,
+            ImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400"
+        };
+
+        // Load campsite map URL (in real app, this would come from API based on campsite ID)
+        // For demo purposes, using a sample campsite map image
+        _campsiteMapUrl = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800";
+
+        // Load camping spots for this accommodation
+        LoadCampingSpots();
+
+        // Load peripheral purchases
+        LoadPeripheralPurchases();
+    }
+
+    private void LoadCampingSpots()
+    {
+        // Generate sample camping spots based on accommodation ID
+        // In a real app, this would come from a database
+
+        var spots = new List<CampingSpot>();
+        var random = new Random(AccommodationId); // Seed with ID for consistency
+
+        // Section A - Tent pitches (A1-A10)
+        for (int i = 1; i <= 10; i++)
+        {
+            spots.Add(new CampingSpot
+            {
+                SpotId = $"A{i}",
+                CampsiteId = AccommodationId,
+                CampsiteName = _accommodation?.Name ?? "",
+                Latitude = 0,
+                Longitude = 0,
+                Type = "Tent",
+                Amenities = new List<string> { "Picnic-Table" },
+                Status = random.Next(100) < 70 ? "Available" : "Occupied",
+                PriceModifier = 1.0m
+            });
+        }
+
+        // Section B - Caravan pitches (B1-B8)
+        for (int i = 1; i <= 8; i++)
+        {
+            spots.Add(new CampingSpot
+            {
+                SpotId = $"B{i}",
+                CampsiteId = AccommodationId,
+                CampsiteName = _accommodation?.Name ?? "",
+                Latitude = 0,
+                Longitude = 0,
+                Type = "Caravan",
+                Amenities = new List<string> { "Electric-Hookup", "Water-Access" },
+                Status = random.Next(100) < 60 ? "Available" : "Occupied",
+                PriceModifier = 1.2m
+            });
+        }
+
+        // Section C - Cabins (C1-C5)
+        for (int i = 1; i <= 5; i++)
+        {
+            spots.Add(new CampingSpot
+            {
+                SpotId = $"C{i}",
+                CampsiteId = AccommodationId,
+                CampsiteName = _accommodation?.Name ?? "",
+                Latitude = 0,
+                Longitude = 0,
+                Type = "Cabin",
+                Amenities = new List<string> { "Electric-Hookup", "Water-Access", "WiFi" },
+                Status = random.Next(100) < 50 ? "Available" : "Occupied",
+                PriceModifier = 1.5m
+            });
+        }
+
+        // Section D - Premium spots (D1-D3)
+        for (int i = 1; i <= 3; i++)
+        {
+            spots.Add(new CampingSpot
+            {
+                SpotId = $"D{i}",
+                CampsiteId = AccommodationId,
+                CampsiteName = _accommodation?.Name ?? "",
+                Latitude = 0,
+                Longitude = 0,
+                Type = "Premium",
+                Amenities = new List<string> { "Electric-Hookup", "Water-Access", "WiFi", "Near-Beach" },
+                Status = random.Next(100) < 40 ? "Available" : "Occupied",
+                PriceModifier = 2.0m
+            });
+        }
+
+        _campingSpots = spots;
+    }
+
+    private void LoadPeripheralPurchases()
+    {
+        // In a real app, this would come from the database based on accommodation type and campsite
+        // For now, using sample data that matches the accommodation type
+
+        // Accommodation-specific peripheral purchases (based on accommodation type)
+        if (_accommodation?.Type == "Cabin")
+        {
+            _accommodationPeripheralPurchases = new List<PeripheralPurchaseDto>
+            {
+                new() { Id = 101, Name = "Cabin Cleaning", Description = "Professional cleaning service", Price = 50.00m, IsActive = true },
+                new() { Id = 102, Name = "Linen Package", Description = "Fresh bed linens and towels", Price = 25.00m, IsActive = true },
+                new() { Id = 103, Name = "Firewood Bundle", Description = "Bundle of firewood for fireplace", Price = 15.00m, IsActive = true }
+            };
+        }
+        else if (_accommodation?.Type == "Tent Site")
+        {
+            _accommodationPeripheralPurchases = new List<PeripheralPurchaseDto>
+            {
+                new() { Id = 104, Name = "Tent Rental", Description = "4-person tent rental", Price = 30.00m, IsActive = true },
+                new() { Id = 105, Name = "Sleeping Bag Rental", Description = "Warm sleeping bag rental", Price = 15.00m, IsActive = true },
+                new() { Id = 106, Name = "Camping Chair Set", Description = "Set of 4 camping chairs", Price = 10.00m, IsActive = true }
+            };
+        }
+        else if (_accommodation?.Type == "Glamping")
+        {
+            _accommodationPeripheralPurchases = new List<PeripheralPurchaseDto>
+            {
+                new() { Id = 107, Name = "Premium Cleaning", Description = "Luxury cleaning service", Price = 75.00m, IsActive = true },
+                new() { Id = 108, Name = "Welcome Package", Description = "Champagne and snacks", Price = 40.00m, IsActive = true },
+                new() { Id = 109, Name = "Private Chef", Description = "Personal chef for one meal", Price = 150.00m, IsActive = true }
+            };
+        }
+        else if (_accommodation?.Type == "RV Spot")
+        {
+            _accommodationPeripheralPurchases = new List<PeripheralPurchaseDto>
+            {
+                new() { Id = 110, Name = "Electricity Hookup", Description = "30-amp electrical connection", Price = 20.00m, IsActive = true },
+                new() { Id = 111, Name = "Water Hookup", Description = "Fresh water connection", Price = 15.00m, IsActive = true },
+                new() { Id = 112, Name = "Sewage Disposal", Description = "Sewage disposal service", Price = 25.00m, IsActive = true }
+            };
+        }
+
+        // Campsite-wide peripheral purchases (available to all accommodation types)
+        _campsitePeripheralPurchases = new List<PeripheralPurchaseDto>
+        {
+            new() { Id = 1, Name = "Beach Volleyball Access", Description = "Access to beach volleyball courts", Price = 15.00m, IsActive = true },
+            new() { Id = 2, Name = "Kayak Rental", Description = "Full-day kayak rental", Price = 35.00m, IsActive = true },
+            new() { Id = 3, Name = "Lighthouse Tour", Description = "Guided tour of nearby lighthouse", Price = 25.00m, IsActive = true },
+            new() { Id = 4, Name = "Bike Rental", Description = "Full-day bike rental", Price = 20.00m, IsActive = true },
+            new() { Id = 5, Name = "Morning Yoga", Description = "Beachside yoga session", Price = 18.00m, IsActive = true },
+            new() { Id = 6, Name = "Restaurant Brunch (Daily)", Description = "Daily brunch at campsite restaurant", Price = 30.00m, IsActive = true }
+        };
+    }
+
+    private void ApplyDiscount()
+    {
+        _discountError = string.Empty;
+
+        // Validate discount code (in real app, this would call an API)
+        var validDiscounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "SUMMER10", 10 },
+            { "SUMMER20", 20 },
+            { "WELCOME15", 15 },
+            { "EARLYBIRD", 25 },
+            { "FAMILY10", 10 },
+            { "WEEKEND5", 5 }
+        };
+
+        if (validDiscounts.TryGetValue(_discountCode.Trim(), out int percentage))
+        {
+            _discountApplied = true;
+            _appliedDiscountCode = _discountCode.Trim().ToUpper();
+            _discountPercentage = percentage;
+        }
+        else
+        {
+            _discountError = "Invalid discount code. Please check and try again.";
+            _discountApplied = false;
+            _appliedDiscountCode = string.Empty;
+            _discountPercentage = 0;
+        }
+    }
+
+    private async Task SubmitBooking()
+    {
+        // TODO: Submit booking to API
+        await Task.Delay(500);
+        Navigation.NavigateTo("/bookings");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/search");
+    }
+
+    public class AccommodationDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public int Capacity { get; set; }
+        public decimal PricePerNight { get; set; }
+        public string ImageUrl { get; set; } = string.Empty;
+    }
+
+    public class PeripheralPurchaseDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public bool IsActive { get; set; } = true;
+        public bool IsSelected { get; set; } = false;
+    }
+}
+

@@ -1,0 +1,194 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_isValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        Configure accommodation spot for <strong>@CampsiteName</strong>
+                    </MudAlert>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="AccommodationSpot.Name"
+                                  Label="Spot Name/Number"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  RequiredError="Spot name is required"
+                                  Placeholder="e.g., A1, Cabin 5, Glamping Tent 3" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudSelect @bind-Value="AccommodationSpot.Type"
+                              Label="Accommodation Type"
+                              Variant="Variant.Outlined"
+                              Required="true">
+                        <MudSelectItem T="string" Value="@("Cabin")">Cabin</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Tent Site")">Tent Site</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Glamping")">Glamping</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("RV Spot")">RV Spot</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Caravan")">Caravan</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="AccommodationSpot.Description"
+                                  Label="Description"
+                                  Variant="Variant.Outlined"
+                                  Lines="3"
+                                  Placeholder="Describe this accommodation spot..." />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudNumericField @bind-Value="AccommodationSpot.MaxCapacity"
+                                     Label="Maximum Capacity (Persons)"
+                                     Variant="Variant.Outlined"
+                                     Required="true"
+                                     Min="1"
+                                     RequiredError="Max capacity is required" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudNumericField @bind-Value="AccommodationSpot.PricePerNight"
+                                     Label="Price per Night"
+                                     Variant="Variant.Outlined"
+                                     Required="true"
+                                     Min="0"
+                                     Format="N2"
+                                     Adornment="Adornment.Start"
+                                     AdornmentText="$" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="AccommodationSpot.ImageUrl"
+                                  Label="Image URL"
+                                  Variant="Variant.Outlined"
+                                  Placeholder="https://example.com/image.jpg" />
+                </MudItem>
+
+                @if (!string.IsNullOrWhiteSpace(AccommodationSpot.ImageUrl))
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Image Preview:</MudText>
+                        <MudImage Src="@AccommodationSpot.ImageUrl" Alt="Accommodation preview" 
+                                  Height="200" ObjectFit="ObjectFit.Cover" Class="rounded mt-2" />
+                    </MudItem>
+                }
+
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" GutterBottom="true">Amenities</MudText>
+                    <div class="d-flex flex-wrap gap-2">
+                        <MudCheckBox @bind-Value="_amenityWiFi" Label="WiFi" />
+                        <MudCheckBox @bind-Value="_amenityElectric" Label="Electric Hookup" />
+                        <MudCheckBox @bind-Value="_amenityWater" Label="Water Access" />
+                        <MudCheckBox @bind-Value="_amenityFirePit" Label="Fire Pit" />
+                        <MudCheckBox @bind-Value="_amenityPicnicTable" Label="Picnic Table" />
+                        <MudCheckBox @bind-Value="_amenityBBQ" Label="BBQ Grill" />
+                        <MudCheckBox @bind-Value="_amenityPetFriendly" Label="Pet Friendly" />
+                    </div>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudDivider />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudSwitch @bind-Value="AccommodationSpot.IsActive"
+                              Color="Color.Success"
+                              Label="Active"
+                              UnCheckedColor="Color.Default">
+                        @(AccommodationSpot.IsActive ? "Available for booking" : "Closed for maintenance")
+                    </MudSwitch>
+                </MudItem>
+
+                @if (!AccommodationSpot.IsActive)
+                {
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="AccommodationSpot.MaintenanceReason"
+                                      Label="Reason for Closure"
+                                      Variant="Variant.Outlined"
+                                      Placeholder="e.g., Under maintenance, Seasonal closure" />
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="!_isValid">
+            @(IsEdit ? "Update" : "Add")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public string CampsiteName { get; set; } = string.Empty;
+
+    [Parameter]
+    public AccommodationSpotDto AccommodationSpot { get; set; } = new();
+
+    [Parameter]
+    public bool IsEdit { get; set; }
+
+    private MudForm _form = null!;
+    private bool _isValid;
+
+    private bool _amenityWiFi;
+    private bool _amenityElectric;
+    private bool _amenityWater;
+    private bool _amenityFirePit;
+    private bool _amenityPicnicTable;
+    private bool _amenityBBQ;
+    private bool _amenityPetFriendly;
+
+    protected override void OnInitialized()
+    {
+        _amenityWiFi = AccommodationSpot.Amenities.Contains("WiFi");
+        _amenityElectric = AccommodationSpot.Amenities.Contains("Electric-Hookup");
+        _amenityWater = AccommodationSpot.Amenities.Contains("Water-Access");
+        _amenityFirePit = AccommodationSpot.Amenities.Contains("Fire-Pit");
+        _amenityPicnicTable = AccommodationSpot.Amenities.Contains("Picnic-Table");
+        _amenityBBQ = AccommodationSpot.Amenities.Contains("BBQ-Grill");
+        _amenityPetFriendly = AccommodationSpot.Amenities.Contains("Pet-Friendly");
+    }
+
+    private void Submit()
+    {
+        AccommodationSpot.Amenities.Clear();
+        if (_amenityWiFi) AccommodationSpot.Amenities.Add("WiFi");
+        if (_amenityElectric) AccommodationSpot.Amenities.Add("Electric-Hookup");
+        if (_amenityWater) AccommodationSpot.Amenities.Add("Water-Access");
+        if (_amenityFirePit) AccommodationSpot.Amenities.Add("Fire-Pit");
+        if (_amenityPicnicTable) AccommodationSpot.Amenities.Add("Picnic-Table");
+        if (_amenityBBQ) AccommodationSpot.Amenities.Add("BBQ-Grill");
+        if (_amenityPetFriendly) AccommodationSpot.Amenities.Add("Pet-Friendly");
+
+        MudDialog.Close(DialogResult.Ok(AccommodationSpot));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    public class AccommodationSpotDto
+    {
+        public int Id { get; set; }
+        public int CampsiteId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public int MaxCapacity { get; set; }
+        public decimal PricePerNight { get; set; }
+        public string ImageUrl { get; set; } = string.Empty;
+        public List<string> Amenities { get; set; } = new();
+        public bool IsActive { get; set; } = true;
+        public string MaintenanceReason { get; set; } = string.Empty;
+    }
+}
+

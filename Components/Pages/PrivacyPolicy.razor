@@ -1,0 +1,131 @@
+@page "/privacy-policy"
+
+<PageTitle>Privacy Policy - Campsite Booking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-8">
+    <MudText Typo="Typo.h3" Class="mb-4">Privacy Policy</MudText>
+    <MudText Typo="Typo.body2" Class="mb-6">Last updated: @DateTime.Now.ToString("MMMM dd, yyyy")</MudText>
+
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudText Typo="Typo.h5" Class="mb-3">1. Introduction</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            Welcome to Campsite Booking. We respect your privacy and are committed to protecting your personal data. 
+            This privacy policy will inform you about how we look after your personal data when you visit our website 
+            and tell you about your privacy rights and how the law protects you.
+        </MudText>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">2. Data We Collect</MudText>
+        <MudText Typo="Typo.body1" Class="mb-2">We may collect, use, store and transfer different kinds of personal data about you:</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Circle">
+                <MudText><strong>Identity Data:</strong> First name, last name, username or similar identifier</MudText>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Circle">
+                <MudText><strong>Contact Data:</strong> Email address, telephone number, billing address</MudText>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Circle">
+                <MudText><strong>Financial Data:</strong> Payment card details</MudText>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Circle">
+                <MudText><strong>Transaction Data:</strong> Details about bookings and payments</MudText>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Circle">
+                <MudText><strong>Technical Data:</strong> IP address, browser type, time zone setting</MudText>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Circle">
+                <MudText><strong>Usage Data:</strong> Information about how you use our website and services</MudText>
+            </MudListItem>
+        </MudList>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">3. How We Use Your Data</MudText>
+        <MudText Typo="Typo.body1" Class="mb-2">We will only use your personal data when the law allows us to. Most commonly, we will use your personal data in the following circumstances:</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">To process and manage your bookings</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">To communicate with you about your reservations</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">To process payments and prevent fraud</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">To improve our website and services</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">To send you marketing communications (with your consent)</MudListItem>
+        </MudList>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">4. Data Security</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            We have put in place appropriate security measures to prevent your personal data from being accidentally lost, 
+            used or accessed in an unauthorized way, altered or disclosed. We limit access to your personal data to those 
+            employees, agents, contractors and other third parties who have a business need to know.
+        </MudText>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">5. Data Retention</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            We will only retain your personal data for as long as necessary to fulfill the purposes we collected it for, 
+            including for the purposes of satisfying any legal, accounting, or reporting requirements.
+        </MudText>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">6. Your Legal Rights</MudText>
+        <MudText Typo="Typo.body1" Class="mb-2">Under certain circumstances, you have rights under data protection laws in relation to your personal data:</MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowRight">Request access to your personal data</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowRight">Request correction of your personal data</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowRight">Request erasure of your personal data</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowRight">Object to processing of your personal data</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowRight">Request restriction of processing your personal data</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowRight">Request transfer of your personal data</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.ArrowRight">Right to withdraw consent</MudListItem>
+        </MudList>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">7. Cookies</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            Our website uses cookies to distinguish you from other users. This helps us to provide you with a good 
+            experience when you browse our website and also allows us to improve our site. For detailed information 
+            on the cookies we use, please see our <MudLink Href="/cookie-policy">Cookie Policy</MudLink>.
+        </MudText>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">8. Third-Party Links</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            This website may include links to third-party websites, plug-ins and applications. Clicking on those links 
+            or enabling those connections may allow third parties to collect or share data about you. We do not control 
+            these third-party websites and are not responsible for their privacy statements.
+        </MudText>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">9. Contact Us</MudText>
+        <MudText Typo="Typo.body1" Class="mb-2">
+            If you have any questions about this privacy policy or our privacy practices, please contact us:
+        </MudText>
+        <MudList T="string">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Email">Email: privacy@campsitebooking.dk</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Phone">Phone: +45 12 34 56 78</MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.LocationOn">Address: Copenhagen, Denmark</MudListItem>
+        </MudList>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" Class="mb-3">10. Changes to This Policy</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            We may update this privacy policy from time to time. We will notify you of any changes by posting the new 
+            privacy policy on this page and updating the "Last updated" date at the top of this policy.
+        </MudText>
+
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            <MudText Typo="Typo.body2">
+                <strong>GDPR Compliance:</strong> This privacy policy is designed to comply with the General Data Protection 
+                Regulation (GDPR) and other applicable data protection laws in Denmark and the European Union.
+            </MudText>
+        </MudAlert>
+    </MudPaper>
+</MudContainer>
+

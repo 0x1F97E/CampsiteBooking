@@ -1,0 +1,210 @@
+@page "/booking-details/{bookingId}"
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+
+<PageTitle>Booking Details - Campsite Booking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" 
+               Variant="Variant.Text" 
+               Color="Color.Primary"
+               OnClick="@(() => Navigation.NavigateTo("/bookings"))"
+               Class="mb-4">
+        Back to My Bookings
+    </MudButton>
+    
+    @if (_booking != null)
+    {
+        <MudPaper Elevation="3" Class="pa-6">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h4">Booking Details</MudText>
+                        <MudChip T="string" Color="@GetStatusColor(_booking.Status)" Size="Size.Large">@_booking.Status</MudChip>
+                    </MudStack>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Booking ID: @_booking.Id</MudText>
+                </MudItem>
+                
+                <MudItem xs="12" Class="mt-4">
+                    <MudDivider />
+                </MudItem>
+                
+                <MudItem xs="12" md="6">
+                    <MudImage Src="@_booking.AccommodationImageUrl" Alt="@_booking.AccommodationName" Elevation="2" Class="rounded" />
+                </MudItem>
+                
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.h5" GutterBottom="true">@_booking.AccommodationName</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info">@_booking.AccommodationType</MudChip>
+                    
+                    <MudStack Spacing="3" Class="mt-4">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Check-in</MudText>
+                            <MudText Typo="Typo.body1">
+                                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                @_booking.CheckInDate.ToString("dddd, MMMM dd, yyyy")
+                            </MudText>
+                        </div>
+                        
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Check-out</MudText>
+                            <MudText Typo="Typo.body1">
+                                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                @_booking.CheckOutDate.ToString("dddd, MMMM dd, yyyy")
+                            </MudText>
+                        </div>
+                        
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Number of Guests</MudText>
+                            <MudText Typo="Typo.body1">
+                                <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" />
+                                @_booking.NumberOfGuests guests
+                            </MudText>
+                        </div>
+                        
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Duration</MudText>
+                            <MudText Typo="Typo.body1">@_numberOfNights nights</MudText>
+                        </div>
+                    </MudStack>
+                </MudItem>
+                
+                <MudItem xs="12" Class="mt-4">
+                    <MudDivider />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Guest Information</MudText>
+                    <MudSimpleTable Dense="true" Hover="true">
+                        <tbody>
+                            <tr>
+                                <td><b>Name:</b></td>
+                                <td>@_booking.GuestName</td>
+                            </tr>
+                            <tr>
+                                <td><b>Email:</b></td>
+                                <td>@_booking.GuestEmail</td>
+                            </tr>
+                            <tr>
+                                <td><b>Phone:</b></td>
+                                <td>@_booking.GuestPhone</td>
+                            </tr>
+                        </tbody>
+                    </MudSimpleTable>
+                </MudItem>
+                
+                @if (!string.IsNullOrEmpty(_booking.SpecialRequests))
+                {
+                    <MudItem xs="12" Class="mt-2">
+                        <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Special Requests</MudText>
+                        <MudText Typo="Typo.body2">@_booking.SpecialRequests</MudText>
+                    </MudItem>
+                }
+                
+                <MudItem xs="12" Class="mt-4">
+                    <MudDivider />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Payment Summary</MudText>
+                    <MudSimpleTable Dense="true">
+                        <tbody>
+                            <tr>
+                                <td>Price per night:</td>
+                                <td class="text-right">$@_booking.PricePerNight</td>
+                            </tr>
+                            <tr>
+                                <td>Number of nights:</td>
+                                <td class="text-right">@_numberOfNights</td>
+                            </tr>
+                            <tr>
+                                <td><b>Total:</b></td>
+                                <td class="text-right"><b>$@_booking.TotalPrice</b></td>
+                            </tr>
+                        </tbody>
+                    </MudSimpleTable>
+                </MudItem>
+                
+                <MudItem xs="12" Class="mt-4">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        Booked on: @_booking.BookedDate.ToString("MMMM dd, yyyy 'at' hh:mm tt")
+                    </MudText>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+    else
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string BookingId { get; set; } = string.Empty;
+    
+    private BookingDetailsDto? _booking;
+    
+    private int _numberOfNights => _booking != null 
+        ? (_booking.CheckOutDate - _booking.CheckInDate).Days 
+        : 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBookingDetails();
+    }
+
+    private async Task LoadBookingDetails()
+    {
+        await Task.Delay(300); // Simulate API call
+        
+        // Mock data - will be replaced with actual API call
+        _booking = new BookingDetailsDto
+        {
+            Id = BookingId,
+            AccommodationName = "Lakeside Cabin",
+            AccommodationType = "Cabin",
+            AccommodationImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=600",
+            CheckInDate = DateTime.Today.AddDays(7),
+            CheckOutDate = DateTime.Today.AddDays(10),
+            NumberOfGuests = 4,
+            PricePerNight = 120,
+            TotalPrice = 360,
+            Status = "Confirmed",
+            GuestName = "John Doe",
+            GuestEmail = "john.doe@example.com",
+            GuestPhone = "+1 (555) 123-4567",
+            SpecialRequests = "Late check-in requested",
+            BookedDate = DateTime.Today.AddDays(-5)
+        };
+    }
+    
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Confirmed" => Color.Success,
+        "Pending" => Color.Warning,
+        "Cancelled" => Color.Error,
+        "Completed" => Color.Default,
+        _ => Color.Default
+    };
+
+    public class BookingDetailsDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string AccommodationName { get; set; } = string.Empty;
+        public string AccommodationType { get; set; } = string.Empty;
+        public string AccommodationImageUrl { get; set; } = string.Empty;
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
+        public int NumberOfGuests { get; set; }
+        public decimal PricePerNight { get; set; }
+        public decimal TotalPrice { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string GuestName { get; set; } = string.Empty;
+        public string GuestEmail { get; set; } = string.Empty;
+        public string GuestPhone { get; set; } = string.Empty;
+        public string SpecialRequests { get; set; } = string.Empty;
+        public DateTime BookedDate { get; set; }
+    }
+}
+

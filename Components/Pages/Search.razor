@@ -1,0 +1,328 @@
+@page "/search"
+@rendermode InteractiveServer
+
+<PageTitle>Search - Campsite Booking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">Available Accommodations</MudText>
+    
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudDateRangePicker Label="Check-in / Check-out"
+                                   @bind-DateRange="_dateRange"
+                                   MinDate="DateTime.Today"
+                                   Editable="true" />
+            </MudItem>
+
+            <MudItem xs="6" md="2">
+                <MudNumericField @bind-Value="_adults"
+                                Label="Adults"
+                                Variant="Variant.Outlined"
+                                Min="1"
+                                Max="20"
+                                Adornment="Adornment.Start"
+                                AdornmentIcon="@Icons.Material.Filled.Person" />
+            </MudItem>
+
+            <MudItem xs="6" md="2">
+                <MudNumericField @bind-Value="_children"
+                                Label="Children"
+                                Variant="Variant.Outlined"
+                                Min="0"
+                                Max="20"
+                                Adornment="Adornment.Start"
+                                AdornmentIcon="@Icons.Material.Filled.ChildCare" />
+            </MudItem>
+
+            <MudItem xs="12" md="2">
+                <MudSelect T="string" Label="Accommodation" @bind-Value="_accommodationType" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("All")">All Types</MudSelectItem>
+                    <MudSelectItem Value="@("Cabin")">Cabin</MudSelectItem>
+                    <MudSelectItem Value="@("Tent Site")">Tent Site</MudSelectItem>
+                    <MudSelectItem Value="@("Glamping")">Glamping</MudSelectItem>
+                    <MudSelectItem Value="@("RV Spot")">RV Spot</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="3">
+                <MudSelect T="string"
+                           Label="Amenities"
+                           Variant="Variant.Outlined"
+                           MultiSelection="true"
+                           @bind-SelectedValues="_selectedAmenities"
+                           MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                    <MudSelectItem T="string" Value="@("Pool")">
+                        <MudIcon Icon="@Icons.Material.Filled.Pool" Size="Size.Small" Class="mr-2" />
+                        Pool
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Dog-Friendly")">
+                        <MudIcon Icon="@Icons.Material.Filled.Pets" Size="Size.Small" Class="mr-2" />
+                        Dog-Friendly
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Campingvan-Friendly")">
+                        <MudIcon Icon="@Icons.Material.Filled.RvHookup" Size="Size.Small" Class="mr-2" />
+                        Campingvan-Friendly
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Near-Beach")">
+                        <MudIcon Icon="@Icons.Material.Filled.BeachAccess" Size="Size.Small" Class="mr-2" />
+                        Near Beach
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("WiFi")">
+                        <MudIcon Icon="@Icons.Material.Filled.Wifi" Size="Size.Small" Class="mr-2" />
+                        WiFi
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Electric-Hookup")">
+                        <MudIcon Icon="@Icons.Material.Filled.ElectricBolt" Size="Size.Small" Class="mr-2" />
+                        Electric Hookup
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Water-Access")">
+                        <MudIcon Icon="@Icons.Material.Filled.Water" Size="Size.Small" Class="mr-2" />
+                        Water Access
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Playground")">
+                        <MudIcon Icon="@Icons.Material.Filled.ChildFriendly" Size="Size.Small" Class="mr-2" />
+                        Playground
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Restaurant")">
+                        <MudIcon Icon="@Icons.Material.Filled.Restaurant" Size="Size.Small" Class="mr-2" />
+                        Restaurant
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Fire-Pit")">
+                        <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" Size="Size.Small" Class="mr-2" />
+                        Fire Pit
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Picnic-Table")">
+                        <MudIcon Icon="@Icons.Material.Filled.TableRestaurant" Size="Size.Small" Class="mr-2" />
+                        Picnic Table
+                    </MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="2" Class="d-flex align-center">
+                <MudButton Variant="Variant.Filled"
+                          Color="Color.Primary"
+                          FullWidth="true"
+                          OnClick="SearchAvailability"
+                          StartIcon="@Icons.Material.Filled.Search">
+                    Search
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+    }
+    else if (_accommodations.Any())
+    {
+        <MudGrid>
+            @foreach (var accommodation in _accommodations)
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <MudCard Elevation="3">
+                        <MudCardMedia Image="@accommodation.ImageUrl" Height="200" />
+                        <MudCardContent>
+                            <MudText Typo="Typo.h6">@accommodation.Name</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@accommodation.Type</MudChip>
+                            <MudText Typo="Typo.body2" Class="mt-2">@accommodation.Description</MudText>
+
+                            @if (accommodation.Amenities.Any())
+                            {
+                                <MudStack Row="true" Spacing="1" Class="mt-2" Wrap="Wrap.Wrap">
+                                    @foreach (var amenity in accommodation.Amenities.Take(4))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Icon="@GetAmenityIcon(amenity)">
+                                            @amenity
+                                        </MudChip>
+                                    }
+                                    @if (accommodation.Amenities.Count > 4)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                            +@(accommodation.Amenities.Count - 4) more
+                                        </MudChip>
+                                    }
+                                </MudStack>
+                            }
+
+                            <MudDivider Class="my-2" />
+
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <div>
+                                    <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" />
+                                    <MudText Typo="Typo.body2" Inline="true">Up to @accommodation.Capacity guests</MudText>
+                                </div>
+                                <MudText Typo="Typo.h6" Color="Color.Primary">$@accommodation.PricePerNight/night</MudText>
+                            </MudStack>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Variant="Variant.Filled" 
+                                      Color="Color.Primary" 
+                                      FullWidth="true"
+                                      Href="@($"/booking/{accommodation.Id}")">
+                                Book Now
+                            </MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            No accommodations found. Try adjusting your search criteria.
+        </MudAlert>
+    }
+</MudContainer>
+
+@code {
+    private DateRange? _dateRange = new DateRange(DateTime.Today.AddDays(1), DateTime.Today.AddDays(3));
+    private int _adults = 2;
+    private int _children = 0;
+    private string _accommodationType = "All";
+    private IEnumerable<string> _selectedAmenities = new HashSet<string>();
+    private bool _isLoading = false;
+    private List<AccommodationDto> _accommodations = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SearchAvailability();
+    }
+
+    private async Task SearchAvailability()
+    {
+        _isLoading = true;
+        await Task.Delay(500); // Simulate API call
+
+        // Mock data - will be replaced with actual API call
+        var allAccommodations = new List<AccommodationDto>
+        {
+            new AccommodationDto
+            {
+                Id = 1,
+                Name = "Lakeside Cabin",
+                Type = "Cabin",
+                Description = "Cozy cabin with lake view",
+                Capacity = 4,
+                PricePerNight = 120,
+                ImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400",
+                Amenities = new List<string> { "Pool", "WiFi", "Electric-Hookup", "Water-Access", "Fire-Pit", "Picnic-Table", "Restaurant" }
+            },
+            new AccommodationDto
+            {
+                Id = 2,
+                Name = "Forest Tent Site",
+                Type = "Tent Site",
+                Description = "Peaceful spot among the trees",
+                Capacity = 2,
+                PricePerNight = 35,
+                ImageUrl = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400",
+                Amenities = new List<string> { "Dog-Friendly", "Fire-Pit", "Picnic-Table" }
+            },
+            new AccommodationDto
+            {
+                Id = 3,
+                Name = "Luxury Glamping",
+                Type = "Glamping",
+                Description = "Glamorous camping experience",
+                Capacity = 2,
+                PricePerNight = 85,
+                ImageUrl = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=400",
+                Amenities = new List<string> { "Pool", "WiFi", "Electric-Hookup", "Water-Access", "Dog-Friendly", "Near-Beach", "Restaurant" }
+            },
+            new AccommodationDto
+            {
+                Id = 4,
+                Name = "Mountain View Cabin",
+                Type = "Cabin",
+                Description = "Stunning mountain views",
+                Capacity = 6,
+                PricePerNight = 150,
+                ImageUrl = "https://images.unsplash.com/photo-1542718610-a1d656d1884c?w=400",
+                Amenities = new List<string> { "WiFi", "Electric-Hookup", "Water-Access", "Fire-Pit", "Picnic-Table", "Dog-Friendly", "Playground" }
+            },
+            new AccommodationDto
+            {
+                Id = 5,
+                Name = "RV Full Hookup",
+                Type = "RV Spot",
+                Description = "Full hookup with utilities",
+                Capacity = 4,
+                PricePerNight = 55,
+                ImageUrl = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=400",
+                Amenities = new List<string> { "Campingvan-Friendly", "Electric-Hookup", "Water-Access", "WiFi", "Dog-Friendly" }
+            },
+            new AccommodationDto
+            {
+                Id = 6,
+                Name = "Riverside Tent Site",
+                Type = "Tent Site",
+                Description = "Right by the river",
+                Capacity = 3,
+                PricePerNight = 40,
+                ImageUrl = "https://images.unsplash.com/photo-1445308394109-4ec2920981b1?w=400",
+                Amenities = new List<string> { "Dog-Friendly", "Water-Access", "Fire-Pit", "Picnic-Table", "Near-Beach", "Playground" }
+            },
+        };
+
+        _accommodations = allAccommodations;
+
+        // Filter by accommodation type
+        if (_accommodationType != "All")
+        {
+            _accommodations = _accommodations.Where(a => a.Type == _accommodationType).ToList();
+        }
+
+        // Filter by amenities (accommodation must have ALL selected amenities)
+        if (_selectedAmenities.Any())
+        {
+            _accommodations = _accommodations
+                .Where(a => _selectedAmenities.All(amenity => a.Amenities.Contains(amenity)))
+                .ToList();
+        }
+
+        _isLoading = false;
+    }
+
+    private string GetMultiSelectionText(List<string> selectedValues)
+    {
+        if (!selectedValues.Any())
+            return "All Amenities";
+
+        if (selectedValues.Count == 1)
+            return selectedValues[0];
+
+        return $"{selectedValues.Count} selected";
+    }
+
+    private string GetAmenityIcon(string amenity) => amenity switch
+    {
+        "Pool" => Icons.Material.Filled.Pool,
+        "Dog-Friendly" => Icons.Material.Filled.Pets,
+        "Campingvan-Friendly" => Icons.Material.Filled.RvHookup,
+        "Near-Beach" => Icons.Material.Filled.BeachAccess,
+        "WiFi" => Icons.Material.Filled.Wifi,
+        "Electric-Hookup" => Icons.Material.Filled.ElectricBolt,
+        "Water-Access" => Icons.Material.Filled.Water,
+        "Playground" => Icons.Material.Filled.ChildFriendly,
+        "Restaurant" => Icons.Material.Filled.Restaurant,
+        "Fire-Pit" => Icons.Material.Filled.LocalFireDepartment,
+        "Picnic-Table" => Icons.Material.Filled.TableRestaurant,
+        _ => Icons.Material.Filled.Check
+    };
+
+    public class AccommodationDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public int Capacity { get; set; }
+        public decimal PricePerNight { get; set; }
+        public string ImageUrl { get; set; } = string.Empty;
+        public List<string> Amenities { get; set; } = new();
+    }
+}
+

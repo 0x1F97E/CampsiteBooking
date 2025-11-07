@@ -1,0 +1,779 @@
+@page "/admin/campsites"
+@rendermode InteractiveServer
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Campsite Management - Campsite Booking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-space-between align-center mb-6">
+        <div>
+            <MudText Typo="Typo.h3" GutterBottom="true">
+                <MudIcon Icon="@Icons.Material.Filled.Terrain" Class="mr-2" />
+                Campsite Management
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Search for a campsite and manage its accommodation types
+            </MudText>
+        </div>
+    </div>
+
+    <!-- Campsite Search/Selector -->
+    <MudPaper Elevation="3" Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" md="8">
+                <MudAutocomplete T="CampsiteManagementDto"
+                                 Value="_selectedCampsite"
+                                 Label="Search Campsite"
+                                 Variant="Variant.Outlined"
+                                 SearchFunc="@SearchCampsites"
+                                 ToStringFunc="@(c => c?.Name ?? "")"
+                                 ValueChanged="@OnCampsiteSelected"
+                                 Clearable="true"
+                                 Adornment="Adornment.Start"
+                                 AdornmentIcon="@Icons.Material.Filled.Search"
+                                 Immediate="true"
+                                 ResetValueOnEmptyText="true"
+                                 CoerceText="false"
+                                 CoerceValue="false">
+                    <ItemTemplate Context="campsite">
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Landscape" Class="mr-2" Color="Color.Primary" Size="Size.Small" />
+                            <div>
+                                <MudText Typo="Typo.body2"><strong>@campsite.Name</strong></MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@campsite.Region - @campsite.Description</MudText>
+                            </div>
+                        </div>
+                    </ItemTemplate>
+                </MudAutocomplete>
+            </MudItem>
+            <MudItem xs="12" md="4" Class="d-flex align-center">
+                @if (_selectedCampsite != null)
+                {
+                    <MudChip T="string" Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success">
+                        Selected: @_selectedCampsite.Name
+                    </MudChip>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                        No campsite selected
+                    </MudText>
+                }
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Campsite Details Section -->
+    @if (_selectedCampsite != null)
+    {
+        <MudPaper Elevation="3" Class="pa-4 mb-4">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                    Campsite Details
+                </MudText>
+            </div>
+
+            <MudGrid>
+                <!-- Description Section -->
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-1" />
+                        Description
+                    </MudText>
+                    <MudTextField @bind-Value="_selectedCampsite.Description"
+                                  Label="Campsite Description"
+                                  Variant="Variant.Outlined"
+                                  Lines="4"
+                                  Placeholder="Enter a detailed description of the campsite..."
+                                  HelperText="Provide information about the campsite location, features, and attractions" />
+                </MudItem>
+
+                <!-- Main Image Section -->
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Small" Class="mr-1" />
+                        Main Image
+                    </MudText>
+                    <MudTextField @bind-Value="_selectedCampsite.MapImageUrl"
+                                  Label="Main Image URL"
+                                  Variant="Variant.Outlined"
+                                  Placeholder="https://example.com/campsite-image.jpg"
+                                  HelperText="URL for the main campsite image" />
+                    @if (!string.IsNullOrWhiteSpace(_selectedCampsite.MapImageUrl))
+                    {
+                        <MudImage Src="@_selectedCampsite.MapImageUrl"
+                                  Alt="Campsite Main Image"
+                                  Class="mt-2 rounded"
+                                  ObjectFit="ObjectFit.Cover"
+                                  Height="200"
+                                  Style="width: 100%;" />
+                    }
+                </MudItem>
+
+                <!-- Gallery Images Section -->
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Size="Size.Small" Class="mr-1" />
+                        Image Gallery
+                    </MudText>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.PhotoLibrary"
+                               FullWidth="true"
+                               OnClick="@(() => OpenCampsiteGalleryDialog(_selectedCampsite))">
+                        Manage Photo Gallery (@(_selectedCampsite.GalleryImages?.Count ?? 0) images)
+                    </MudButton>
+                </MudItem>
+
+                <!-- Save Button -->
+                <MudItem xs="12" Class="d-flex justify-end">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Success"
+                               StartIcon="@Icons.Material.Filled.Save"
+                               OnClick="@(() => SaveCampsiteDetails(_selectedCampsite))">
+                        Save Campsite Details
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+
+    <!-- Accommodation Types Tree View -->
+    @if (_selectedCampsite != null)
+    {
+        <MudPaper Elevation="3" Class="pa-4">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.Cabin" Class="mr-2" />
+                    Accommodation Types - @_selectedCampsite.Name
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenAddAccommodationTypeDialog">
+                    Add Accommodation Type
+                </MudButton>
+            </div>
+
+            @if (_loading)
+            {
+                <div class="d-flex justify-center pa-8">
+                    <MudProgressCircular Indeterminate="true" />
+                </div>
+            }
+            else if (!_accommodationTypes.Any())
+            {
+                <MudAlert Severity="Severity.Info" Class="my-4">
+                    No accommodation types found for this campsite. Click "Add Accommodation Type" to create one.
+                </MudAlert>
+            }
+            else
+            {
+                <!-- Grid of Accommodation Type Cards -->
+                <MudGrid>
+                    @foreach (var accType in _accommodationTypes.OrderBy(a => a.Type))
+                    {
+                        <MudItem xs="12">
+                            <MudCard Elevation="2" Class="mb-3">
+                                <!-- Card Header -->
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <div class="d-flex align-center justify-space-between" style="width: 100%;">
+                                            <div class="d-flex align-center">
+                                                <MudIcon Icon="@GetAccommodationIcon(accType.Type)" Class="mr-3" Color="Color.Primary" Size="Size.Large" />
+                                                <div>
+                                                    <MudText Typo="Typo.h5">@accType.Type</MudText>
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                        @accType.AvailableUnits units • Max @accType.MaxCapacity guests • @accType.PricePerNight.ToString("C") per night
+                                                    </MudText>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex align-center gap-2">
+                                                <MudChip T="string" Size="Size.Small" Color="@(accType.IsActive ? Color.Success : Color.Default)">
+                                                    @(accType.IsActive ? "Active" : "Inactive")
+                                                </MudChip>
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                                               OnClick="@(() => DeleteAccommodationType(accType))" />
+                                            </div>
+                                        </div>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+
+                                <!-- Card Content -->
+                                <MudCardContent>
+                                    <MudGrid>
+                                            <!-- Description Section -->
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-1" />
+                                                    Description
+                                                </MudText>
+                                                <MudTextField @bind-Value="accType.Description"
+                                                              Label="Description"
+                                                              Variant="Variant.Outlined"
+                                                              Lines="3"
+                                                              FullWidth="true" />
+                                            </MudItem>
+
+                                            <!-- Available Units -->
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Numbers" Size="Size.Small" Class="mr-1" />
+                                                    Available Units
+                                                </MudText>
+                                                <MudNumericField @bind-Value="accType.AvailableUnits"
+                                                                 Label="Number of Units"
+                                                                 Variant="Variant.Outlined"
+                                                                 Min="0" />
+                                            </MudItem>
+
+                                            <!-- Pricing & Capacity -->
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                                    <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" Class="mr-1" />
+                                                    Pricing & Capacity
+                                                </MudText>
+                                                <MudGrid>
+                                                    <MudItem xs="12" sm="6">
+                                                        <MudNumericField @bind-Value="accType.PricePerNight"
+                                                                         Label="Price per Night"
+                                                                         Variant="Variant.Outlined"
+                                                                         Min="0"
+                                                                         Format="C2" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6">
+                                                        <MudNumericField @bind-Value="accType.MaxCapacity"
+                                                                         Label="Max Guests"
+                                                                         Variant="Variant.Outlined"
+                                                                         Min="1" />
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </MudItem>
+
+                                            <!-- Pictures Section -->
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Small" Class="mr-1" />
+                                                    Pictures
+                                                </MudText>
+                                                <MudGrid>
+                                                    <MudItem xs="12">
+                                                        <MudTextField @bind-Value="accType.ImageUrl"
+                                                                      Label="Main Image URL"
+                                                                      Variant="Variant.Outlined"
+                                                                      FullWidth="true" />
+                                                    </MudItem>
+                                                    @if (!string.IsNullOrWhiteSpace(accType.ImageUrl))
+                                                    {
+                                                        <MudItem xs="12">
+                                                            <MudImage Src="@accType.ImageUrl" Alt="@accType.Type"
+                                                                      Height="200" ObjectFit="ObjectFit.Cover" Class="rounded" />
+                                                        </MudItem>
+                                                    }
+                                                    <MudItem xs="12">
+                                                        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                                                   StartIcon="@Icons.Material.Filled.AddPhotoAlternate"
+                                                                   OnClick="@(() => ManageGallery(accType))">
+                                                            Manage Photo Gallery (@accType.GalleryImages.Count images)
+                                                        </MudButton>
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </MudItem>
+
+                                            <!-- Amenities Section -->
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                                                    Amenities
+                                                </MudText>
+                                                <MudGrid>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "WiFi")"
+                                                                     Label="WiFi"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "WiFi", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Electric-Hookup")"
+                                                                     Label="Electric Hookup"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Electric-Hookup", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Water-Access")"
+                                                                     Label="Water Access"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Water-Access", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Sewage-Hookup")"
+                                                                     Label="Sewage Hookup"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Sewage-Hookup", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Heating")"
+                                                                     Label="Heating"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Heating", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Air-Conditioning")"
+                                                                     Label="Air Conditioning"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Air-Conditioning", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Fire-Pit")"
+                                                                     Label="Fire Pit"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Fire-Pit", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Picnic-Table")"
+                                                                     Label="Picnic Table"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Picnic-Table", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "BBQ-Grill")"
+                                                                     Label="BBQ Grill"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "BBQ-Grill", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Pet-Friendly")"
+                                                                     Label="Pet Friendly"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Pet-Friendly", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Kitchen")"
+                                                                     Label="Kitchen"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Kitchen", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Bathroom")"
+                                                                     Label="Private Bathroom"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Bathroom", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Close-To-Playground")"
+                                                                     Label="Close to Playground"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Close-To-Playground", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Senior-Friendly")"
+                                                                     Label="Senior Friendly"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Senior-Friendly", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Handicap-Friendly")"
+                                                                     Label="Handicap Friendly"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Handicap-Friendly", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Oven")"
+                                                                     Label="Oven"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Oven", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Fridge")"
+                                                                     Label="Fridge"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Fridge", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Freezer")"
+                                                                     Label="Freezer"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Freezer", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Deposit-Box")"
+                                                                     Label="Deposit Box"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Deposit-Box", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "TV")"
+                                                                     Label="TV"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "TV", val))" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" md="4">
+                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Surveilled")"
+                                                                     Label="Surveilled"
+                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Surveilled", val))" />
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </MudItem>
+
+                                            <!-- Status -->
+                                            <MudItem xs="12">
+                                                <MudSwitch @bind-Value="accType.IsActive" Color="Color.Success" Label="Active" />
+                                            </MudItem>
+
+                                            <!-- Save Button -->
+                                            <MudItem xs="12">
+                                                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                                           StartIcon="@Icons.Material.Filled.Save"
+                                                           OnClick="@(() => SaveAccommodationType(accType))">
+                                                    Save Changes
+                                                </MudButton>
+                                            </MudItem>
+                                        </MudGrid>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private CampsiteManagementDto? _selectedCampsite;
+    private List<CampsiteManagementDto> _campsites = new();
+    private List<AccommodationTypeDto> _accommodationTypes = new();
+    private bool _loading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCampsites();
+
+        // Automatically select the first campsite for display
+        if (_campsites.Any())
+        {
+            _selectedCampsite = _campsites.First();
+            await LoadAccommodationTypes(_selectedCampsite.Id);
+        }
+    }
+
+    private async Task LoadCampsites()
+    {
+        _loading = true;
+        await Task.Delay(500); // Simulate API call
+
+        // Sample data - will be replaced with actual data from backend
+        _campsites = new List<CampsiteManagementDto>
+        {
+            new() {
+                Id = 1,
+                Name = "Copenhagen Beach Camp",
+                Region = "Zealand",
+                Description = "Beautiful beachfront camping with stunning views of the Øresund strait. Our campsite offers direct beach access, modern facilities, and a variety of accommodation options for families and solo travelers alike.",
+                TotalSpots = 50,
+                AvailableSpots = 42,
+                AccommodationTypes = new List<string> { "Cabin", "Tent Site", "RV Spot", "Glamping" },
+                Amenities = new List<string> { "Near-Beach", "WiFi", "Electric-Hookup", "Water-Access" },
+                IsActive = true,
+                MapImageUrl = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800",
+                GalleryImages = new List<string>
+                {
+                    "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800",
+                    "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800",
+                    "https://images.unsplash.com/photo-1537225228614-56cc3556d7ed?w=800"
+                },
+                InactivePeriods = new List<InactivePeriodDto>
+                {
+                    new() { Id = 1, StartDate = new DateTime(2025, 12, 1), EndDate = new DateTime(2025, 12, 15), Reason = "Winter maintenance", Type = "EntireCampsite", AffectedSpotIds = new() }
+                }
+            },
+            new() {
+                Id = 2,
+                Name = "Skagen North Point",
+                Region = "North Jutland",
+                Description = "Denmark's northernmost campsite with breathtaking views where two seas meet. Experience unique natural phenomena and pristine beaches.",
+                TotalSpots = 40,
+                AvailableSpots = 32,
+                AccommodationTypes = new List<string> { "Cabin", "Tent Site", "Glamping" },
+                Amenities = new List<string> { "Near-Beach", "WiFi", "Fire-Pit", "Picnic-Table" },
+                IsActive = true,
+                MapImageUrl = "https://images.unsplash.com/photo-1445308394109-4ec2920981b1?w=800",
+                GalleryImages = new List<string>(),
+                InactivePeriods = new List<InactivePeriodDto>()
+            },
+            new() {
+                Id = 3,
+                Name = "Aarhus Forest Retreat",
+                Region = "East Jutland",
+                Description = "Peaceful forest camping surrounded by ancient Danish woodlands. Perfect for nature lovers seeking tranquility and outdoor adventures.",
+                TotalSpots = 35,
+                AvailableSpots = 28,
+                AccommodationTypes = new List<string> { "Cabin", "Glamping", "Tent Site" },
+                Amenities = new List<string> { "WiFi", "Dog-Friendly", "Fire-Pit", "Water-Access" },
+                IsActive = true,
+                MapImageUrl = "https://images.unsplash.com/photo-1476041800959-2f6bb412c8ce?w=800",
+                GalleryImages = new List<string>(),
+                InactivePeriods = new List<InactivePeriodDto>()
+            },
+            new() {
+                Id = 4,
+                Name = "Odense Family Camp",
+                Region = "Funen",
+                Description = "Family-friendly campsite with playgrounds, activities, and spacious facilities. Close to Hans Christian Andersen's birthplace and other attractions.",
+                TotalSpots = 60,
+                AvailableSpots = 52,
+                AccommodationTypes = new List<string> { "Cabin", "RV Spot", "Tent Site" },
+                Amenities = new List<string> { "WiFi", "Electric-Hookup", "Water-Access", "Dog-Friendly" },
+                IsActive = true,
+                MapImageUrl = "https://images.unsplash.com/photo-1504851149312-7a075b496cc7?w=800",
+                GalleryImages = new List<string>(),
+                InactivePeriods = new List<InactivePeriodDto>()
+            },
+            new() {
+                Id = 5,
+                Name = "Bornholm Island Camp",
+                Region = "Bornholm",
+                Description = "Island paradise camping on the beautiful Baltic island of Bornholm. Enjoy rocky coastlines, sandy beaches, and charming fishing villages.",
+                TotalSpots = 30,
+                AvailableSpots = 18,
+                AccommodationTypes = new List<string> { "Cabin", "Tent Site" },
+                Amenities = new List<string> { "Near-Beach", "WiFi", "Fire-Pit" },
+                IsActive = true,
+                MapImageUrl = "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=800",
+                GalleryImages = new List<string>(),
+                InactivePeriods = new List<InactivePeriodDto>()
+            }
+        };
+
+        _loading = false;
+    }
+
+    private async Task<IEnumerable<CampsiteManagementDto>> SearchCampsites(string value, CancellationToken token)
+    {
+        await Task.Delay(100, token); // Simulate API delay
+
+        if (string.IsNullOrWhiteSpace(value))
+            return _campsites;
+
+        return _campsites.Where(c =>
+            c.Name.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+            c.Region.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+            c.Description.Contains(value, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task LoadAccommodationTypes(int campsiteId)
+    {
+        _loading = true;
+        await Task.Delay(300); // Simulate API call
+
+        // Sample data - will be replaced with actual data from backend
+        _accommodationTypes = new List<AccommodationTypeDto>
+        {
+            new() {
+                Id = 1,
+                CampsiteId = campsiteId,
+                Type = "Cabin",
+                Description = "Cozy wooden cabins with modern amenities, perfect for families. Each cabin features comfortable beds, heating, and a private porch.",
+                MaxCapacity = 6,
+                PricePerNight = 150,
+                ImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800",
+                Amenities = new List<string> { "WiFi", "Electric-Hookup", "Water-Access", "Heating", "Kitchen", "Bathroom" },
+                AvailableUnits = 12,
+                GalleryImages = new List<string>(),
+                IsActive = true
+            },
+            new() {
+                Id = 2,
+                CampsiteId = campsiteId,
+                Type = "Tent Site",
+                Description = "Spacious tent sites with fire pits and picnic tables. Perfect for traditional camping experience.",
+                MaxCapacity = 4,
+                PricePerNight = 50,
+                ImageUrl = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800",
+                Amenities = new List<string> { "Fire-Pit", "Picnic-Table", "Water-Access" },
+                AvailableUnits = 20,
+                GalleryImages = new List<string>(),
+                IsActive = true
+            },
+            new() {
+                Id = 3,
+                CampsiteId = campsiteId,
+                Type = "RV Spot",
+                Description = "Full hookup RV spots with electric, water, and sewage connections.",
+                MaxCapacity = 6,
+                PricePerNight = 80,
+                ImageUrl = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=800",
+                Amenities = new List<string> { "Electric-Hookup", "Water-Access", "Sewage-Hookup", "WiFi" },
+                AvailableUnits = 15,
+                GalleryImages = new List<string>(),
+                IsActive = true
+            },
+            new() {
+                Id = 4,
+                CampsiteId = campsiteId,
+                Type = "Glamping",
+                Description = "Luxury glamping tents with comfortable beds, electricity, and stylish furnishings.",
+                MaxCapacity = 4,
+                PricePerNight = 200,
+                ImageUrl = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800",
+                Amenities = new List<string> { "WiFi", "Electric-Hookup", "Heating", "Kitchen" },
+                AvailableUnits = 8,
+                GalleryImages = new List<string>(),
+                IsActive = true
+            }
+        };
+
+        _loading = false;
+    }
+
+    private async void OnCampsiteSelected(CampsiteManagementDto? campsite)
+    {
+        _selectedCampsite = campsite;
+        if (campsite != null)
+        {
+            await LoadAccommodationTypes(campsite.Id);
+        }
+        else
+        {
+            _accommodationTypes.Clear();
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveCampsiteDetails(CampsiteManagementDto campsite)
+    {
+        // Simulate API call to save campsite details
+        await Task.Delay(500);
+
+        Snackbar.Add($"Campsite details for '{campsite.Name}' saved successfully!", Severity.Success);
+    }
+
+    private async Task OpenCampsiteGalleryDialog(CampsiteManagementDto campsite)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = $"Photo Gallery - {campsite.Name}",
+            ["GalleryImages"] = campsite.GalleryImages ?? new List<string>()
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<ManageGalleryDialog>("Manage Photo Gallery", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is List<string> updatedGallery)
+        {
+            campsite.GalleryImages = updatedGallery;
+            Snackbar.Add("Photo gallery updated successfully!", Severity.Success);
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenAddAccommodationTypeDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            ["CampsiteName"] = _selectedCampsite!.Name,
+            ["AccommodationType"] = new AccommodationTypeDto { CampsiteId = _selectedCampsite.Id },
+            ["IsEdit"] = false
+        };
+
+        var dialog = await DialogService.ShowAsync<CampsiteAccommodationDialog>("Add Accommodation Type", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is AccommodationTypeDto newAccType)
+        {
+            _accommodationTypes.Add(newAccType);
+            Snackbar.Add($"Accommodation type '{newAccType.Type}' added successfully!", Severity.Success);
+        }
+    }
+
+    private async Task SaveAccommodationType(AccommodationTypeDto accType)
+    {
+        // In a real application, this would save to the backend
+        await Task.Delay(300); // Simulate API call
+        Snackbar.Add($"Changes to '{accType.Type}' saved successfully!", Severity.Success);
+    }
+
+    private async Task DeleteAccommodationType(AccommodationTypeDto accType)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete the accommodation type '{accType.Type}'? This action cannot be undone.",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            _accommodationTypes.Remove(accType);
+            Snackbar.Add($"Accommodation type '{accType.Type}' deleted successfully!", Severity.Success);
+        }
+    }
+
+    private void ManageGallery(AccommodationTypeDto accType)
+    {
+        // This would open a dialog to manage the photo gallery
+        Snackbar.Add("Photo gallery management coming soon!", Severity.Info);
+    }
+
+    private bool GetAmenityValue(AccommodationTypeDto accType, string amenity)
+    {
+        return accType.Amenities.Contains(amenity);
+    }
+
+    private void UpdateAmenity(AccommodationTypeDto accType, string amenity, bool value)
+    {
+        if (value && !accType.Amenities.Contains(amenity))
+        {
+            accType.Amenities.Add(amenity);
+        }
+        else if (!value && accType.Amenities.Contains(amenity))
+        {
+            accType.Amenities.Remove(amenity);
+        }
+    }
+
+
+
+    private string GetAccommodationIcon(string type)
+    {
+        return type.ToLower() switch
+        {
+            "cabin" => Icons.Material.Filled.Cabin,
+            "tent site" or "tent" => Icons.Material.Filled.Landscape,
+            "rv spot" or "rv" or "caravan" => Icons.Material.Filled.RvHookup,
+            "glamping" => Icons.Material.Filled.NightShelter,
+            _ => Icons.Material.Filled.Home
+        };
+    }
+
+
+
+    // DTOs
+    private class AccommodationTypeDto
+    {
+        public int Id { get; set; }
+        public int CampsiteId { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public int MaxCapacity { get; set; }
+        public decimal PricePerNight { get; set; }
+        public string ImageUrl { get; set; } = string.Empty;
+        public List<string> Amenities { get; set; } = new();
+        public int AvailableUnits { get; set; }
+        public List<string> GalleryImages { get; set; } = new();
+        public bool IsActive { get; set; } = true;
+    }
+
+    private class CampsiteManagementDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Region { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public int TotalSpots { get; set; }
+        public int AvailableSpots { get; set; }
+        public List<string> AccommodationTypes { get; set; } = new();
+        public List<string> Amenities { get; set; } = new();
+        public bool IsActive { get; set; }
+        public string MapImageUrl { get; set; } = string.Empty;
+        public List<string> GalleryImages { get; set; } = new();
+        public List<InactivePeriodDto> InactivePeriods { get; set; } = new();
+    }
+
+    private class InactivePeriodDto
+    {
+        public int Id { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public string Reason { get; set; } = string.Empty;
+        public string Type { get; set; } = "EntireCampsite"; // "EntireCampsite" or "SpecificSpots"
+        public List<string> AffectedSpotIds { get; set; } = new();
+    }
+}

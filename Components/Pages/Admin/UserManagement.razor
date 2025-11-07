@@ -1,0 +1,297 @@
+@page "/admin/users"
+@rendermode InteractiveServer
+@inject IDialogService DialogService
+
+<PageTitle>User Management - Campsite Booking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-6">
+        <div>
+            <MudText Typo="Typo.h3" GutterBottom="true">
+                <MudIcon Icon="@Icons.Material.Filled.People" Class="mr-2" />
+                User Management
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Manage users and their roles
+            </MudText>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd">
+            Add User
+        </MudButton>
+    </div>
+
+    <!-- User Statistics -->
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Total Users</MudText>
+                            <MudText Typo="Typo.h5">@_users.Count</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Primary" Size="Size.Large" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Guests</MudText>
+                            <MudText Typo="Typo.h5">@_users.Count(u => u.Role == "Guest")</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Info" Size="Size.Large" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Staff</MudText>
+                            <MudText Typo="Typo.h5">@_users.Count(u => u.Role == "Staff")</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Badge" Color="Color.Success" Size="Size.Large" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Administrators</MudText>
+                            <MudText Typo="Typo.h5">@_users.Count(u => u.Role == "Administrator")</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Color="Color.Warning" Size="Size.Large" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Filters -->
+    <MudPaper Elevation="3" Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_searchText" Label="Search" Variant="Variant.Outlined" 
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
+                              Immediate="true" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="string" @bind-Value="_filterRole" Label="Role" Variant="Variant.Outlined">
+                    <MudSelectItem T="string" Value="@("All")">All Roles</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Guest")">Guest</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Staff")">Staff</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Administrator")">Administrator</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="string" @bind-Value="_filterStatus" Label="Status" Variant="Variant.Outlined">
+                    <MudSelectItem T="string" Value="@("All")">All Status</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Active")">Active</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Inactive")">Inactive</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Users Table -->
+    <MudPaper Elevation="3">
+        <MudTable Items="@GetFilteredUsers()" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Dense="true">
+            <HeaderContent>
+                <MudTh>User</MudTh>
+                <MudTh>Email</MudTh>
+                <MudTh>Phone</MudTh>
+                <MudTh>Role</MudTh>
+                <MudTh>Joined</MudTh>
+                <MudTh>Last Login</MudTh>
+                <MudTh>Bookings</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="User">
+                    <div class="d-flex align-center">
+                        <MudAvatar Color="Color.Primary" Size="Size.Small" Class="mr-2">
+                            @context.Name.Substring(0, 1).ToUpper()
+                        </MudAvatar>
+                        <div>
+                            <MudText Typo="Typo.body2"><strong>@context.Name</strong></MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">ID: @context.Id</MudText>
+                        </div>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="Email">@context.Email</MudTd>
+                <MudTd DataLabel="Phone">@context.Phone</MudTd>
+                <MudTd DataLabel="Role">
+                    <MudChip T="string" Size="Size.Small" Color="@GetRoleColor(context.Role)" Icon="@GetRoleIcon(context.Role)">
+                        @context.Role
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Joined">@context.JoinedDate.ToString("MMM dd, yyyy")</MudTd>
+                <MudTd DataLabel="Last Login">
+                    @if (context.LastLogin.HasValue)
+                    {
+                        <MudText Typo="Typo.caption">@context.LastLogin.Value.ToString("MMM dd, yyyy")</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Never</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Bookings">@context.TotalBookings</MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Default)">
+                        @(context.IsActive ? "Active" : "Inactive")
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
+                        <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="@(() => EditUser(context))">Edit</MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Security" OnClick="@(() => ChangeRole(context))">Change Role</MudMenuItem>
+                        @if (context.IsActive)
+                        {
+                            <MudMenuItem Icon="@Icons.Material.Filled.Block" OnClick="@(() => DeactivateUser(context))">Deactivate</MudMenuItem>
+                        }
+                        else
+                        {
+                            <MudMenuItem Icon="@Icons.Material.Filled.CheckCircle" OnClick="@(() => ActivateUser(context))">Activate</MudMenuItem>
+                        }
+                        <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnClick="@(() => DeleteUser(context))">Delete</MudMenuItem>
+                    </MudMenu>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private bool _loading = false;
+    private string _searchText = "";
+    private string _filterRole = "All";
+    private string _filterStatus = "All";
+    private List<UserManagementDto> _users = new();
+
+    protected override void OnInitialized()
+    {
+        LoadUsers();
+    }
+
+    private void LoadUsers()
+    {
+        // Sample data - will be replaced with actual data from backend
+        _users = new List<UserManagementDto>
+        {
+            new() { Id = 1, Name = "John Doe", Email = "john@example.com", Phone = "+45 12 34 56 78", Role = "Guest", JoinedDate = DateTime.Now.AddMonths(-6), LastLogin = DateTime.Now.AddDays(-2), TotalBookings = 5, IsActive = true },
+            new() { Id = 2, Name = "Jane Smith", Email = "jane@example.com", Phone = "+45 23 45 67 89", Role = "Guest", JoinedDate = DateTime.Now.AddMonths(-8), LastLogin = DateTime.Now.AddDays(-1), TotalBookings = 8, IsActive = true },
+            new() { Id = 3, Name = "Mike Johnson", Email = "mike@example.com", Phone = "+45 34 56 78 90", Role = "Staff", JoinedDate = DateTime.Now.AddMonths(-12), LastLogin = DateTime.Now, TotalBookings = 0, IsActive = true },
+            new() { Id = 4, Name = "Sarah Williams", Email = "sarah@example.com", Phone = "+45 45 67 89 01", Role = "Administrator", JoinedDate = DateTime.Now.AddMonths(-24), LastLogin = DateTime.Now, TotalBookings = 0, IsActive = true },
+            new() { Id = 5, Name = "David Brown", Email = "david@example.com", Phone = "+45 56 78 90 12", Role = "Guest", JoinedDate = DateTime.Now.AddMonths(-3), LastLogin = DateTime.Now.AddDays(-5), TotalBookings = 3, IsActive = true },
+            new() { Id = 6, Name = "Emily Davis", Email = "emily@example.com", Phone = "+45 67 89 01 23", Role = "Guest", JoinedDate = DateTime.Now.AddMonths(-10), LastLogin = DateTime.Now.AddDays(-30), TotalBookings = 12, IsActive = true },
+            new() { Id = 7, Name = "Robert Wilson", Email = "robert@example.com", Phone = "+45 78 90 12 34", Role = "Staff", JoinedDate = DateTime.Now.AddMonths(-18), LastLogin = DateTime.Now.AddHours(-3), TotalBookings = 0, IsActive = true },
+            new() { Id = 8, Name = "Lisa Anderson", Email = "lisa@example.com", Phone = "+45 89 01 23 45", Role = "Guest", JoinedDate = DateTime.Now.AddMonths(-4), LastLogin = null, TotalBookings = 1, IsActive = false }
+        };
+    }
+
+    private IEnumerable<UserManagementDto> GetFilteredUsers()
+    {
+        var filtered = _users.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            filtered = filtered.Where(u =>
+                u.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                u.Email.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                u.Phone.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (_filterRole != "All")
+        {
+            filtered = filtered.Where(u => u.Role == _filterRole);
+        }
+
+        if (_filterStatus != "All")
+        {
+            var isActive = _filterStatus == "Active";
+            filtered = filtered.Where(u => u.IsActive == isActive);
+        }
+
+        return filtered;
+    }
+
+    private Color GetRoleColor(string role) => role switch
+    {
+        "Administrator" => Color.Warning,
+        "Staff" => Color.Success,
+        "Guest" => Color.Info,
+        _ => Color.Default
+    };
+
+    private string GetRoleIcon(string role) => role switch
+    {
+        "Administrator" => Icons.Material.Filled.AdminPanelSettings,
+        "Staff" => Icons.Material.Filled.Badge,
+        "Guest" => Icons.Material.Filled.Person,
+        _ => Icons.Material.Filled.Person
+    };
+
+    private void EditUser(UserManagementDto user)
+    {
+        // Open edit dialog
+    }
+
+    private void ChangeRole(UserManagementDto user)
+    {
+        // Open role change dialog
+    }
+
+    private void ActivateUser(UserManagementDto user)
+    {
+        user.IsActive = true;
+        StateHasChanged();
+    }
+
+    private void DeactivateUser(UserManagementDto user)
+    {
+        user.IsActive = false;
+        StateHasChanged();
+    }
+
+    private async Task DeleteUser(UserManagementDto user)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Delete User",
+            $"Are you sure you want to delete user '{user.Name}'? This action cannot be undone.",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            _users.Remove(user);
+            StateHasChanged();
+        }
+    }
+
+    private class UserManagementDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public DateTime JoinedDate { get; set; }
+        public DateTime? LastLogin { get; set; }
+        public int TotalBookings { get; set; }
+        public bool IsActive { get; set; }
+    }
+}
+

@@ -1,0 +1,230 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_name" Label="Campsite Name" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="_region" Label="Region" Variant="Variant.Outlined" Required="true">
+                    <MudSelectItem T="string" Value="@("Zealand")">Zealand</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("North Jutland")">North Jutland</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("East Jutland")">East Jutland</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Funen")">Funen</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Bornholm")">Bornholm</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Southwest Jutland")">Southwest Jutland</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudNumericField @bind-Value="_totalSpots" Label="Total Spots" Variant="Variant.Outlined" Min="1" Required="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_description" Label="Description" Variant="Variant.Outlined" Lines="3" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudNumericField @bind-Value="_latitude" Label="Latitude" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudNumericField @bind-Value="_longitude" Label="Longitude" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Accommodation Types</MudText>
+                <div class="d-flex flex-wrap gap-2">
+                    <MudCheckBox @bind-Value="_hasCabin" Label="Cabin" Color="Color.Primary" />
+                    <MudCheckBox @bind-Value="_hasTentSite" Label="Tent Site" Color="Color.Primary" />
+                    <MudCheckBox @bind-Value="_hasGlamping" Label="Glamping" Color="Color.Primary" />
+                    <MudCheckBox @bind-Value="_hasRVSpot" Label="RV Spot" Color="Color.Primary" />
+                </div>
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Amenities</MudText>
+                <div class="d-flex flex-wrap gap-2">
+                    <MudCheckBox @bind-Value="_hasWiFi" Label="WiFi" Color="Color.Primary" />
+                    <MudCheckBox @bind-Value="_hasDogFriendly" Label="Dog-Friendly" Color="Color.Primary" />
+                    <MudCheckBox @bind-Value="_hasNearBeach" Label="Near Beach" Color="Color.Primary" />
+                    <MudCheckBox @bind-Value="_hasElectricHookup" Label="Electric Hookup" Color="Color.Primary" />
+                    <MudCheckBox @bind-Value="_hasWaterAccess" Label="Water Access" Color="Color.Primary" />
+                    <MudCheckBox @bind-Value="_hasFirePit" Label="Fire Pit" Color="Color.Primary" />
+                    <MudCheckBox @bind-Value="_hasPicnicTable" Label="Picnic Table" Color="Color.Primary" />
+                    <MudCheckBox @bind-Value="_hasCampingvanFriendly" Label="Campingvan-Friendly" Color="Color.Primary" />
+                </div>
+            </MudItem>
+            <MudItem xs="12">
+                <MudSwitch @bind-Value="_isActive" Label="Active" Color="Color.Success" />
+            </MudItem>
+
+            <!-- Campsite Map Upload -->
+            <MudItem xs="12">
+                <MudDivider Class="my-3" />
+                <MudText Typo="Typo.h6" GutterBottom="true">Campsite Map</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                    Upload a map image showing the layout of camping spots (A1-A10, B1-B8, C1-C5, D1-D3, etc.)
+                </MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_mapImageUrl"
+                              Label="Map Image URL"
+                              Variant="Variant.Outlined"
+                              Placeholder="https://example.com/campsite-map.jpg"
+                              HelperText="Enter the URL of the campsite map image" />
+            </MudItem>
+            @if (!string.IsNullOrWhiteSpace(_mapImageUrl))
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.body2" Class="mb-2">Map Preview:</MudText>
+                    <MudPaper Elevation="2" Class="pa-2">
+                        <img src="@_mapImageUrl" alt="Campsite Map Preview" style="max-width: 100%; height: auto; border-radius: 4px;" />
+                    </MudPaper>
+                </MudItem>
+            }
+
+            <!-- Inactive Periods Management -->
+            <MudItem xs="12">
+                <MudDivider Class="my-3" />
+                <MudText Typo="Typo.h6" GutterBottom="true">Inactive Periods</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                    Set periods when the campsite or specific spots are unavailable for booking
+                </MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="AddInactivePeriod"
+                           Size="Size.Small">
+                    Add Inactive Period
+                </MudButton>
+            </MudItem>
+            @foreach (var period in _inactivePeriods)
+            {
+                <MudItem xs="12">
+                    <MudPaper Elevation="2" Class="pa-3">
+                        <MudGrid>
+                            <MudItem xs="12" md="5">
+                                <MudDateRangePicker Label="Inactive Period"
+                                                   @bind-DateRange="period.DateRange"
+                                                   Editable="true"
+                                                   Required="true" />
+                            </MudItem>
+                            <MudItem xs="12" md="4">
+                                <MudTextField @bind-Value="period.Reason"
+                                             Label="Reason"
+                                             Variant="Variant.Outlined"
+                                             Placeholder="e.g., Maintenance, Off-season" />
+                            </MudItem>
+                            <MudItem xs="12" md="2">
+                                <MudSelect T="string"
+                                          @bind-Value="period.Type"
+                                          Label="Applies To"
+                                          Variant="Variant.Outlined">
+                                    <MudSelectItem T="string" Value="@("EntireCampsite")">Entire Campsite</MudSelectItem>
+                                    <MudSelectItem T="string" Value="@("SpecificSpots")">Specific Spots</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" md="1" Class="d-flex align-center justify-center">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                              Color="Color.Error"
+                                              Size="Size.Small"
+                                              OnClick="@(() => RemoveInactivePeriod(period))" />
+                            </MudItem>
+                            @if (period.Type == "SpecificSpots")
+                            {
+                                <MudItem xs="12">
+                                    <MudTextField @bind-Value="period.AffectedSpotsText"
+                                                 Label="Affected Spot IDs"
+                                                 Variant="Variant.Outlined"
+                                                 Placeholder="e.g., A1, A2, B3, C1"
+                                                 HelperText="Enter spot IDs separated by commas" />
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public object? Campsite { get; set; }
+
+    private string _name = "";
+    private string _region = "Zealand";
+    private string _description = "";
+    private int _totalSpots = 10;
+    private double _latitude = 56.2639;
+    private double _longitude = 10.4515;
+    private bool _isActive = true;
+
+    // Accommodation Types
+    private bool _hasCabin = false;
+    private bool _hasTentSite = false;
+    private bool _hasGlamping = false;
+    private bool _hasRVSpot = false;
+
+    // Amenities
+    private bool _hasWiFi = false;
+    private bool _hasDogFriendly = false;
+    private bool _hasNearBeach = false;
+    private bool _hasElectricHookup = false;
+    private bool _hasWaterAccess = false;
+    private bool _hasFirePit = false;
+    private bool _hasPicnicTable = false;
+    private bool _hasCampingvanFriendly = false;
+
+    // Map and Inactive Periods
+    private string _mapImageUrl = "";
+    private List<InactivePeriodViewModel> _inactivePeriods = new();
+
+    protected override void OnInitialized()
+    {
+        if (Campsite != null)
+        {
+            // Load existing campsite data for editing
+            // This will be implemented when we have the actual DTO
+        }
+    }
+
+    private void AddInactivePeriod()
+    {
+        _inactivePeriods.Add(new InactivePeriodViewModel
+        {
+            DateRange = new DateRange(DateTime.Today, DateTime.Today.AddDays(7)),
+            Reason = "",
+            Type = "EntireCampsite",
+            AffectedSpotsText = ""
+        });
+    }
+
+    private void RemoveInactivePeriod(InactivePeriodViewModel period)
+    {
+        _inactivePeriods.Remove(period);
+    }
+
+    private void Submit()
+    {
+        // Validate and save
+        // TODO: Convert _inactivePeriods to proper format and save with campsite data
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private class InactivePeriodViewModel
+    {
+        public DateRange? DateRange { get; set; }
+        public string Reason { get; set; } = string.Empty;
+        public string Type { get; set; } = "EntireCampsite";
+        public string AffectedSpotsText { get; set; } = string.Empty;
+    }
+}
+

@@ -1,0 +1,99 @@
+@rendermode InteractiveServer
+
+<MudPaper Elevation="4" Class="mt-8" Square="true">
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+        <MudGrid Class="py-6">
+            <!-- About Section -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudText Typo="Typo.h6" Class="mb-3">Campsite Booking</MudText>
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    Denmark's premier camping network offering unforgettable outdoor experiences.
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
+                    Copenhagen, Denmark
+                </MudText>
+                <MudStack Spacing="1">
+                    <MudLink Href="https://datacvr.virk.dk/enhed/virksomhed/11223344" Target="_blank" Typo="Typo.body2" Color="Color.Inherit">
+                        CVR: 11 22 33 44
+                    </MudLink>
+                    <MudText Typo="Typo.body2">
+                        <strong>Work with us</strong>
+                    </MudText>
+                    <MudLink Href="mailto:carrier@campsitebooking.dk" Typo="Typo.body2" Color="Color.Inherit">
+                        carrier@campsitebooking.dk
+                    </MudLink>
+                    <MudText Typo="Typo.body2">
+                        <strong>Inqueries</strong>
+                    </MudText>
+                    <MudLink Href="mailto:contact@campsitebooking.dk" Typo="Typo.body2" Color="Color.Inherit">
+                        Contact us at contact@campsitebooking.dk
+                    </MudLink>
+                </MudStack>
+            </MudItem>
+
+            <!-- Quick Links -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudText Typo="Typo.h6" Class="mb-3">Quick Links</MudText>
+                <MudStack Spacing="2">
+                    <MudLink Href="/" Color="Color.Inherit">Home</MudLink>
+                    <MudLink Href="/information" Color="Color.Inherit">Information & Activities</MudLink>
+                    <MudLink Href="/search" Color="Color.Inherit">Search Campsites</MudLink>
+                    <MudLink Href="/bookings" Color="Color.Inherit">My Bookings</MudLink>
+                    <MudLink Href="/my-account" Color="Color.Inherit">My Account</MudLink>
+                </MudStack>
+            </MudItem>
+
+            <!-- Legal -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudText Typo="Typo.h6" Class="mb-3">Legal</MudText>
+                <MudStack Spacing="2">
+                    <MudLink Href="/privacy-policy" Color="Color.Inherit">Privacy Policy</MudLink>
+                    <MudLink Href="/cookie-policy" Color="Color.Inherit">Cookie Policy</MudLink>
+                    <MudLink Href="#" Color="Color.Inherit" OnClick="@(() => ShowCookieSettings())">Cookie Settings</MudLink>
+                    <MudLink Href="#" Color="Color.Inherit">Terms & Conditions</MudLink>
+                </MudStack>
+            </MudItem>
+
+            <!-- Admin Portal -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudText Typo="Typo.h6" Class="mb-3">Admin</MudText>
+                <MudStack Spacing="2">
+                    <MudLink Href="/admin/dashboard" Color="Color.Inherit">Admin Portal</MudLink>
+                    <MudLink Href="/admin/campsites" Color="Color.Inherit">Manage Campsites</MudLink>
+                    <MudLink Href="/admin/bookings" Color="Color.Inherit">Manage Bookings</MudLink>
+                    <MudLink Href="/admin/users" Color="Color.Inherit">Manage Users</MudLink>
+                    <MudLink Href="/admin/information" Color="Color.Inherit">Information & Newsletter</MudLink>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+
+        <MudDivider Class="my-4" />
+
+        <!-- Bottom Bar -->
+        <MudGrid Class="pb-4">
+            <MudItem xs="12" md="6" Class="d-flex align-center">
+                <MudText Typo="Typo.body2">
+                    © @DateTime.Now.Year Campsite Booking. All rights reserved.
+                </MudText>
+            </MudItem>
+            <MudItem xs="12" md="6" Class="d-flex align-center justify-end">
+                <MudStack Row="true" Spacing="3">
+                    <MudIconButton Icon="@Icons.Custom.Brands.Facebook" Color="Color.Inherit" Size="Size.Small" />
+                    <MudIconButton Icon="@Icons.Custom.Brands.Instagram" Color="Color.Inherit" Size="Size.Small" />
+                    <MudIconButton Icon="@Icons.Custom.Brands.X" Color="Color.Inherit" Size="Size.Small" />
+                    <MudIconButton Icon="@Icons.Custom.Brands.LinkedIn" Color="Color.Inherit" Size="Size.Small" />
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+</MudPaper>
+
+@code {
+    private void ShowCookieSettings()
+    {
+        // This would open a cookie settings dialog
+        // For now, just a placeholder
+    }
+}
+

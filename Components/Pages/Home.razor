@@ -1,7 +1,338 @@
 ﻿@page "/"
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Home - Campsite Booking</PageTitle>
 
-<h1>Hello, world!</h1>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">
+        Find Your Perfect Campsite in Denmark
+    </MudText>
+    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-6 mud-text-secondary">
+        Book cabins, tent sites, and more at beautiful locations across Denmark
+    </MudText>
 
-Welcome to your new app.
+    <!-- Filters Bar -->
+    <MudPaper Elevation="3" Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudDateRangePicker Label="Check-in / Check-out"
+                                   @bind-DateRange="_dateRange"
+                                   MinDate="DateTime.Today"
+                                   Editable="true"
+                                   @bind-DateRange:after="OnFilterChanged" />
+            </MudItem>
+
+            <MudItem xs="6" md="2">
+                <MudNumericField @bind-Value="_adults"
+                                Label="Adults"
+                                Variant="Variant.Outlined"
+                                Min="1"
+                                Max="20"
+                                @bind-Value:after="OnFilterChanged"
+                                Adornment="Adornment.Start"
+                                AdornmentIcon="@Icons.Material.Filled.Person" />
+            </MudItem>
+
+            <MudItem xs="6" md="2">
+                <MudNumericField @bind-Value="_children"
+                                Label="Children"
+                                Variant="Variant.Outlined"
+                                Min="0"
+                                Max="20"
+                                @bind-Value:after="OnFilterChanged"
+                                Adornment="Adornment.Start"
+                                AdornmentIcon="@Icons.Material.Filled.ChildCare" />
+            </MudItem>
+
+            <MudItem xs="12" md="2">
+                <MudSelect T="string"
+                          Label="Accommodation"
+                          @bind-Value="_accommodationType"
+                          Variant="Variant.Outlined"
+                          @bind-Value:after="OnFilterChanged">
+                    <MudSelectItem Value="@("All")">All Types</MudSelectItem>
+                    <MudSelectItem Value="@("Cabin")">Cabin</MudSelectItem>
+                    <MudSelectItem Value="@("Tent Site")">Tent Site</MudSelectItem>
+                    <MudSelectItem Value="@("Glamping")">Glamping</MudSelectItem>
+                    <MudSelectItem Value="@("RV Spot")">RV Spot</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="3">
+                <MudSelect T="string"
+                           Label="Amenities"
+                           Variant="Variant.Outlined"
+                           MultiSelection="true"
+                           @bind-SelectedValues="_selectedAmenities"
+                           @bind-SelectedValues:after="OnFilterChanged"
+                           MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                    <MudSelectItem T="string" Value="@("Pool")">
+                        <MudIcon Icon="@Icons.Material.Filled.Pool" Size="Size.Small" Class="mr-2" />
+                        Pool
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Dog-Friendly")">
+                        <MudIcon Icon="@Icons.Material.Filled.Pets" Size="Size.Small" Class="mr-2" />
+                        Dog-Friendly
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Campingvan-Friendly")">
+                        <MudIcon Icon="@Icons.Material.Filled.RvHookup" Size="Size.Small" Class="mr-2" />
+                        Campingvan-Friendly
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Near-Beach")">
+                        <MudIcon Icon="@Icons.Material.Filled.BeachAccess" Size="Size.Small" Class="mr-2" />
+                        Near Beach
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("WiFi")">
+                        <MudIcon Icon="@Icons.Material.Filled.Wifi" Size="Size.Small" Class="mr-2" />
+                        WiFi
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Electric-Hookup")">
+                        <MudIcon Icon="@Icons.Material.Filled.ElectricBolt" Size="Size.Small" Class="mr-2" />
+                        Electric Hookup
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Water-Access")">
+                        <MudIcon Icon="@Icons.Material.Filled.Water" Size="Size.Small" Class="mr-2" />
+                        Water Access
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Playground")">
+                        <MudIcon Icon="@Icons.Material.Filled.ChildFriendly" Size="Size.Small" Class="mr-2" />
+                        Playground
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Restaurant")">
+                        <MudIcon Icon="@Icons.Material.Filled.Restaurant" Size="Size.Small" Class="mr-2" />
+                        Restaurant
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Fire-Pit")">
+                        <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" Size="Size.Small" Class="mr-2" />
+                        Fire Pit
+                    </MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Picnic-Table")">
+                        <MudIcon Icon="@Icons.Material.Filled.TableRestaurant" Size="Size.Small" Class="mr-2" />
+                        Picnic Table
+                    </MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Map -->
+    <MudPaper Elevation="3" Class="pa-4" Style="height: 700px;">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            Campsites in Denmark (@_filteredCampsites.Count available)
+        </MudText>
+
+        <!-- Google Maps Container -->
+        <div style="position: relative; width: 100%; height: 650px;">
+            <gmp-map center="56.2639,10.4515" zoom="7" map-id="DEMO_MAP_ID" style="width: 100%; height: 100%;">
+                @foreach (var campsite in _filteredCampsites)
+                {
+                    <gmp-advanced-marker
+                        position="@($"{campsite.Latitude},{campsite.Longitude}")"
+                        title="@campsite.Name">
+                    </gmp-advanced-marker>
+                }
+            </gmp-map>
+
+            <!-- Selected Campsite Info Card -->
+            @if (_selectedCampsite != null)
+            {
+                <MudCard Style="position: absolute; bottom: 20px; right: 20px; width: 300px;" Elevation="4">
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6">@_selectedCampsite.Name</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">@_selectedCampsite.Region</MudText>
+                        <MudText Typo="Typo.body2">@_selectedCampsite.Description</MudText>
+                        <MudText Typo="Typo.body2" Class="mt-2">
+                            <strong>Available:</strong> @_selectedCampsite.AvailableSpots spots
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+            }
+        </div>
+    </MudPaper>
+</MudContainer>
+
+
+@code {
+    private DateRange? _dateRange = new DateRange(DateTime.Today.AddDays(1), DateTime.Today.AddDays(3));
+    private int _adults = 2;
+    private int _children = 0;
+    private string _accommodationType = "All";
+    private IEnumerable<string> _selectedAmenities = new HashSet<string>();
+    private List<CampsiteDto> _allCampsites = new();
+    private List<CampsiteDto> _filteredCampsites = new();
+    private CampsiteDto? _selectedCampsite = null;
+
+    protected override void OnInitialized()
+    {
+        // Mock campsite data - will be replaced with actual API call
+        _allCampsites = new List<CampsiteDto>
+        {
+            new CampsiteDto
+            {
+                Id = 1,
+                Name = "Copenhagen Beach Camp",
+                Region = "Zealand",
+                Description = "Beautiful beachside camping near Copenhagen",
+                Latitude = 55.6761,
+                Longitude = 12.5683,
+                AvailableSpots = 45,
+                AccommodationTypes = new List<string> { "Cabin", "Tent Site", "RV Spot" },
+                Amenities = new List<string> { "Pool", "WiFi", "Near-Beach", "Dog-Friendly", "Electric-Hookup", "Restaurant", "Playground" }
+            },
+            new CampsiteDto
+            {
+                Id = 2,
+                Name = "Skagen North Point",
+                Region = "North Jutland",
+                Description = "Denmark's northernmost campsite with stunning views",
+                Latitude = 57.7209,
+                Longitude = 10.5882,
+                AvailableSpots = 32,
+                AccommodationTypes = new List<string> { "Cabin", "Tent Site", "Glamping" },
+                Amenities = new List<string> { "Near-Beach", "WiFi", "Fire-Pit", "Picnic-Table", "Restaurant" }
+            },
+            new CampsiteDto
+            {
+                Id = 3,
+                Name = "Aarhus Forest Retreat",
+                Region = "East Jutland",
+                Description = "Peaceful forest camping near Aarhus city",
+                Latitude = 56.1629,
+                Longitude = 10.2039,
+                AvailableSpots = 28,
+                AccommodationTypes = new List<string> { "Cabin", "Glamping", "Tent Site" },
+                Amenities = new List<string> { "WiFi", "Dog-Friendly", "Fire-Pit", "Water-Access", "Picnic-Table", "Playground" }
+            },
+            new CampsiteDto
+            {
+                Id = 4,
+                Name = "Odense Family Camp",
+                Region = "Funen",
+                Description = "Family-friendly campsite on Funen island",
+                Latitude = 55.4038,
+                Longitude = 10.4024,
+                AvailableSpots = 52,
+                AccommodationTypes = new List<string> { "Cabin", "RV Spot", "Tent Site" },
+                Amenities = new List<string> { "Pool", "WiFi", "Electric-Hookup", "Water-Access", "Dog-Friendly", "Campingvan-Friendly", "Playground", "Restaurant" }
+            },
+            new CampsiteDto
+            {
+                Id = 5,
+                Name = "Bornholm Island Camp",
+                Region = "Bornholm",
+                Description = "Scenic island camping with rocky coastline",
+                Latitude = 55.1367,
+                Longitude = 14.9155,
+                AvailableSpots = 18,
+                AccommodationTypes = new List<string> { "Cabin", "Tent Site" },
+                Amenities = new List<string> { "Near-Beach", "Fire-Pit", "Picnic-Table", "Dog-Friendly" }
+            },
+            new CampsiteDto
+            {
+                Id = 6,
+                Name = "Ribe Viking Camp",
+                Region = "Southwest Jutland",
+                Description = "Historic campsite near Denmark's oldest town",
+                Latitude = 55.3282,
+                Longitude = 8.7619,
+                AvailableSpots = 38,
+                AccommodationTypes = new List<string> { "Cabin", "Glamping", "RV Spot" },
+                Amenities = new List<string> { "WiFi", "Electric-Hookup", "Campingvan-Friendly", "Water-Access", "Fire-Pit", "Restaurant" }
+            },
+            new CampsiteDto
+            {
+                Id = 7,
+                Name = "Roskilde Fjord Camp",
+                Region = "Zealand",
+                Description = "Waterfront camping by the beautiful Roskilde Fjord",
+                Latitude = 55.6415,
+                Longitude = 12.0803,
+                AvailableSpots = 41,
+                AccommodationTypes = new List<string> { "Cabin", "Tent Site", "Glamping" },
+                Amenities = new List<string> { "Pool", "Near-Beach", "Water-Access", "WiFi", "Dog-Friendly", "Fire-Pit", "Picnic-Table", "Playground" }
+            },
+            new CampsiteDto
+            {
+                Id = 8,
+                Name = "Aalborg Limfjord",
+                Region = "North Jutland",
+                Description = "Camping by the Limfjord with water activities",
+                Latitude = 57.0488,
+                Longitude = 9.9217,
+                AvailableSpots = 35,
+                AccommodationTypes = new List<string> { "RV Spot", "Tent Site", "Cabin" },
+                Amenities = new List<string> { "Water-Access", "Campingvan-Friendly", "Electric-Hookup", "WiFi", "Picnic-Table" }
+            }
+        };
+
+        _filteredCampsites = _allCampsites;
+    }
+
+    private void OnFilterChanged()
+    {
+        _filteredCampsites = _allCampsites;
+
+        // Filter by accommodation type
+        if (_accommodationType != "All")
+        {
+            _filteredCampsites = _filteredCampsites
+                .Where(c => c.AccommodationTypes.Contains(_accommodationType))
+                .ToList();
+        }
+
+        // Filter by amenities (campsite must have ALL selected amenities)
+        if (_selectedAmenities.Any())
+        {
+            _filteredCampsites = _filteredCampsites
+                .Where(c => _selectedAmenities.All(amenity => c.Amenities.Contains(amenity)))
+                .ToList();
+        }
+
+        // Clear selection if selected campsite is no longer in filtered list
+        if (_selectedCampsite != null && !_filteredCampsites.Contains(_selectedCampsite))
+        {
+            _selectedCampsite = null;
+        }
+    }
+
+    private void SelectCampsite(CampsiteDto campsite)
+    {
+        _selectedCampsite = campsite;
+    }
+
+    private string GetMultiSelectionText(List<string> selectedValues)
+    {
+        if (!selectedValues.Any())
+            return "All Amenities";
+
+        if (selectedValues.Count == 1)
+            return selectedValues[0];
+
+        return $"{selectedValues.Count} selected";
+    }
+
+    private Color GetCampsiteColor(string region) => region switch
+    {
+        "Zealand" => Color.Primary,
+        "North Jutland" => Color.Info,
+        "East Jutland" => Color.Success,
+        "Funen" => Color.Warning,
+        "Bornholm" => Color.Secondary,
+        "Southwest Jutland" => Color.Tertiary,
+        _ => Color.Default
+    };
+
+    public class CampsiteDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Region { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+        public int AvailableSpots { get; set; }
+        public List<string> AccommodationTypes { get; set; } = new();
+        public List<string> Amenities { get; set; } = new();
+    }
+}

@@ -1,0 +1,104 @@
+@using MudBlazor
+@inject IDialogService DialogService
+@rendermode InteractiveServer
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="AddOn.Name" Label="Add-on Name" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="AddOn.Description" Label="Description" Variant="Variant.Outlined" Lines="3" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField @bind-Value="AddOn.Price" Label="Price" Variant="Variant.Outlined" 
+                                 Format="N2" Min="0" Adornment="Adornment.Start" AdornmentText="DKK" Required="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="AddOn.Type" Label="Type" Variant="Variant.Outlined" Required="true">
+                    <MudSelectItem Value="@("Cleaning")">
+                        <MudIcon Icon="@Icons.Material.Filled.CleaningServices" Size="Size.Small" Class="mr-2" />
+                        Cleaning
+                    </MudSelectItem>
+                    <MudSelectItem Value="@("Electricity")">
+                        <MudIcon Icon="@Icons.Material.Filled.ElectricBolt" Size="Size.Small" Class="mr-2" />
+                        Electricity
+                    </MudSelectItem>
+                    <MudSelectItem Value="@("Firewood")">
+                        <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" Size="Size.Small" Class="mr-2" />
+                        Firewood
+                    </MudSelectItem>
+                    <MudSelectItem Value="@("Parking")">
+                        <MudIcon Icon="@Icons.Material.Filled.LocalParking" Size="Size.Small" Class="mr-2" />
+                        Parking
+                    </MudSelectItem>
+                    <MudSelectItem Value="@("WiFi")">
+                        <MudIcon Icon="@Icons.Material.Filled.Wifi" Size="Size.Small" Class="mr-2" />
+                        WiFi
+                    </MudSelectItem>
+                    <MudSelectItem Value="@("Breakfast")">
+                        <MudIcon Icon="@Icons.Material.Filled.FreeBreakfast" Size="Size.Small" Class="mr-2" />
+                        Breakfast
+                    </MudSelectItem>
+                    <MudSelectItem Value="@("Linen")">
+                        <MudIcon Icon="@Icons.Material.Filled.Bed" Size="Size.Small" Class="mr-2" />
+                        Linen
+                    </MudSelectItem>
+                    <MudSelectItem Value="@("Towels")">
+                        <MudIcon Icon="@Icons.Material.Filled.Shower" Size="Size.Small" Class="mr-2" />
+                        Towels
+                    </MudSelectItem>
+                    <MudSelectItem Value="@("Other")">
+                        <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Small" Class="mr-2" />
+                        Other
+                    </MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudSwitch @bind-Value="AddOn.IsActive" Color="Color.Success" Label="Active" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">@(IsEdit ? "Update" : "Create")</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public AddOnDto AddOn { get; set; } = new();
+
+    [Parameter]
+    public bool IsEdit { get; set; }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(AddOn.Name) || string.IsNullOrWhiteSpace(AddOn.Type))
+        {
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(AddOn));
+    }
+
+    public class AddOnDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
+    }
+}
+
