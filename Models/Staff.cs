@@ -7,7 +7,7 @@ public class Staff : User
 {
     public int StaffId { get; set; }
     
-    private string _employeeId = string.Empty;c
+    private string _employeeId = string.Empty;
     public string EmployeeId
     {
         get => _employeeId;
