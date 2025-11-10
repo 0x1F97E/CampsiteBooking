@@ -77,6 +77,13 @@
 /home/pc/Desktop/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.pdb
 /home/pc/Desktop/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.genruntimeconfig.cache
 /home/pc/Desktop/CampsiteBooking/obj/Debug/net9.0/ref/CampsiteBooking.dll
+/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.csproj.AssemblyReference.cache
+/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.GeneratedMSBuildEditorConfig.editorconfig
+/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.AssemblyInfoInputs.cache
+/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.AssemblyInfo.cs
+/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.csproj.CoreCompileInputs.cache
+/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.MvcApplicationPartsAssemblyInfo.cache
+/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.sourcelink.json
 /home/pc/Documents/CampsiteBooking/bin/Debug/net9.0/appsettings.Development.json
 /home/pc/Documents/CampsiteBooking/bin/Debug/net9.0/appsettings.json
 /home/pc/Documents/CampsiteBooking/bin/Debug/net9.0/CampsiteBooking.staticwebassets.runtime.json
@@ -100,13 +107,6 @@
 /home/pc/Documents/CampsiteBooking/bin/Debug/net9.0/Microsoft.Extensions.Primitives.dll
 /home/pc/Documents/CampsiteBooking/bin/Debug/net9.0/Microsoft.JSInterop.dll
 /home/pc/Documents/CampsiteBooking/bin/Debug/net9.0/MudBlazor.dll
-/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.csproj.AssemblyReference.cache
-/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.GeneratedMSBuildEditorConfig.editorconfig
-/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.AssemblyInfoInputs.cache
-/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.AssemblyInfo.cs
-/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.csproj.CoreCompileInputs.cache
-/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.MvcApplicationPartsAssemblyInfo.cache
-/home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/CampsiteBooking.sourcelink.json
 /home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/scopedcss/Components/Layout/MainLayout.razor.rz.scp.css
 /home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/scopedcss/Components/Layout/NavMenu.razor.rz.scp.css
 /home/pc/Documents/CampsiteBooking/obj/Debug/net9.0/scopedcss/bundle/CampsiteBooking.styles.css
