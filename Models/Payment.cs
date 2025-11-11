@@ -1,153 +1,151 @@
+using CampsiteBooking.Models.Common;
 using CampsiteBooking.Models.ValueObjects;
-using CampsiteBooking.Models.DomainEvents;
 
 namespace CampsiteBooking.Models;
 
 /// <summary>
 /// Payment entity representing a payment transaction
+/// Part of the Booking aggregate
 /// </summary>
-public class Payment
+public class Payment : Entity<PaymentId>
 {
-    public int PaymentId { get; set; }
-
-    private int _bookingId;
-    public int BookingId
-    {
-        get => _bookingId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("BookingId must be greater than 0", nameof(BookingId));
-            _bookingId = value;
-        }
-    }
-
-    // Value Object: Money
-    private Money? _amount;
-    public Money? Amount
-    {
-        get => _amount;
-        set
-        {
-            if (value != null && value.Amount <= 0)
-                throw new ArgumentException("Payment amount must be greater than 0", nameof(Amount));
-            _amount = value;
-        }
-    }
-
-    public string Currency { get; set; } = "DKK"; // DKK, EUR, USD
-    public string Method { get; set; } = string.Empty; // CreditCard, DebitCard, MobilePay, BankTransfer
-
+    // ============================================================================
+    // PRIVATE FIELDS
+    // ============================================================================
+    
+    private BookingId _bookingId = null!;
+    private Money _amount = null!;
+    private string _method = string.Empty;
     private string _transactionId = string.Empty;
-    public string TransactionId
-    {
-        get => _transactionId;
-        set
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                throw new ArgumentException("TransactionId cannot be empty", nameof(TransactionId));
-            _transactionId = value;
-        }
-    }
-
-    // Value Object: PaymentStatus
     private PaymentStatus _status = PaymentStatus.Pending;
-    public PaymentStatus Status
-    {
-        get => _status;
-        set => _status = value;
-    }
-
-    public DateTime PaymentDate { get; set; } = DateTime.UtcNow;
-    public DateTime? RefundDate { get; set; }
-
-    // Value Object: Money for refund
+    private DateTime _paymentDate;
+    private DateTime? _refundDate;
     private Money? _refundAmount;
-    public Money? RefundAmount
+    private DateTime _createdDate;
+    
+    // ============================================================================
+    // PUBLIC PROPERTIES (Read-only)
+    // ============================================================================
+    
+    public BookingId BookingId => _bookingId;
+    public Money Amount => _amount;
+    public string Method => _method;
+    public string TransactionId => _transactionId;
+    public PaymentStatus Status => _status;
+    public DateTime PaymentDate => _paymentDate;
+    public DateTime? RefundDate => _refundDate;
+    public Money? RefundAmount => _refundAmount;
+    public DateTime CreatedDate => _createdDate;
+    
+    // ============================================================================
+    // LEGACY PROPERTIES (for EF Core backward compatibility)
+    // ============================================================================
+    
+    public int PaymentId
     {
-        get => _refundAmount;
-        set
-        {
-            if (value != null && Amount != null && value.Amount > Amount.Amount)
-                throw new ArgumentException("RefundAmount cannot exceed original Amount", nameof(RefundAmount));
-            _refundAmount = value;
-        }
+        get => Id?.Value ?? 0;
+        private set => Id = value > 0 ? ValueObjects.PaymentId.Create(value) : ValueObjects.PaymentId.CreateNew();
     }
-
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-
-    // Domain Events
-    private readonly List<IDomainEvent> _domainEvents = new();
-    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
-
-    public void ClearDomainEvents() => _domainEvents.Clear();
-
+    
+    public string Currency
+    {
+        get => _amount?.Currency ?? "DKK";
+        set { } // Ignored - currency is part of Money value object
+    }
+    
+    // ============================================================================
+    // FACTORY METHOD
+    // ============================================================================
+    
+    public static Payment Create(
+        BookingId bookingId,
+        Money amount,
+        string method,
+        string transactionId)
+    {
+        // Validate business rules
+        if (string.IsNullOrWhiteSpace(method))
+            throw new DomainException("Payment method cannot be empty");
+        
+        var validMethods = new[] { "CreditCard", "DebitCard", "MobilePay", "BankTransfer", "Cash" };
+        if (!validMethods.Contains(method))
+            throw new DomainException("Payment method must be CreditCard, DebitCard, MobilePay, BankTransfer, or Cash");
+        
+        if (string.IsNullOrWhiteSpace(transactionId))
+            throw new DomainException("Transaction ID cannot be empty");
+        
+        var payment = new Payment
+        {
+            Id = ValueObjects.PaymentId.CreateNew(),
+            _bookingId = bookingId,
+            _amount = amount,
+            _method = method,
+            _transactionId = transactionId.Trim(),
+            _status = PaymentStatus.Pending,
+            _paymentDate = DateTime.UtcNow,
+            _createdDate = DateTime.UtcNow
+        };
+        
+        return payment;
+    }
+    
+    // ============================================================================
+    // CONSTRUCTORS
+    // ============================================================================
+    
     /// <summary>
-    /// Marks the payment as completed
+    /// Protected constructor for EF Core
     /// </summary>
+    private Payment()
+    {
+    }
+    
+    // ============================================================================
+    // DOMAIN BEHAVIOR
+    // ============================================================================
+    
     public void MarkAsCompleted()
     {
-        if (!Status.CanTransitionTo(PaymentStatus.Completed))
-            throw new InvalidOperationException("Only pending payments can be completed");
-
-        Status = PaymentStatus.Completed;
-        PaymentDate = DateTime.UtcNow;
-
-        // Raise domain event
-        _domainEvents.Add(new PaymentCompletedEvent(
-            PaymentId,
-            BookingId,
-            Amount?.Amount ?? 0m,
-            Amount?.Currency ?? "DKK",
-            Method
-        ));
+        if (!_status.CanTransitionTo(PaymentStatus.Completed))
+            throw new DomainException("Only pending payments can be completed");
+        
+        _status = PaymentStatus.Completed;
+        _paymentDate = DateTime.UtcNow;
     }
-
-    /// <summary>
-    /// Marks the payment as failed
-    /// </summary>
+    
     public void MarkAsFailed()
     {
-        if (!Status.CanTransitionTo(PaymentStatus.Failed))
-            throw new InvalidOperationException("Only pending payments can be marked as failed");
-
-        Status = PaymentStatus.Failed;
+        if (!_status.CanTransitionTo(PaymentStatus.Failed))
+            throw new DomainException("Only pending payments can be marked as failed");
+        
+        _status = PaymentStatus.Failed;
     }
-
-    /// <summary>
-    /// Processes a refund
-    /// </summary>
-    public void ProcessRefund(decimal amount)
+    
+    public void ProcessRefund(Money refundAmount)
     {
-        if (!Status.CanTransitionTo(PaymentStatus.Refunded))
-            throw new InvalidOperationException("Only completed payments can be refunded");
-
-        if (amount <= 0)
-            throw new ArgumentException("Refund amount must be positive", nameof(amount));
-
-        if (Amount != null && amount > Amount.Amount)
-            throw new ArgumentException("Refund amount cannot exceed original payment amount", nameof(amount));
-
-        RefundAmount = Money.Create(amount, Amount?.Currency ?? "DKK");
-        RefundDate = DateTime.UtcNow;
-        Status = PaymentStatus.Refunded;
-
-        // Raise domain event
-        _domainEvents.Add(new PaymentRefundedEvent(
-            PaymentId,
-            BookingId,
-            amount,
-            Amount?.Currency ?? "DKK"
-        ));
+        if (!_status.CanTransitionTo(PaymentStatus.Refunded))
+            throw new DomainException("Only completed payments can be refunded");
+        
+        if (refundAmount.Amount > _amount.Amount)
+            throw new DomainException("Refund amount cannot exceed original payment amount");
+        
+        if (refundAmount.Currency != _amount.Currency)
+            throw new DomainException("Refund currency must match original payment currency");
+        
+        _refundAmount = refundAmount;
+        _refundDate = DateTime.UtcNow;
+        _status = PaymentStatus.Refunded;
     }
-
-    /// <summary>
-    /// Validates currency code
-    /// </summary>
+    
     public bool IsValidCurrency()
     {
         var validCurrencies = new[] { "DKK", "EUR", "USD", "GBP", "SEK", "NOK" };
-        return validCurrencies.Contains(Currency);
+        return validCurrencies.Contains(_amount.Currency);
     }
+    
+    public bool IsCompleted() => _status == PaymentStatus.Completed;
+    public bool IsPending() => _status == PaymentStatus.Pending;
+    public bool IsFailed() => _status == PaymentStatus.Failed;
+    public bool IsRefunded() => _status == PaymentStatus.Refunded;
 }
 

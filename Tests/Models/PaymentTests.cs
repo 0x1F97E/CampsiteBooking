@@ -1,4 +1,5 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.Common;
 using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
@@ -6,200 +7,152 @@ namespace CampsiteBooking.Tests.Models;
 
 public class PaymentTests
 {
-    [Fact]
-    public void Payment_Amount_MustBePositive()
+    private Payment CreateValidPayment(
+        int bookingId = 1,
+        decimal amount = 500.0m,
+        string currency = "DKK",
+        string method = "CreditCard",
+        string transactionId = "TXN123")
     {
-        // Arrange
-        var payment = new Payment
-        {
-            BookingId = 1,
-            TransactionId = "TXN123"
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => payment.Amount = Money.Create(0));
-        Assert.Throws<ArgumentException>(() => payment.Amount = Money.Create(-100));
+        return Payment.Create(
+            BookingId.Create(bookingId),
+            Money.Create(amount, currency),
+            method,
+            transactionId
+        );
     }
 
     [Fact]
-    public void Payment_RefundAmount_CannotExceedOriginalAmount()
+    public void Payment_CanBeCreated_WithValidData()
     {
-        // Arrange
-        var payment = new Payment
-        {
-            BookingId = 1,
-            Amount = Money.Create(500),
-            TransactionId = "TXN123"
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => payment.RefundAmount = Money.Create(600));
+        var payment = CreateValidPayment();
+        Assert.NotNull(payment);
+        Assert.Equal(500.0m, payment.Amount.Amount);
+        Assert.Equal("DKK", payment.Amount.Currency);
+        Assert.Equal("CreditCard", payment.Method);
+        Assert.Equal(PaymentStatus.Pending, payment.Status);
     }
 
     [Fact]
-    public void Payment_RefundAmount_CannotBeNegative()
+    public void Payment_Create_ThrowsException_WhenMethodIsEmpty()
     {
-        // Arrange
-        var payment = new Payment
-        {
-            BookingId = 1,
-            Amount = Money.Create(500),
-            TransactionId = "TXN123"
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => payment.RefundAmount = Money.Create(-100));
+        Assert.Throws<DomainException>(() => CreateValidPayment(method: ""));
     }
-    
-    [Fact]
-    public void Payment_CanTransition_FromPendingToCompleted()
-    {
-        // Arrange
-        var payment = new Payment
-        {
-            PaymentId = 1,
-            BookingId = 1,
-            Amount = Money.Create(500),
-            TransactionId = "TXN123",
-            Status = PaymentStatus.Pending
-        };
 
-        // Act
+    [Fact]
+    public void Payment_Create_ThrowsException_WhenMethodIsInvalid()
+    {
+        Assert.Throws<DomainException>(() => CreateValidPayment(method: "Invalid"));
+    }
+
+    [Theory]
+    [InlineData("CreditCard")]
+    [InlineData("DebitCard")]
+    [InlineData("MobilePay")]
+    [InlineData("BankTransfer")]
+    [InlineData("Cash")]
+    public void Payment_Create_AcceptsValidMethods(string method)
+    {
+        var payment = CreateValidPayment(method: method);
+        Assert.Equal(method, payment.Method);
+    }
+
+    [Fact]
+    public void Payment_Create_ThrowsException_WhenTransactionIdIsEmpty()
+    {
+        Assert.Throws<DomainException>(() => CreateValidPayment(transactionId: ""));
+    }
+
+    [Fact]
+    public void Payment_MarkAsCompleted_ChangesStatusToCompleted()
+    {
+        var payment = CreateValidPayment();
         payment.MarkAsCompleted();
-
-        // Assert
         Assert.Equal(PaymentStatus.Completed, payment.Status);
-        Assert.Single(payment.DomainEvents); // Should raise PaymentCompletedEvent
+        Assert.True(payment.IsCompleted());
     }
 
     [Fact]
-    public void Payment_CanTransition_FromPendingToFailed()
+    public void Payment_MarkAsCompleted_ThrowsException_WhenNotPending()
     {
-        // Arrange
-        var payment = new Payment
-        {
-            BookingId = 1,
-            Amount = Money.Create(500),
-            TransactionId = "TXN123",
-            Status = PaymentStatus.Pending
-        };
+        var payment = CreateValidPayment();
+        payment.MarkAsCompleted();
+        Assert.Throws<DomainException>(() => payment.MarkAsCompleted());
+    }
 
-        // Act
+    [Fact]
+    public void Payment_MarkAsFailed_ChangesStatusToFailed()
+    {
+        var payment = CreateValidPayment();
         payment.MarkAsFailed();
-
-        // Assert
         Assert.Equal(PaymentStatus.Failed, payment.Status);
+        Assert.True(payment.IsFailed());
     }
 
     [Fact]
-    public void Payment_CannotBeCompleted_WhenNotPending()
+    public void Payment_MarkAsFailed_ThrowsException_WhenNotPending()
     {
-        // Arrange
-        var payment = new Payment
-        {
-            BookingId = 1,
-            Amount = Money.Create(500),
-            TransactionId = "TXN123",
-            Status = PaymentStatus.Completed
-        };
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => payment.MarkAsCompleted());
+        var payment = CreateValidPayment();
+        payment.MarkAsCompleted();
+        Assert.Throws<DomainException>(() => payment.MarkAsFailed());
     }
 
     [Fact]
-    public void Payment_ProcessRefund_SetsRefundAmountAndDate()
+    public void Payment_ProcessRefund_ChangesStatusToRefunded()
     {
-        // Arrange
-        var payment = new Payment
-        {
-            PaymentId = 1,
-            BookingId = 1,
-            Amount = Money.Create(500),
-            TransactionId = "TXN123",
-            Status = PaymentStatus.Completed
-        };
-
-        // Act
-        payment.ProcessRefund(300);
-
-        // Assert
-        Assert.Equal(300m, payment.RefundAmount?.Amount);
-        Assert.NotNull(payment.RefundDate);
+        var payment = CreateValidPayment(amount: 500.0m);
+        payment.MarkAsCompleted();
+        
+        var refundAmount = Money.Create(300.0m, "DKK");
+        payment.ProcessRefund(refundAmount);
+        
         Assert.Equal(PaymentStatus.Refunded, payment.Status);
-        Assert.Single(payment.DomainEvents); // Should raise PaymentRefundedEvent
+        Assert.Equal(300.0m, payment.RefundAmount?.Amount);
+        Assert.NotNull(payment.RefundDate);
+        Assert.True(payment.IsRefunded());
     }
 
     [Fact]
     public void Payment_ProcessRefund_ThrowsException_WhenNotCompleted()
     {
-        // Arrange
-        var payment = new Payment
-        {
-            BookingId = 1,
-            Amount = Money.Create(500),
-            TransactionId = "TXN123",
-            Status = PaymentStatus.Pending
-        };
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => payment.ProcessRefund(300));
+        var payment = CreateValidPayment();
+        var refundAmount = Money.Create(100.0m, "DKK");
+        Assert.Throws<DomainException>(() => payment.ProcessRefund(refundAmount));
     }
 
     [Fact]
-    public void Payment_ProcessRefund_ThrowsException_WhenAmountExceedsOriginal()
+    public void Payment_ProcessRefund_ThrowsException_WhenRefundExceedsOriginalAmount()
     {
-        // Arrange
-        var payment = new Payment
-        {
-            BookingId = 1,
-            Amount = Money.Create(500),
-            TransactionId = "TXN123",
-            Status = PaymentStatus.Completed
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => payment.ProcessRefund(600));
-    }
-
-    [Theory]
-    [InlineData("DKK", true)]
-    [InlineData("EUR", true)]
-    [InlineData("USD", true)]
-    [InlineData("GBP", true)]
-    [InlineData("SEK", true)]
-    [InlineData("NOK", true)]
-    [InlineData("INVALID", false)]
-    public void Payment_IsValidCurrency_ValidatesCorrectly(string currency, bool expectedValid)
-    {
-        // Arrange
-        var payment = new Payment
-        {
-            BookingId = 1,
-            Amount = Money.Create(500),
-            TransactionId = "TXN123",
-            Currency = currency
-        };
-
-        // Act
-        var isValid = payment.IsValidCurrency();
-
-        // Assert
-        Assert.Equal(expectedValid, isValid);
+        var payment = CreateValidPayment(amount: 500.0m);
+        payment.MarkAsCompleted();
+        
+        var refundAmount = Money.Create(600.0m, "DKK");
+        Assert.Throws<DomainException>(() => payment.ProcessRefund(refundAmount));
     }
 
     [Fact]
-    public void Payment_TransactionId_CannotBeEmpty()
+    public void Payment_ProcessRefund_ThrowsException_WhenCurrencyMismatch()
     {
-        // Arrange
-        var payment = new Payment
-        {
-            BookingId = 1,
-            Amount = Money.Create(500)
-        };
+        var payment = CreateValidPayment(amount: 500.0m, currency: "DKK");
+        payment.MarkAsCompleted();
+        
+        var refundAmount = Money.Create(100.0m, "EUR");
+        Assert.Throws<DomainException>(() => payment.ProcessRefund(refundAmount));
+    }
 
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => payment.TransactionId = "");
-        Assert.Throws<ArgumentException>(() => payment.TransactionId = " ");
+    [Fact]
+    public void Payment_IsValidCurrency_ReturnsTrueForValidCurrencies()
+    {
+        var payment = CreateValidPayment(currency: "DKK");
+        Assert.True(payment.IsValidCurrency());
+    }
+
+    [Fact]
+    public void Payment_IsPending_ReturnsTrueForPendingPayment()
+    {
+        var payment = CreateValidPayment();
+        Assert.True(payment.IsPending());
+        Assert.False(payment.IsCompleted());
     }
 }
+
