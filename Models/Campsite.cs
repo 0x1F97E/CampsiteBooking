@@ -1,109 +1,205 @@
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
+
 namespace CampsiteBooking.Models;
 
 /// <summary>
-/// Campsite entity representing a physical campsite location
+/// Campsite aggregate root representing a physical campsite location
 /// </summary>
-public class Campsite
+public class Campsite : AggregateRoot<CampsiteId>
 {
-    public int CampsiteId { get; set; }
+    // ============================================================================
+    // PRIVATE FIELDS
+    // ============================================================================
     
     private string _name = string.Empty;
-    public string Name
-    {
-        get => _name;
-        set
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                throw new ArgumentException("Name cannot be empty", nameof(Name));
-            _name = value;
-        }
-    }
-    
-    public string Region { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    
+    private string _region = string.Empty;
+    private string _description = string.Empty;
     private double _latitude;
-    public double Latitude
-    {
-        get => _latitude;
-        set
-        {
-            if (value < -90 || value > 90)
-                throw new ArgumentException("Latitude must be between -90 and 90", nameof(Latitude));
-            _latitude = value;
-        }
-    }
-    
     private double _longitude;
-    public double Longitude
-    {
-        get => _longitude;
-        set
-        {
-            if (value < -180 || value > 180)
-                throw new ArgumentException("Longitude must be between -180 and 180", nameof(Longitude));
-            _longitude = value;
-        }
-    }
-    
-    public string Attractiveness { get; set; } = "Medium"; // Low, Medium, High, Very High
-    public string PhoneNumber { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string WebsiteUrl { get; set; } = string.Empty;
-    
+    private string _attractiveness = "Medium";
+    private string _phoneNumber = string.Empty;
+    private Email? _email;
+    private string _websiteUrl = string.Empty;
     private int _establishedYear;
-    public int EstablishedYear
-    {
-        get => _establishedYear;
-        set
-        {
-            if (value > DateTime.UtcNow.Year)
-                throw new ArgumentException("EstablishedYear cannot be in the future", nameof(EstablishedYear));
-            _establishedYear = value;
-        }
-    }
-    
-    public bool IsActive { get; set; } = true;
-    
+    private bool _isActive;
     private decimal _totalArea;
-    public decimal TotalArea
+    private DateTime _createdDate;
+    private DateTime _updatedDate;
+    
+    // ============================================================================
+    // PUBLIC PROPERTIES (Read-only)
+    // ============================================================================
+    
+    public string Name => _name;
+    public string Region => _region;
+    public string Description => _description;
+    public double Latitude => _latitude;
+    public double Longitude => _longitude;
+    public string Attractiveness => _attractiveness;
+    public string PhoneNumber => _phoneNumber;
+    public Email? Email => _email;
+    public string WebsiteUrl => _websiteUrl;
+    public int EstablishedYear => _establishedYear;
+    public bool IsActive => _isActive;
+    public decimal TotalArea => _totalArea;
+    public DateTime CreatedDate => _createdDate;
+    public DateTime UpdatedDate => _updatedDate;
+    
+    // ============================================================================
+    // LEGACY PROPERTIES (for EF Core backward compatibility)
+    // ============================================================================
+    
+    public int CampsiteId
     {
-        get => _totalArea;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("TotalArea must be positive", nameof(TotalArea));
-            _totalArea = value;
-        }
+        get => Id?.Value ?? 0;
+        private set => Id = value > 0 ? ValueObjects.CampsiteId.Create(value) : ValueObjects.CampsiteId.CreateNew();
     }
     
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
+    // ============================================================================
+    // FACTORY METHOD
+    // ============================================================================
+    
+    public static Campsite Create(
+        string name,
+        string region,
+        double latitude,
+        double longitude,
+        decimal totalArea,
+        int establishedYear,
+        string description = "",
+        string attractiveness = "Medium",
+        string phoneNumber = "",
+        Email? email = null,
+        string websiteUrl = "")
+    {
+        // Validate business rules
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException("Campsite name cannot be empty");
+        
+        if (name.Length > 200)
+            throw new DomainException("Campsite name cannot exceed 200 characters");
+        
+        if (latitude < -90 || latitude > 90)
+            throw new DomainException("Latitude must be between -90 and 90");
+        
+        if (longitude < -180 || longitude > 180)
+            throw new DomainException("Longitude must be between -180 and 180");
+        
+        if (totalArea <= 0)
+            throw new DomainException("Total area must be positive");
+        
+        if (establishedYear > DateTime.UtcNow.Year)
+            throw new DomainException("Established year cannot be in the future");
+        
+        var validAttractivenessLevels = new[] { "Low", "Medium", "High", "Very High" };
+        if (!validAttractivenessLevels.Contains(attractiveness))
+            throw new DomainException("Attractiveness must be Low, Medium, High, or Very High");
+        
+        var campsite = new Campsite
+        {
+            Id = ValueObjects.CampsiteId.CreateNew(),
+            _name = name.Trim(),
+            _region = region?.Trim() ?? string.Empty,
+            _description = description?.Trim() ?? string.Empty,
+            _latitude = latitude,
+            _longitude = longitude,
+            _attractiveness = attractiveness,
+            _phoneNumber = phoneNumber?.Trim() ?? string.Empty,
+            _email = email,
+            _websiteUrl = websiteUrl?.Trim() ?? string.Empty,
+            _establishedYear = establishedYear,
+            _totalArea = totalArea,
+            _isActive = true,
+            _createdDate = DateTime.UtcNow,
+            _updatedDate = DateTime.UtcNow
+        };
+        
+        return campsite;
+    }
+    
+    // ============================================================================
+    // CONSTRUCTORS
+    // ============================================================================
     
     /// <summary>
-    /// Activates the campsite
+    /// Protected constructor for EF Core
     /// </summary>
+    private Campsite()
+    {
+    }
+    
+    // ============================================================================
+    // DOMAIN BEHAVIOR
+    // ============================================================================
+    
     public void Activate()
     {
-        IsActive = true;
-        UpdatedDate = DateTime.UtcNow;
+        if (_isActive)
+            throw new DomainException("Campsite is already active");
+        
+        _isActive = true;
+        _updatedDate = DateTime.UtcNow;
     }
     
-    /// <summary>
-    /// Deactivates the campsite
-    /// </summary>
     public void Deactivate()
     {
-        IsActive = false;
-        UpdatedDate = DateTime.UtcNow;
+        if (!_isActive)
+            throw new DomainException("Campsite is already inactive");
+
+        _isActive = false;
+        _updatedDate = DateTime.UtcNow;
     }
-    
-    /// <summary>
-    /// Updates the campsite information
-    /// </summary>
-    public void Update()
+
+    public void UpdateInformation(
+        string name,
+        string region,
+        string description,
+        string attractiveness,
+        string phoneNumber,
+        Email? email,
+        string websiteUrl)
     {
-        UpdatedDate = DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException("Campsite name cannot be empty");
+
+        if (name.Length > 200)
+            throw new DomainException("Campsite name cannot exceed 200 characters");
+
+        var validAttractivenessLevels = new[] { "Low", "Medium", "High", "Very High" };
+        if (!validAttractivenessLevels.Contains(attractiveness))
+            throw new DomainException("Attractiveness must be Low, Medium, High, or Very High");
+
+        _name = name.Trim();
+        _region = region?.Trim() ?? string.Empty;
+        _description = description?.Trim() ?? string.Empty;
+        _attractiveness = attractiveness;
+        _phoneNumber = phoneNumber?.Trim() ?? string.Empty;
+        _email = email;
+        _websiteUrl = websiteUrl?.Trim() ?? string.Empty;
+        _updatedDate = DateTime.UtcNow;
+    }
+
+    public void UpdateLocation(double latitude, double longitude)
+    {
+        if (latitude < -90 || latitude > 90)
+            throw new DomainException("Latitude must be between -90 and 90");
+
+        if (longitude < -180 || longitude > 180)
+            throw new DomainException("Longitude must be between -180 and 180");
+
+        _latitude = latitude;
+        _longitude = longitude;
+        _updatedDate = DateTime.UtcNow;
+    }
+
+    public void UpdateTotalArea(decimal totalArea)
+    {
+        if (totalArea <= 0)
+            throw new DomainException("Total area must be positive");
+
+        _totalArea = totalArea;
+        _updatedDate = DateTime.UtcNow;
     }
 }
 

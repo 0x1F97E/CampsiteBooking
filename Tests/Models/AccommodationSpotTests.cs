@@ -1,333 +1,166 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
 namespace CampsiteBooking.Tests.Models;
 
 public class AccommodationSpotTests
 {
-    [Fact]
-    public void SpotId_ValidValue_SetsCorrectly()
+    private AccommodationSpot CreateValidAccommodationSpot(
+        string spotIdentifier = "A1",
+        int campsiteId = 1,
+        string campsiteName = "Test Campsite",
+        int accommodationTypeId = 1,
+        string type = "Tent",
+        double latitude = 56.0,
+        double longitude = 10.0,
+        decimal priceModifier = 1.0m)
     {
-        // Arrange
-        var spot = new AccommodationSpot();
-
-        // Act
-        spot.SpotId = "A-101";
-
-        // Assert
-        Assert.Equal("A-101", spot.SpotId);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void SpotId_EmptyValue_ThrowsArgumentException(string invalidSpotId)
-    {
-        // Arrange
-        var spot = new AccommodationSpot();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => spot.SpotId = invalidSpotId);
+        return AccommodationSpot.Create(
+            spotIdentifier,
+            CampsiteId.Create(campsiteId),
+            campsiteName,
+            AccommodationTypeId.Create(accommodationTypeId),
+            type,
+            latitude,
+            longitude,
+            priceModifier
+        );
     }
 
     [Fact]
-    public void CampsiteId_ValidValue_SetsCorrectly()
+    public void AccommodationSpot_CanBeCreated_WithValidData()
     {
-        // Arrange
-        var spot = new AccommodationSpot { SpotId = "A-101" };
-
-        // Act
-        spot.CampsiteId = 5;
-
-        // Assert
-        Assert.Equal(5, spot.CampsiteId);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-100)]
-    public void CampsiteId_InvalidValue_ThrowsArgumentException(int invalidCampsiteId)
-    {
-        // Arrange
-        var spot = new AccommodationSpot { SpotId = "A-101" };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => spot.CampsiteId = invalidCampsiteId);
+        var spot = CreateValidAccommodationSpot();
+        Assert.NotNull(spot);
+        Assert.Equal("A1", spot.SpotIdentifier);
+        Assert.Equal("Tent", spot.Type);
+        Assert.Equal(SpotStatus.Available, spot.Status);
     }
 
     [Fact]
-    public void AccommodationTypeId_ValidValue_SetsCorrectly()
+    public void AccommodationSpot_Create_ThrowsException_WhenSpotIdentifierIsEmpty()
     {
-        // Arrange
-        var spot = new AccommodationSpot { SpotId = "A-101", CampsiteId = 1 };
+        Assert.Throws<DomainException>(() => CreateValidAccommodationSpot(spotIdentifier: ""));
+    }
 
-        // Act
-        spot.AccommodationTypeId = 3;
-
-        // Assert
-        Assert.Equal(3, spot.AccommodationTypeId);
+    [Fact]
+    public void AccommodationSpot_Create_ThrowsException_WhenTypeIsInvalid()
+    {
+        Assert.Throws<DomainException>(() => CreateValidAccommodationSpot(type: "Invalid"));
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-100)]
-    public void AccommodationTypeId_InvalidValue_ThrowsArgumentException(int invalidTypeId)
+    [InlineData("Tent")]
+    [InlineData("Caravan")]
+    [InlineData("Cabin")]
+    [InlineData("Premium")]
+    public void AccommodationSpot_Create_AcceptsValidTypes(string type)
     {
-        // Arrange
-        var spot = new AccommodationSpot { SpotId = "A-101", CampsiteId = 1 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => spot.AccommodationTypeId = invalidTypeId);
+        var spot = CreateValidAccommodationSpot(type: type);
+        Assert.Equal(type, spot.Type);
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(45.5)]
-    [InlineData(-45.5)]
-    [InlineData(90)]
-    [InlineData(-90)]
-    public void Latitude_ValidValue_SetsCorrectly(double validLatitude)
-    {
-        // Arrange
-        var spot = new AccommodationSpot { SpotId = "A-101", CampsiteId = 1, AccommodationTypeId = 1 };
-
-        // Act
-        spot.Latitude = validLatitude;
-
-        // Assert
-        Assert.Equal(validLatitude, spot.Latitude);
-    }
-
-    [Theory]
-    [InlineData(91)]
     [InlineData(-91)]
-    [InlineData(100)]
-    [InlineData(-100)]
-    public void Latitude_InvalidValue_ThrowsArgumentException(double invalidLatitude)
+    [InlineData(91)]
+    public void AccommodationSpot_Create_ThrowsException_WhenLatitudeIsInvalid(double invalidLatitude)
     {
-        // Arrange
-        var spot = new AccommodationSpot { SpotId = "A-101", CampsiteId = 1, AccommodationTypeId = 1 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => spot.Latitude = invalidLatitude);
+        Assert.Throws<DomainException>(() => CreateValidAccommodationSpot(latitude: invalidLatitude));
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(90.5)]
-    [InlineData(-90.5)]
-    [InlineData(180)]
-    [InlineData(-180)]
-    public void Longitude_ValidValue_SetsCorrectly(double validLongitude)
-    {
-        // Arrange
-        var spot = new AccommodationSpot { SpotId = "A-101", CampsiteId = 1, AccommodationTypeId = 1 };
-
-        // Act
-        spot.Longitude = validLongitude;
-
-        // Assert
-        Assert.Equal(validLongitude, spot.Longitude);
-    }
-
-    [Theory]
-    [InlineData(181)]
     [InlineData(-181)]
-    [InlineData(200)]
-    [InlineData(-200)]
-    public void Longitude_InvalidValue_ThrowsArgumentException(double invalidLongitude)
+    [InlineData(181)]
+    public void AccommodationSpot_Create_ThrowsException_WhenLongitudeIsInvalid(double invalidLongitude)
     {
-        // Arrange
-        var spot = new AccommodationSpot { SpotId = "A-101", CampsiteId = 1, AccommodationTypeId = 1 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => spot.Longitude = invalidLongitude);
-    }
-
-    [Theory]
-    [InlineData("Available")]
-    [InlineData("Occupied")]
-    [InlineData("Reserved")]
-    [InlineData("Maintenance")]
-    public void Status_ValidValue_SetsCorrectly(string validStatus)
-    {
-        // Arrange
-        var spot = new AccommodationSpot { SpotId = "A-101", CampsiteId = 1, AccommodationTypeId = 1 };
-
-        // Act
-        spot.Status = validStatus;
-
-        // Assert
-        Assert.Equal(validStatus, spot.Status);
-    }
-
-    [Theory]
-    [InlineData("Invalid")]
-    [InlineData("Booked")]
-    [InlineData("Closed")]
-    public void Status_InvalidValue_ThrowsArgumentException(string invalidStatus)
-    {
-        // Arrange
-        var spot = new AccommodationSpot { SpotId = "A-101", CampsiteId = 1, AccommodationTypeId = 1 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => spot.Status = invalidStatus);
+        Assert.Throws<DomainException>(() => CreateValidAccommodationSpot(longitude: invalidLongitude));
     }
 
     [Fact]
-    public void Status_DefaultValue_IsAvailable()
+    public void AccommodationSpot_Create_ThrowsException_WhenPriceModifierIsZero()
     {
-        // Arrange & Act
-        var spot = new AccommodationSpot { SpotId = "A-101", CampsiteId = 1, AccommodationTypeId = 1 };
-
-        // Assert
-        Assert.Equal("Available", spot.Status);
-    }
-
-    [Theory]
-    [InlineData(0.5)]
-    [InlineData(1.0)]
-    [InlineData(1.5)]
-    [InlineData(2.0)]
-    public void PriceModifier_ValidValue_SetsCorrectly(decimal validModifier)
-    {
-        // Arrange
-        var spot = new AccommodationSpot { SpotId = "A-101", CampsiteId = 1, AccommodationTypeId = 1 };
-
-        // Act
-        spot.PriceModifier = validModifier;
-
-        // Assert
-        Assert.Equal(validModifier, spot.PriceModifier);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-0.5)]
-    public void PriceModifier_InvalidValue_ThrowsArgumentException(decimal invalidModifier)
-    {
-        // Arrange
-        var spot = new AccommodationSpot { SpotId = "A-101", CampsiteId = 1, AccommodationTypeId = 1 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => spot.PriceModifier = invalidModifier);
+        Assert.Throws<DomainException>(() => CreateValidAccommodationSpot(priceModifier: 0));
     }
 
     [Fact]
-    public void MarkAsAvailable_SetsStatusToAvailable()
+    public void AccommodationSpot_MarkAsAvailable_ChangesStatusToAvailable()
     {
-        // Arrange
-        var spot = new AccommodationSpot
-        {
-            SpotId = "A-101",
-            CampsiteId = 1,
-            AccommodationTypeId = 1,
-            Status = "Occupied"
-        };
-
-        // Act
-        spot.MarkAsAvailable();
-
-        // Assert
-        Assert.Equal("Available", spot.Status);
-    }
-
-    [Fact]
-    public void MarkAsOccupied_SetsStatusToOccupied()
-    {
-        // Arrange
-        var spot = new AccommodationSpot
-        {
-            SpotId = "A-101",
-            CampsiteId = 1,
-            AccommodationTypeId = 1
-        };
-
-        // Act
+        var spot = CreateValidAccommodationSpot();
         spot.MarkAsOccupied();
-
-        // Assert
-        Assert.Equal("Occupied", spot.Status);
+        spot.MarkAsAvailable();
+        Assert.Equal(SpotStatus.Available, spot.Status);
     }
 
     [Fact]
-    public void MarkAsReserved_SetsStatusToReserved()
+    public void AccommodationSpot_MarkAsOccupied_ChangesStatusToOccupied()
     {
-        // Arrange
-        var spot = new AccommodationSpot
-        {
-            SpotId = "A-101",
-            CampsiteId = 1,
-            AccommodationTypeId = 1
-        };
+        var spot = CreateValidAccommodationSpot();
+        spot.MarkAsOccupied();
+        Assert.Equal(SpotStatus.Occupied, spot.Status);
+    }
 
-        // Act
+    [Fact]
+    public void AccommodationSpot_MarkAsReserved_ChangesStatusToReserved()
+    {
+        var spot = CreateValidAccommodationSpot();
         spot.MarkAsReserved();
-
-        // Assert
-        Assert.Equal("Reserved", spot.Status);
+        Assert.Equal(SpotStatus.Reserved, spot.Status);
     }
 
     [Fact]
-    public void MarkAsMaintenance_SetsStatusToMaintenance()
+    public void AccommodationSpot_MarkAsMaintenance_ChangesStatusToMaintenance()
     {
-        // Arrange
-        var spot = new AccommodationSpot
-        {
-            SpotId = "A-101",
-            CampsiteId = 1,
-            AccommodationTypeId = 1
-        };
-
-        // Act
+        var spot = CreateValidAccommodationSpot();
         spot.MarkAsMaintenance();
-
-        // Assert
-        Assert.Equal("Maintenance", spot.Status);
+        Assert.Equal(SpotStatus.Maintenance, spot.Status);
     }
 
     [Fact]
-    public void IsAvailableForBooking_WhenAvailable_ReturnsTrue()
+    public void AccommodationSpot_MarkAsOccupied_ThrowsException_WhenUnderMaintenance()
     {
-        // Arrange
-        var spot = new AccommodationSpot
-        {
-            SpotId = "A-101",
-            CampsiteId = 1,
-            AccommodationTypeId = 1,
-            Status = "Available"
-        };
-
-        // Act
-        var result = spot.IsAvailableForBooking();
-
-        // Assert
-        Assert.True(result);
+        var spot = CreateValidAccommodationSpot();
+        spot.MarkAsMaintenance();
+        Assert.Throws<DomainException>(() => spot.MarkAsOccupied());
     }
 
-    [Theory]
-    [InlineData("Occupied")]
-    [InlineData("Reserved")]
-    [InlineData("Maintenance")]
-    public void IsAvailableForBooking_WhenNotAvailable_ReturnsFalse(string status)
+    [Fact]
+    public void AccommodationSpot_MarkAsReserved_ThrowsException_WhenUnderMaintenance()
     {
-        // Arrange
-        var spot = new AccommodationSpot
-        {
-            SpotId = "A-101",
-            CampsiteId = 1,
-            AccommodationTypeId = 1,
-            Status = status
-        };
+        var spot = CreateValidAccommodationSpot();
+        spot.MarkAsMaintenance();
+        Assert.Throws<DomainException>(() => spot.MarkAsReserved());
+    }
 
-        // Act
-        var result = spot.IsAvailableForBooking();
+    [Fact]
+    public void AccommodationSpot_IsAvailableForBooking_ReturnsTrueWhenAvailable()
+    {
+        var spot = CreateValidAccommodationSpot();
+        Assert.True(spot.IsAvailableForBooking());
+    }
 
-        // Assert
-        Assert.False(result);
+    [Fact]
+    public void AccommodationSpot_IsAvailableForBooking_ReturnsFalseWhenOccupied()
+    {
+        var spot = CreateValidAccommodationSpot();
+        spot.MarkAsOccupied();
+        Assert.False(spot.IsAvailableForBooking());
+    }
+
+    [Fact]
+    public void AccommodationSpot_UpdatePriceModifier_UpdatesValue()
+    {
+        var spot = CreateValidAccommodationSpot();
+        spot.UpdatePriceModifier(1.5m);
+        Assert.Equal(1.5m, spot.PriceModifier);
+    }
+
+    [Fact]
+    public void AccommodationSpot_UpdatePriceModifier_ThrowsException_WhenZero()
+    {
+        var spot = CreateValidAccommodationSpot();
+        Assert.Throws<DomainException>(() => spot.UpdatePriceModifier(0));
     }
 }
 

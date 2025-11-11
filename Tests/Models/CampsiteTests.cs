@@ -1,218 +1,141 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
 namespace CampsiteBooking.Tests.Models;
 
 public class CampsiteTests
 {
-    [Fact]
-    public void Name_ValidValue_SetsCorrectly()
+    private Campsite CreateValidCampsite(
+        string name = "Sunset Campsite",
+        string region = "North",
+        double latitude = 56.0,
+        double longitude = 10.0,
+        decimal totalArea = 1000.0m,
+        int establishedYear = 2000,
+        string attractiveness = "Medium")
     {
-        // Arrange
-        var campsite = new Campsite();
+        return Campsite.Create(name, region, latitude, longitude, totalArea, establishedYear, attractiveness: attractiveness);
+    }
 
-        // Act
-        campsite.Name = "Sunset Campsite";
-
-        // Assert
+    [Fact]
+    public void Campsite_CanBeCreated_WithValidData()
+    {
+        var campsite = CreateValidCampsite();
+        Assert.NotNull(campsite);
         Assert.Equal("Sunset Campsite", campsite.Name);
+        Assert.True(campsite.IsActive);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Name_EmptyValue_ThrowsArgumentException(string invalidName)
+    [Fact]
+    public void Campsite_Create_ThrowsException_WhenNameIsEmpty()
     {
-        // Arrange
-        var campsite = new Campsite();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => campsite.Name = invalidName);
+        Assert.Throws<DomainException>(() => CreateValidCampsite(name: ""));
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(45.5)]
-    [InlineData(-45.5)]
-    [InlineData(90)]
-    [InlineData(-90)]
-    public void Latitude_ValidValue_SetsCorrectly(double validLatitude)
-    {
-        // Arrange
-        var campsite = new Campsite { Name = "Test Campsite", TotalArea = 100 };
-
-        // Act
-        campsite.Latitude = validLatitude;
-
-        // Assert
-        Assert.Equal(validLatitude, campsite.Latitude);
-    }
-
-    [Theory]
-    [InlineData(91)]
     [InlineData(-91)]
-    [InlineData(100)]
-    [InlineData(-100)]
-    public void Latitude_InvalidValue_ThrowsArgumentException(double invalidLatitude)
+    [InlineData(91)]
+    public void Campsite_Create_ThrowsException_WhenLatitudeIsInvalid(double invalidLatitude)
     {
-        // Arrange
-        var campsite = new Campsite { Name = "Test Campsite", TotalArea = 100 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => campsite.Latitude = invalidLatitude);
+        Assert.Throws<DomainException>(() => CreateValidCampsite(latitude: invalidLatitude));
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(90.5)]
-    [InlineData(-90.5)]
-    [InlineData(180)]
-    [InlineData(-180)]
-    public void Longitude_ValidValue_SetsCorrectly(double validLongitude)
-    {
-        // Arrange
-        var campsite = new Campsite { Name = "Test Campsite", TotalArea = 100 };
-
-        // Act
-        campsite.Longitude = validLongitude;
-
-        // Assert
-        Assert.Equal(validLongitude, campsite.Longitude);
-    }
-
-    [Theory]
-    [InlineData(181)]
     [InlineData(-181)]
-    [InlineData(200)]
-    [InlineData(-200)]
-    public void Longitude_InvalidValue_ThrowsArgumentException(double invalidLongitude)
+    [InlineData(181)]
+    public void Campsite_Create_ThrowsException_WhenLongitudeIsInvalid(double invalidLongitude)
     {
-        // Arrange
-        var campsite = new Campsite { Name = "Test Campsite", TotalArea = 100 };
+        Assert.Throws<DomainException>(() => CreateValidCampsite(longitude: invalidLongitude));
+    }
 
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => campsite.Longitude = invalidLongitude);
+    [Fact]
+    public void Campsite_Create_ThrowsException_WhenTotalAreaIsNegative()
+    {
+        Assert.Throws<DomainException>(() => CreateValidCampsite(totalArea: 0));
+    }
+
+    [Fact]
+    public void Campsite_Create_ThrowsException_WhenEstablishedYearIsInFuture()
+    {
+        Assert.Throws<DomainException>(() => CreateValidCampsite(establishedYear: DateTime.UtcNow.Year + 1));
+    }
+
+    [Fact]
+    public void Campsite_Create_ThrowsException_WhenAttractivenessIsInvalid()
+    {
+        Assert.Throws<DomainException>(() => CreateValidCampsite(attractiveness: "Invalid"));
     }
 
     [Theory]
-    [InlineData(1)]
-    [InlineData(100.5)]
-    [InlineData(1000)]
-    public void TotalArea_ValidValue_SetsCorrectly(decimal validArea)
+    [InlineData("Low")]
+    [InlineData("Medium")]
+    [InlineData("High")]
+    [InlineData("Very High")]
+    public void Campsite_Create_AcceptsValidAttractiveness(string attractiveness)
     {
-        // Arrange
-        var campsite = new Campsite { Name = "Test Campsite" };
-
-        // Act
-        campsite.TotalArea = validArea;
-
-        // Assert
-        Assert.Equal(validArea, campsite.TotalArea);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-100)]
-    public void TotalArea_InvalidValue_ThrowsArgumentException(decimal invalidArea)
-    {
-        // Arrange
-        var campsite = new Campsite { Name = "Test Campsite" };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => campsite.TotalArea = invalidArea);
+        var campsite = CreateValidCampsite(attractiveness: attractiveness);
+        Assert.Equal(attractiveness, campsite.Attractiveness);
     }
 
     [Fact]
-    public void EstablishedYear_ValidYear_SetsCorrectly()
+    public void Campsite_Activate_ChangesIsActiveToTrue()
     {
-        // Arrange
-        var campsite = new Campsite { Name = "Test Campsite", TotalArea = 100 };
-        var validYear = DateTime.UtcNow.Year - 10;
-
-        // Act
-        campsite.EstablishedYear = validYear;
-
-        // Assert
-        Assert.Equal(validYear, campsite.EstablishedYear);
-    }
-
-    [Fact]
-    public void EstablishedYear_FutureYear_ThrowsArgumentException()
-    {
-        // Arrange
-        var campsite = new Campsite { Name = "Test Campsite", TotalArea = 100 };
-        var futureYear = DateTime.UtcNow.Year + 1;
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => campsite.EstablishedYear = futureYear);
-    }
-
-    [Fact]
-    public void IsActive_DefaultValue_IsTrue()
-    {
-        // Arrange & Act
-        var campsite = new Campsite { Name = "Test Campsite", TotalArea = 100 };
-
-        // Assert
-        Assert.True(campsite.IsActive);
-    }
-
-    [Fact]
-    public void Activate_SetsIsActiveToTrue()
-    {
-        // Arrange
-        var campsite = new Campsite
-        {
-            Name = "Test Campsite",
-            TotalArea = 100,
-            IsActive = false
-        };
-
-        // Act
-        campsite.Activate();
-
-        // Assert
-        Assert.True(campsite.IsActive);
-    }
-
-    [Fact]
-    public void Deactivate_SetsIsActiveToFalse()
-    {
-        // Arrange
-        var campsite = new Campsite
-        {
-            Name = "Test Campsite",
-            TotalArea = 100,
-            IsActive = true
-        };
-
-        // Act
+        var campsite = CreateValidCampsite();
         campsite.Deactivate();
+        campsite.Activate();
+        Assert.True(campsite.IsActive);
+    }
 
-        // Assert
+    [Fact]
+    public void Campsite_Activate_ThrowsException_WhenAlreadyActive()
+    {
+        var campsite = CreateValidCampsite();
+        Assert.Throws<DomainException>(() => campsite.Activate());
+    }
+
+    [Fact]
+    public void Campsite_Deactivate_ChangesIsActiveToFalse()
+    {
+        var campsite = CreateValidCampsite();
+        campsite.Deactivate();
         Assert.False(campsite.IsActive);
     }
 
     [Fact]
-    public void Update_UpdatesUpdatedDate()
+    public void Campsite_Deactivate_ThrowsException_WhenAlreadyInactive()
     {
-        // Arrange
-        var campsite = new Campsite
-        {
-            Name = "Test Campsite",
-            TotalArea = 100
-        };
-        var originalUpdatedDate = campsite.UpdatedDate;
+        var campsite = CreateValidCampsite();
+        campsite.Deactivate();
+        Assert.Throws<DomainException>(() => campsite.Deactivate());
+    }
 
-        // Wait a tiny bit to ensure time difference
-        System.Threading.Thread.Sleep(10);
+    [Fact]
+    public void Campsite_UpdateInformation_UpdatesFields()
+    {
+        var campsite = CreateValidCampsite();
+        var email = Email.Create("new@campsite.com");
+        campsite.UpdateInformation("New Name", "South", "New description", "High", "12345678", email, "http://new.com");
+        Assert.Equal("New Name", campsite.Name);
+        Assert.Equal("South", campsite.Region);
+    }
 
-        // Act
-        campsite.Update();
+    [Fact]
+    public void Campsite_UpdateLocation_UpdatesCoordinates()
+    {
+        var campsite = CreateValidCampsite();
+        campsite.UpdateLocation(57.0, 11.0);
+        Assert.Equal(57.0, campsite.Latitude);
+        Assert.Equal(11.0, campsite.Longitude);
+    }
 
-        // Assert
-        Assert.True(campsite.UpdatedDate > originalUpdatedDate);
+    [Fact]
+    public void Campsite_UpdateTotalArea_UpdatesArea()
+    {
+        var campsite = CreateValidCampsite();
+        campsite.UpdateTotalArea(2000.0m);
+        Assert.Equal(2000.0m, campsite.TotalArea);
     }
 }
 

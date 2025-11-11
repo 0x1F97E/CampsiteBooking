@@ -1,107 +1,156 @@
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
+
 namespace CampsiteBooking.Models;
 
 /// <summary>
 /// AccommodationType entity representing a type of accommodation at a campsite
+/// Part of the Campsite aggregate
 /// </summary>
-public class AccommodationType
+public class AccommodationType : Entity<AccommodationTypeId>
 {
-    public int AccommodationTypeId { get; set; }
+    // ============================================================================
+    // PRIVATE FIELDS
+    // ============================================================================
     
-    private int _campsiteId;
-    public int CampsiteId
-    {
-        get => _campsiteId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("CampsiteId must be greater than 0", nameof(CampsiteId));
-            _campsiteId = value;
-        }
-    }
-    
-    public string Type { get; set; } = string.Empty; // Cabin, Tent Site, RV Spot, Glamping
-    public string Description { get; set; } = string.Empty;
-    
+    private CampsiteId _campsiteId = null!;
+    private string _type = string.Empty;
+    private string _description = string.Empty;
     private int _maxCapacity;
-    public int MaxCapacity
-    {
-        get => _maxCapacity;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("MaxCapacity must be greater than 0", nameof(MaxCapacity));
-            _maxCapacity = value;
-        }
-    }
-    
-    private decimal _basePrice;
-    public decimal BasePrice
-    {
-        get => _basePrice;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("BasePrice must be positive", nameof(BasePrice));
-            _basePrice = value;
-        }
-    }
-    
-    public string ImageUrl { get; set; } = string.Empty;
-    
+    private Money _basePrice = null!;
+    private string _imageUrl = string.Empty;
     private int _availableUnits;
-    public int AvailableUnits
+    private bool _isActive;
+    private DateTime _createdDate;
+    
+    // ============================================================================
+    // PUBLIC PROPERTIES (Read-only)
+    // ============================================================================
+    
+    public CampsiteId CampsiteId => _campsiteId;
+    public string Type => _type;
+    public string Description => _description;
+    public int MaxCapacity => _maxCapacity;
+    public Money BasePrice => _basePrice;
+    public string ImageUrl => _imageUrl;
+    public int AvailableUnits => _availableUnits;
+    public bool IsActive => _isActive;
+    public DateTime CreatedDate => _createdDate;
+    
+    // ============================================================================
+    // LEGACY PROPERTIES (for EF Core backward compatibility)
+    // ============================================================================
+    
+    public int AccommodationTypeId
     {
-        get => _availableUnits;
-        set
-        {
-            if (value < 0)
-                throw new ArgumentException("AvailableUnits cannot be negative", nameof(AvailableUnits));
-            _availableUnits = value;
-        }
+        get => Id?.Value ?? 0;
+        private set => Id = value > 0 ? ValueObjects.AccommodationTypeId.Create(value) : ValueObjects.AccommodationTypeId.CreateNew();
     }
     
-    public bool IsActive { get; set; } = true;
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+    public decimal BasePrice_Legacy
+    {
+        get => _basePrice?.Amount ?? 0;
+        set => _basePrice = Money.Create(value, "DKK");
+    }
+    
+    // ============================================================================
+    // FACTORY METHOD
+    // ============================================================================
+    
+    public static AccommodationType Create(
+        CampsiteId campsiteId,
+        string type,
+        int maxCapacity,
+        Money basePrice,
+        int availableUnits,
+        string description = "",
+        string imageUrl = "")
+    {
+        // Validate business rules
+        if (string.IsNullOrWhiteSpace(type))
+            throw new DomainException("Accommodation type cannot be empty");
+        
+        var validTypes = new[] { "Cabin", "Tent Site", "RV Spot", "Glamping" };
+        if (!validTypes.Contains(type))
+            throw new DomainException("Type must be Cabin, Tent Site, RV Spot, or Glamping");
+        
+        if (maxCapacity <= 0)
+            throw new DomainException("Max capacity must be greater than 0");
+        
+        if (availableUnits < 0)
+            throw new DomainException("Available units cannot be negative");
+        
+        var accommodationType = new AccommodationType
+        {
+            Id = ValueObjects.AccommodationTypeId.CreateNew(),
+            _campsiteId = campsiteId,
+            _type = type,
+            _description = description?.Trim() ?? string.Empty,
+            _maxCapacity = maxCapacity,
+            _basePrice = basePrice,
+            _imageUrl = imageUrl?.Trim() ?? string.Empty,
+            _availableUnits = availableUnits,
+            _isActive = true,
+            _createdDate = DateTime.UtcNow
+        };
+        
+        return accommodationType;
+    }
+    
+    // ============================================================================
+    // CONSTRUCTORS
+    // ============================================================================
     
     /// <summary>
-    /// Activates the accommodation type
+    /// Protected constructor for EF Core
     /// </summary>
+    private AccommodationType()
+    {
+    }
+    
+    // ============================================================================
+    // DOMAIN BEHAVIOR
+    // ============================================================================
+    
     public void Activate()
     {
-        IsActive = true;
+        if (_isActive)
+            throw new DomainException("Accommodation type is already active");
+        
+        _isActive = true;
     }
     
-    /// <summary>
-    /// Deactivates the accommodation type
-    /// </summary>
     public void Deactivate()
     {
-        IsActive = false;
+        if (!_isActive)
+            throw new DomainException("Accommodation type is already inactive");
+        
+        _isActive = false;
     }
     
-    /// <summary>
-    /// Reserves units
-    /// </summary>
     public void ReserveUnits(int count)
     {
         if (count <= 0)
-            throw new ArgumentException("Count must be positive", nameof(count));
+            throw new DomainException("Count must be positive");
         
-        if (count > AvailableUnits)
-            throw new InvalidOperationException("Not enough available units");
+        if (count > _availableUnits)
+            throw new DomainException("Not enough available units");
         
-        AvailableUnits -= count;
+        _availableUnits -= count;
     }
     
-    /// <summary>
-    /// Releases units
-    /// </summary>
     public void ReleaseUnits(int count)
     {
         if (count <= 0)
-            throw new ArgumentException("Count must be positive", nameof(count));
+            throw new DomainException("Count must be positive");
         
-        AvailableUnits += count;
+        _availableUnits += count;
+    }
+    
+    public void UpdateInformation(string description, string imageUrl)
+    {
+        _description = description?.Trim() ?? string.Empty;
+        _imageUrl = imageUrl?.Trim() ?? string.Empty;
     }
 }
 

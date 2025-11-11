@@ -1,247 +1,120 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
 namespace CampsiteBooking.Tests.Models;
 
 public class AccommodationTypeTests
 {
-    [Fact]
-    public void CampsiteId_ValidValue_SetsCorrectly()
+    private AccommodationType CreateValidAccommodationType(
+        int campsiteId = 1,
+        string type = "Cabin",
+        int maxCapacity = 4,
+        decimal basePrice = 500.0m,
+        int availableUnits = 10)
     {
-        // Arrange
-        var accommodationType = new AccommodationType();
-
-        // Act
-        accommodationType.CampsiteId = 5;
-
-        // Assert
-        Assert.Equal(5, accommodationType.CampsiteId);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-100)]
-    public void CampsiteId_InvalidValue_ThrowsArgumentException(int invalidCampsiteId)
-    {
-        // Arrange
-        var accommodationType = new AccommodationType();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => accommodationType.CampsiteId = invalidCampsiteId);
-    }
-
-    [Theory]
-    [InlineData(1)]
-    [InlineData(5)]
-    [InlineData(10)]
-    public void MaxCapacity_ValidValue_SetsCorrectly(int validCapacity)
-    {
-        // Arrange
-        var accommodationType = new AccommodationType { CampsiteId = 1 };
-
-        // Act
-        accommodationType.MaxCapacity = validCapacity;
-
-        // Assert
-        Assert.Equal(validCapacity, accommodationType.MaxCapacity);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-100)]
-    public void MaxCapacity_InvalidValue_ThrowsArgumentException(int invalidCapacity)
-    {
-        // Arrange
-        var accommodationType = new AccommodationType { CampsiteId = 1 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => accommodationType.MaxCapacity = invalidCapacity);
-    }
-
-    [Theory]
-    [InlineData(100)]
-    [InlineData(250.50)]
-    [InlineData(1000)]
-    public void BasePrice_ValidValue_SetsCorrectly(decimal validPrice)
-    {
-        // Arrange
-        var accommodationType = new AccommodationType { CampsiteId = 1 };
-
-        // Act
-        accommodationType.BasePrice = validPrice;
-
-        // Assert
-        Assert.Equal(validPrice, accommodationType.BasePrice);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-100)]
-    public void BasePrice_InvalidValue_ThrowsArgumentException(decimal invalidPrice)
-    {
-        // Arrange
-        var accommodationType = new AccommodationType { CampsiteId = 1 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => accommodationType.BasePrice = invalidPrice);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(5)]
-    [InlineData(100)]
-    public void AvailableUnits_ValidValue_SetsCorrectly(int validUnits)
-    {
-        // Arrange
-        var accommodationType = new AccommodationType { CampsiteId = 1 };
-
-        // Act
-        accommodationType.AvailableUnits = validUnits;
-
-        // Assert
-        Assert.Equal(validUnits, accommodationType.AvailableUnits);
-    }
-
-    [Theory]
-    [InlineData(-1)]
-    [InlineData(-100)]
-    public void AvailableUnits_NegativeValue_ThrowsArgumentException(int invalidUnits)
-    {
-        // Arrange
-        var accommodationType = new AccommodationType { CampsiteId = 1 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => accommodationType.AvailableUnits = invalidUnits);
+        return AccommodationType.Create(
+            CampsiteId.Create(campsiteId),
+            type,
+            maxCapacity,
+            Money.Create(basePrice, "DKK"),
+            availableUnits
+        );
     }
 
     [Fact]
-    public void IsActive_DefaultValue_IsTrue()
+    public void AccommodationType_CanBeCreated_WithValidData()
     {
-        // Arrange & Act
-        var accommodationType = new AccommodationType { CampsiteId = 1 };
-
-        // Assert
+        var accommodationType = CreateValidAccommodationType();
+        Assert.NotNull(accommodationType);
+        Assert.Equal("Cabin", accommodationType.Type);
+        Assert.Equal(4, accommodationType.MaxCapacity);
         Assert.True(accommodationType.IsActive);
     }
 
     [Fact]
-    public void Activate_SetsIsActiveToTrue()
+    public void AccommodationType_Create_ThrowsException_WhenTypeIsEmpty()
     {
-        // Arrange
-        var accommodationType = new AccommodationType 
-        { 
-            CampsiteId = 1,
-            IsActive = false 
-        };
-
-        // Act
-        accommodationType.Activate();
-
-        // Assert
-        Assert.True(accommodationType.IsActive);
+        Assert.Throws<DomainException>(() => CreateValidAccommodationType(type: ""));
     }
 
     [Fact]
-    public void Deactivate_SetsIsActiveToFalse()
+    public void AccommodationType_Create_ThrowsException_WhenTypeIsInvalid()
     {
-        // Arrange
-        var accommodationType = new AccommodationType
-        {
-            CampsiteId = 1,
-            IsActive = true
-        };
+        Assert.Throws<DomainException>(() => CreateValidAccommodationType(type: "Invalid"));
+    }
 
-        // Act
+    [Theory]
+    [InlineData("Cabin")]
+    [InlineData("Tent Site")]
+    [InlineData("RV Spot")]
+    [InlineData("Glamping")]
+    public void AccommodationType_Create_AcceptsValidTypes(string type)
+    {
+        var accommodationType = CreateValidAccommodationType(type: type);
+        Assert.Equal(type, accommodationType.Type);
+    }
+
+    [Fact]
+    public void AccommodationType_Create_ThrowsException_WhenMaxCapacityIsZero()
+    {
+        Assert.Throws<DomainException>(() => CreateValidAccommodationType(maxCapacity: 0));
+    }
+
+    [Fact]
+    public void AccommodationType_Create_ThrowsException_WhenAvailableUnitsIsNegative()
+    {
+        Assert.Throws<DomainException>(() => CreateValidAccommodationType(availableUnits: -1));
+    }
+
+    [Fact]
+    public void AccommodationType_Activate_ChangesIsActiveToTrue()
+    {
+        var accommodationType = CreateValidAccommodationType();
         accommodationType.Deactivate();
+        accommodationType.Activate();
+        Assert.True(accommodationType.IsActive);
+    }
 
-        // Assert
+    [Fact]
+    public void AccommodationType_Deactivate_ChangesIsActiveToFalse()
+    {
+        var accommodationType = CreateValidAccommodationType();
+        accommodationType.Deactivate();
         Assert.False(accommodationType.IsActive);
     }
 
     [Fact]
-    public void ReserveUnits_ValidCount_DecreasesAvailableUnits()
+    public void AccommodationType_ReserveUnits_DecreasesAvailableUnits()
     {
-        // Arrange
-        var accommodationType = new AccommodationType
-        {
-            CampsiteId = 1,
-            AvailableUnits = 10
-        };
-
-        // Act
+        var accommodationType = CreateValidAccommodationType(availableUnits: 10);
         accommodationType.ReserveUnits(3);
-
-        // Assert
         Assert.Equal(7, accommodationType.AvailableUnits);
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-5)]
-    public void ReserveUnits_InvalidCount_ThrowsArgumentException(int invalidCount)
+    [Fact]
+    public void AccommodationType_ReserveUnits_ThrowsException_WhenNotEnoughUnits()
     {
-        // Arrange
-        var accommodationType = new AccommodationType
-        {
-            CampsiteId = 1,
-            AvailableUnits = 10
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => accommodationType.ReserveUnits(invalidCount));
+        var accommodationType = CreateValidAccommodationType(availableUnits: 5);
+        Assert.Throws<DomainException>(() => accommodationType.ReserveUnits(10));
     }
 
     [Fact]
-    public void ReserveUnits_CountExceedsAvailable_ThrowsInvalidOperationException()
+    public void AccommodationType_ReleaseUnits_IncreasesAvailableUnits()
     {
-        // Arrange
-        var accommodationType = new AccommodationType
-        {
-            CampsiteId = 1,
-            AvailableUnits = 5
-        };
-
-        // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => accommodationType.ReserveUnits(10));
-        Assert.Contains("Not enough available units", exception.Message);
+        var accommodationType = CreateValidAccommodationType(availableUnits: 10);
+        accommodationType.ReleaseUnits(5);
+        Assert.Equal(15, accommodationType.AvailableUnits);
     }
 
     [Fact]
-    public void ReleaseUnits_ValidCount_IncreasesAvailableUnits()
+    public void AccommodationType_UpdateInformation_UpdatesFields()
     {
-        // Arrange
-        var accommodationType = new AccommodationType
-        {
-            CampsiteId = 1,
-            AvailableUnits = 5
-        };
-
-        // Act
-        accommodationType.ReleaseUnits(3);
-
-        // Assert
-        Assert.Equal(8, accommodationType.AvailableUnits);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-5)]
-    public void ReleaseUnits_InvalidCount_ThrowsArgumentException(int invalidCount)
-    {
-        // Arrange
-        var accommodationType = new AccommodationType
-        {
-            CampsiteId = 1,
-            AvailableUnits = 10
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => accommodationType.ReleaseUnits(invalidCount));
+        var accommodationType = CreateValidAccommodationType();
+        accommodationType.UpdateInformation("New description", "http://image.jpg");
+        Assert.Equal("New description", accommodationType.Description);
+        Assert.Equal("http://image.jpg", accommodationType.ImageUrl);
     }
 }
 
