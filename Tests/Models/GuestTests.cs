@@ -1,4 +1,5 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.Common;
 using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
@@ -6,84 +7,68 @@ namespace CampsiteBooking.Tests.Models;
 
 public class GuestTests
 {
+    // Helper method to create a valid guest for testing
+    private Guest CreateValidGuest(
+        string email = "guest@example.com",
+        string firstName = "Jane",
+        string lastName = "Smith",
+        string phone = "",
+        string country = "",
+        string preferredCommunication = "Email")
+    {
+        return Guest.Create(
+            Email.Create(email),
+            firstName,
+            lastName,
+            phone,
+            country,
+            preferredCommunication
+        );
+    }
+
     [Fact]
     public void Guest_InheritsFromUser_Correctly()
     {
         // Arrange & Act
-        var guest = new Guest
-        {
-            Email = Email.Create("guest@example.com"),
-            FirstName = "Jane",
-            LastName = "Smith"
-        };
+        var guest = CreateValidGuest();
         
         // Assert
         Assert.IsAssignableFrom<User>(guest);
-        Assert.Equal("guest@example.com", guest.Email?.Value);
+        Assert.Equal("guest@example.com", guest.Email.Value);
         Assert.Equal("Jane", guest.FirstName);
         Assert.Equal("Jane Smith", guest.FullName);
-    }
-    
-    [Fact]
-    public void Guest_LoyaltyPoints_CannotBeNegative()
-    {
-        // Arrange
-        var guest = new Guest
-        {
-            Email = Email.Create("guest@example.com"),
-            FirstName = "Jane",
-            LastName = "Smith"
-        };
-        
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => guest.LoyaltyPoints = -10);
     }
     
     [Fact]
     public void Guest_CanAccumulateLoyaltyPoints()
     {
         // Arrange
-        var guest = new Guest
-        {
-            Email = Email.Create("guest@example.com"),
-            FirstName = "Jane",
-            LastName = "Smith",
-            LoyaltyPoints = 100
-        };
+        var guest = CreateValidGuest();
         
         // Act
         guest.AddLoyaltyPoints(50);
+        guest.AddLoyaltyPoints(30);
         
         // Assert
-        Assert.Equal(150, guest.LoyaltyPoints);
+        Assert.Equal(80, guest.LoyaltyPoints);
     }
     
     [Fact]
     public void Guest_AddLoyaltyPoints_ThrowsException_WhenNegative()
     {
         // Arrange
-        var guest = new Guest
-        {
-            Email = Email.Create("guest@example.com"),
-            FirstName = "Jane",
-            LastName = "Smith"
-        };
+        var guest = CreateValidGuest();
         
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => guest.AddLoyaltyPoints(-10));
+        Assert.Throws<DomainException>(() => guest.AddLoyaltyPoints(-10));
     }
     
     [Fact]
     public void Guest_CanRedeemLoyaltyPoints()
     {
         // Arrange
-        var guest = new Guest
-        {
-            Email = Email.Create("guest@example.com"),
-            FirstName = "Jane",
-            LastName = "Smith",
-            LoyaltyPoints = 100
-        };
+        var guest = CreateValidGuest();
+        guest.AddLoyaltyPoints(100);
         
         // Act
         guest.RedeemLoyaltyPoints(30);
@@ -96,55 +81,75 @@ public class GuestTests
     public void Guest_RedeemLoyaltyPoints_ThrowsException_WhenInsufficientPoints()
     {
         // Arrange
-        var guest = new Guest
-        {
-            Email = Email.Create("guest@example.com"),
-            FirstName = "Jane",
-            LastName = "Smith",
-            LoyaltyPoints = 50
-        };
+        var guest = CreateValidGuest();
+        guest.AddLoyaltyPoints(50);
         
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => guest.RedeemLoyaltyPoints(100));
+        Assert.Throws<DomainException>(() => guest.RedeemLoyaltyPoints(100));
     }
     
     [Fact]
     public void Guest_RedeemLoyaltyPoints_ThrowsException_WhenNegative()
     {
         // Arrange
-        var guest = new Guest
-        {
-            Email = Email.Create("guest@example.com"),
-            FirstName = "Jane",
-            LastName = "Smith",
-            LoyaltyPoints = 100
-        };
+        var guest = CreateValidGuest();
+        guest.AddLoyaltyPoints(100);
         
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => guest.RedeemLoyaltyPoints(-10));
+        Assert.Throws<DomainException>(() => guest.RedeemLoyaltyPoints(-10));
     }
     
     [Theory]
-    [InlineData("Email", true)]
-    [InlineData("SMS", true)]
-    [InlineData("Both", true)]
-    [InlineData("Invalid", false)]
-    public void Guest_PreferredCommunication_ValidatesCorrectly(string communication, bool expectedValid)
+    [InlineData("Email")]
+    [InlineData("SMS")]
+    [InlineData("Both")]
+    public void Guest_Create_AcceptsValidPreferredCommunication(string communication)
     {
-        // Arrange
-        var guest = new Guest
-        {
-            Email = Email.Create("guest@example.com"),
-            FirstName = "Jane",
-            LastName = "Smith",
-            PreferredCommunication = communication
-        };
-        
-        // Act
-        var isValid = guest.IsValidPreferredCommunication();
+        // Arrange & Act
+        var guest = CreateValidGuest(preferredCommunication: communication);
         
         // Assert
-        Assert.Equal(expectedValid, isValid);
+        Assert.Equal(communication, guest.PreferredCommunication);
+    }
+    
+    [Fact]
+    public void Guest_Create_ThrowsException_WhenInvalidPreferredCommunication()
+    {
+        // Arrange & Act & Assert
+        Assert.Throws<DomainException>(() => CreateValidGuest(preferredCommunication: "Invalid"));
+    }
+    
+    [Fact]
+    public void Guest_UpdatePreferredCommunication_UpdatesValue()
+    {
+        // Arrange
+        var guest = CreateValidGuest();
+        
+        // Act
+        guest.UpdatePreferredCommunication("SMS");
+        
+        // Assert
+        Assert.Equal("SMS", guest.PreferredCommunication);
+    }
+    
+    [Fact]
+    public void Guest_UpdatePreferredCommunication_ThrowsException_WhenInvalid()
+    {
+        // Arrange
+        var guest = CreateValidGuest();
+        
+        // Act & Assert
+        Assert.Throws<DomainException>(() => guest.UpdatePreferredCommunication("Invalid"));
+    }
+    
+    [Fact]
+    public void Guest_LoyaltyPoints_StartsAtZero()
+    {
+        // Arrange & Act
+        var guest = CreateValidGuest();
+        
+        // Assert
+        Assert.Equal(0, guest.LoyaltyPoints);
     }
 }
 
