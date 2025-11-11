@@ -1,4 +1,5 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
 namespace CampsiteBooking.Tests.Models;
@@ -14,12 +15,12 @@ public class PaymentTests
             BookingId = 1,
             TransactionId = "TXN123"
         };
-        
+
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => payment.Amount = 0);
-        Assert.Throws<ArgumentException>(() => payment.Amount = -100);
+        Assert.Throws<ArgumentException>(() => payment.Amount = Money.Create(0));
+        Assert.Throws<ArgumentException>(() => payment.Amount = Money.Create(-100));
     }
-    
+
     [Fact]
     public void Payment_RefundAmount_CannotExceedOriginalAmount()
     {
@@ -27,14 +28,14 @@ public class PaymentTests
         var payment = new Payment
         {
             BookingId = 1,
-            Amount = 500,
+            Amount = Money.Create(500),
             TransactionId = "TXN123"
         };
-        
+
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => payment.RefundAmount = 600);
+        Assert.Throws<ArgumentException>(() => payment.RefundAmount = Money.Create(600));
     }
-    
+
     [Fact]
     public void Payment_RefundAmount_CannotBeNegative()
     {
@@ -42,12 +43,12 @@ public class PaymentTests
         var payment = new Payment
         {
             BookingId = 1,
-            Amount = 500,
+            Amount = Money.Create(500),
             TransactionId = "TXN123"
         };
-        
+
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => payment.RefundAmount = -100);
+        Assert.Throws<ArgumentException>(() => payment.RefundAmount = Money.Create(-100));
     }
     
     [Fact]
@@ -56,19 +57,21 @@ public class PaymentTests
         // Arrange
         var payment = new Payment
         {
+            PaymentId = 1,
             BookingId = 1,
-            Amount = 500,
+            Amount = Money.Create(500),
             TransactionId = "TXN123",
-            Status = "Pending"
+            Status = PaymentStatus.Pending
         };
-        
+
         // Act
         payment.MarkAsCompleted();
-        
+
         // Assert
-        Assert.Equal("Completed", payment.Status);
+        Assert.Equal(PaymentStatus.Completed, payment.Status);
+        Assert.Single(payment.DomainEvents); // Should raise PaymentCompletedEvent
     }
-    
+
     [Fact]
     public void Payment_CanTransition_FromPendingToFailed()
     {
@@ -76,18 +79,18 @@ public class PaymentTests
         var payment = new Payment
         {
             BookingId = 1,
-            Amount = 500,
+            Amount = Money.Create(500),
             TransactionId = "TXN123",
-            Status = "Pending"
+            Status = PaymentStatus.Pending
         };
-        
+
         // Act
         payment.MarkAsFailed();
-        
+
         // Assert
-        Assert.Equal("Failed", payment.Status);
+        Assert.Equal(PaymentStatus.Failed, payment.Status);
     }
-    
+
     [Fact]
     public void Payment_CannotBeCompleted_WhenNotPending()
     {
@@ -95,36 +98,38 @@ public class PaymentTests
         var payment = new Payment
         {
             BookingId = 1,
-            Amount = 500,
+            Amount = Money.Create(500),
             TransactionId = "TXN123",
-            Status = "Completed"
+            Status = PaymentStatus.Completed
         };
-        
+
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() => payment.MarkAsCompleted());
     }
-    
+
     [Fact]
     public void Payment_ProcessRefund_SetsRefundAmountAndDate()
     {
         // Arrange
         var payment = new Payment
         {
+            PaymentId = 1,
             BookingId = 1,
-            Amount = 500,
+            Amount = Money.Create(500),
             TransactionId = "TXN123",
-            Status = "Completed"
+            Status = PaymentStatus.Completed
         };
-        
+
         // Act
         payment.ProcessRefund(300);
-        
+
         // Assert
-        Assert.Equal(300, payment.RefundAmount);
+        Assert.Equal(300m, payment.RefundAmount?.Amount);
         Assert.NotNull(payment.RefundDate);
-        Assert.Equal("Refunded", payment.Status);
+        Assert.Equal(PaymentStatus.Refunded, payment.Status);
+        Assert.Single(payment.DomainEvents); // Should raise PaymentRefundedEvent
     }
-    
+
     [Fact]
     public void Payment_ProcessRefund_ThrowsException_WhenNotCompleted()
     {
@@ -132,15 +137,15 @@ public class PaymentTests
         var payment = new Payment
         {
             BookingId = 1,
-            Amount = 500,
+            Amount = Money.Create(500),
             TransactionId = "TXN123",
-            Status = "Pending"
+            Status = PaymentStatus.Pending
         };
-        
+
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() => payment.ProcessRefund(300));
     }
-    
+
     [Fact]
     public void Payment_ProcessRefund_ThrowsException_WhenAmountExceedsOriginal()
     {
@@ -148,9 +153,9 @@ public class PaymentTests
         var payment = new Payment
         {
             BookingId = 1,
-            Amount = 500,
+            Amount = Money.Create(500),
             TransactionId = "TXN123",
-            Status = "Completed"
+            Status = PaymentStatus.Completed
         };
 
         // Act & Assert
@@ -171,7 +176,7 @@ public class PaymentTests
         var payment = new Payment
         {
             BookingId = 1,
-            Amount = 500,
+            Amount = Money.Create(500),
             TransactionId = "TXN123",
             Currency = currency
         };
@@ -190,7 +195,7 @@ public class PaymentTests
         var payment = new Payment
         {
             BookingId = 1,
-            Amount = 500
+            Amount = Money.Create(500)
         };
 
         // Act & Assert

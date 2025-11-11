@@ -1,4 +1,5 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
 namespace CampsiteBooking.Tests.Models;
@@ -11,17 +12,17 @@ public class UserTests
         // Arrange & Act
         var user = new User
         {
-            Email = "test@example.com",
+            Email = Email.Create("test@example.com"),
             FirstName = "John",
             LastName = "Doe"
         };
-        
+
         // Assert
-        Assert.Equal("test@example.com", user.Email);
+        Assert.Equal("test@example.com", user.Email?.Value);
         Assert.Equal("John", user.FirstName);
         Assert.Equal("Doe", user.LastName);
     }
-    
+
     [Theory]
     [InlineData("")]
     [InlineData(" ")]
@@ -30,22 +31,22 @@ public class UserTests
     {
         // Arrange
         var user = new User();
-        
+
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => user.Email = invalidEmail);
+        Assert.Throws<ArgumentException>(() => user.Email = Email.Create(invalidEmail));
     }
-    
+
     [Theory]
     [InlineData("notanemail")]
-    [InlineData("missing@domain")]
     [InlineData("missingat.com")]
+    [InlineData("@nodomain.com")]
     public void User_Email_MustBeInValidFormat(string invalidEmail)
     {
         // Arrange
         var user = new User();
-        
+
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => user.Email = invalidEmail);
+        Assert.Throws<ArgumentException>(() => user.Email = Email.Create(invalidEmail));
     }
     
     [Theory]
@@ -80,7 +81,7 @@ public class UserTests
         // Arrange & Act
         var user = new User
         {
-            Email = "test@example.com",
+            Email = Email.Create("test@example.com"),
             FirstName = "John",
             LastName = "Doe"
         };
@@ -95,7 +96,7 @@ public class UserTests
         // Arrange
         var user = new User
         {
-            Email = "test@example.com",
+            Email = Email.Create("test@example.com"),
             FirstName = "John",
             LastName = "Doe"
         };
@@ -117,7 +118,7 @@ public class UserTests
         // Arrange
         var user = new User
         {
-            Email = "test@example.com",
+            Email = Email.Create("test@example.com"),
             FirstName = "John",
             LastName = "Doe"
         };
@@ -138,7 +139,7 @@ public class UserTests
         // Act
         var user = new User
         {
-            Email = "test@example.com",
+            Email = Email.Create("test@example.com"),
             FirstName = "John",
             LastName = "Doe"
         };

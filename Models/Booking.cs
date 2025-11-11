@@ -1,169 +1,252 @@
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
+using CampsiteBooking.Models.DomainEvents;
+
 namespace CampsiteBooking.Models;
 
 /// <summary>
-/// Booking entity representing a reservation
+/// Booking aggregate root representing a campsite reservation.
+/// Enforces all booking business rules and invariants.
 /// </summary>
-public class Booking
+public class Booking : AggregateRoot<BookingId>
 {
-    public int BookingId { get; set; }
-    
-    private int _userId;
-    public int UserId
-    {
-        get => _userId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("UserId must be greater than 0", nameof(UserId));
-            _userId = value;
-        }
-    }
-    
-    private int _campsiteId;
-    public int CampsiteId
-    {
-        get => _campsiteId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("CampsiteId must be greater than 0", nameof(CampsiteId));
-            _campsiteId = value;
-        }
-    }
-    
-    public string SpotId { get; set; } = string.Empty;
-    
-    private int _accommodationTypeId;
-    public int AccommodationTypeId
-    {
-        get => _accommodationTypeId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("AccommodationTypeId must be greater than 0", nameof(AccommodationTypeId));
-            _accommodationTypeId = value;
-        }
-    }
-    
-    private DateTime _checkInDate;
-    public DateTime CheckInDate
-    {
-        get => _checkInDate;
-        set
-        {
-            if (value < DateTime.UtcNow.Date && BookingId == 0) // Only validate for new bookings
-                throw new ArgumentException("CheckInDate cannot be in the past", nameof(CheckInDate));
-            _checkInDate = value;
-        }
-    }
-    
-    private DateTime _checkOutDate;
-    public DateTime CheckOutDate
-    {
-        get => _checkOutDate;
-        set
-        {
-            if (value <= CheckInDate)
-                throw new ArgumentException("CheckOutDate must be after CheckInDate", nameof(CheckOutDate));
-            _checkOutDate = value;
-        }
-    }
-    
-    private int _numberOfGuests;
-    public int NumberOfGuests
-    {
-        get => _numberOfGuests;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("NumberOfGuests must be greater than 0", nameof(NumberOfGuests));
-            _numberOfGuests = value;
-        }
-    }
-    
-    private int _numberOfChildren;
-    public int NumberOfChildren
-    {
-        get => _numberOfChildren;
-        set
-        {
-            if (value < 0)
-                throw new ArgumentException("NumberOfChildren cannot be negative", nameof(NumberOfChildren));
-            _numberOfChildren = value;
-        }
-    }
-    
+    // ============================================================================
+    // PRIVATE FIELDS - Encapsulation
+    // ============================================================================
+
+    private GuestId _guestId = null!;
+    private CampsiteId _campsiteId = null!;
+    private AccommodationSpotId? _accommodationSpotId;
+    private AccommodationTypeId _accommodationTypeId = null!;
+    private DateRange _period = null!;
+    private BookingStatus _status = BookingStatus.Pending;
+    private Money _basePrice = null!;
+    private Money _totalPrice = null!;
     private int _numberOfAdults;
-    public int NumberOfAdults
+    private int _numberOfChildren;
+    private string _specialRequests = string.Empty;
+    private DateTime _createdDate;
+    private DateTime _lastModifiedDate;
+    private DateTime? _cancellationDate;
+
+    // ============================================================================
+    // PUBLIC PROPERTIES - Read-only access
+    // ============================================================================
+
+    /// <summary>Legacy property for EF Core and backward compatibility</summary>
+    public int BookingId
     {
-        get => _numberOfAdults;
-        set
-        {
-            if (value < 0)
-                throw new ArgumentException("NumberOfAdults cannot be negative", nameof(NumberOfAdults));
-            _numberOfAdults = value;
-        }
+        get => Id?.Value ?? 0;
+        private set => Id = value > 0 ? ValueObjects.BookingId.Create(value) : ValueObjects.BookingId.CreateNew();
     }
-    
-    public decimal BasePrice { get; set; }
-    public decimal TotalPrice { get; set; }
-    public string Status { get; set; } = "Pending"; // Pending, Confirmed, Completed, Cancelled
-    public string PaymentStatus { get; set; } = "Pending"; // Pending, Paid, Refunded
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-    public DateTime LastModifiedDate { get; set; } = DateTime.UtcNow;
-    public DateTime? CancellationDate { get; set; }
-    
+
+    public GuestId GuestId => _guestId;
+    public CampsiteId CampsiteId => _campsiteId;
+    public AccommodationSpotId? AccommodationSpotId => _accommodationSpotId;
+    public AccommodationTypeId AccommodationTypeId => _accommodationTypeId;
+    public DateRange Period => _period;
+    public BookingStatus Status => _status;
+    public Money BasePrice => _basePrice;
+    public Money TotalPrice => _totalPrice;
+    public int NumberOfAdults => _numberOfAdults;
+    public int NumberOfChildren => _numberOfChildren;
+    public string SpecialRequests => _specialRequests;
+    public DateTime CreatedDate => _createdDate;
+    public DateTime LastModifiedDate => _lastModifiedDate;
+    public DateTime? CancellationDate => _cancellationDate;
+
+    // Legacy properties for backward compatibility
+    public int UserId => _guestId?.Value ?? 0;
+    public DateTime CheckInDate => _period?.StartDate ?? DateTime.UtcNow.Date;
+    public DateTime CheckOutDate => _period?.EndDate ?? DateTime.UtcNow.Date.AddDays(1);
+    public string SpotId => _accommodationSpotId?.Value.ToString() ?? string.Empty;
+
+    // ============================================================================
+    // FACTORY METHODS - Controlled creation
+    // ============================================================================
+
     /// <summary>
-    /// Validates that NumberOfAdults + NumberOfChildren equals NumberOfGuests
+    /// Create a new booking (factory method)
     /// </summary>
-    public bool ValidateGuestCount()
+    public static Booking Create(
+        GuestId guestId,
+        CampsiteId campsiteId,
+        AccommodationTypeId accommodationTypeId,
+        DateRange period,
+        Money basePrice,
+        int numberOfAdults,
+        int numberOfChildren = 0,
+        string specialRequests = "")
     {
-        return NumberOfAdults + NumberOfChildren == NumberOfGuests;
+        // Validate business rules
+        if (period.StartDate < DateTime.UtcNow.Date)
+            throw new DomainException("Cannot create booking with check-in date in the past");
+
+        if (numberOfAdults <= 0)
+            throw new DomainException("Booking must have at least one adult");
+
+        if (numberOfAdults > 10)
+            throw new DomainException("Maximum 10 adults per booking");
+
+        if (numberOfChildren < 0)
+            throw new DomainException("Number of children cannot be negative");
+
+        if (numberOfChildren > 10)
+            throw new DomainException("Maximum 10 children per booking");
+
+        var booking = new Booking
+        {
+            Id = ValueObjects.BookingId.CreateNew(),
+            _guestId = guestId,
+            _campsiteId = campsiteId,
+            _accommodationTypeId = accommodationTypeId,
+            _period = period,
+            _status = BookingStatus.Pending,
+            _basePrice = basePrice,
+            _totalPrice = basePrice, // Initially same as base price
+            _numberOfAdults = numberOfAdults,
+            _numberOfChildren = numberOfChildren,
+            _specialRequests = specialRequests ?? string.Empty,
+            _createdDate = DateTime.UtcNow,
+            _lastModifiedDate = DateTime.UtcNow
+        };
+
+        // Raise domain event
+        booking.RaiseDomainEvent(new BookingCreatedEvent(
+            booking.Id.Value,
+            guestId.Value,
+            campsiteId.Value,
+            period.StartDate,
+            period.EndDate
+        ));
+
+        return booking;
     }
-    
+
+    // ============================================================================
+    // PRIVATE CONSTRUCTOR - Prevent direct instantiation
+    // ============================================================================
+
+    private Booking()
+    {
+    }
+
+    // ============================================================================
+    // BUSINESS METHODS - Rich behavior
+    // ============================================================================
+
     /// <summary>
-    /// Confirms the booking
+    /// Assign an accommodation spot to this booking
+    /// </summary>
+    public void AssignAccommodationSpot(AccommodationSpotId spotId)
+    {
+        if (_status != BookingStatus.Pending)
+            throw new DomainException("Can only assign spot to pending bookings");
+
+        _accommodationSpotId = spotId;
+        _lastModifiedDate = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Confirm the booking
     /// </summary>
     public void Confirm()
     {
-        if (Status != "Pending")
-            throw new InvalidOperationException("Only pending bookings can be confirmed");
+        if (!_status.CanTransitionTo(BookingStatus.Confirmed))
+            throw new DomainException($"Cannot confirm booking in {_status} status");
 
-        Status = "Confirmed";
-        LastModifiedDate = DateTime.UtcNow;
+        if (_accommodationSpotId == null)
+            throw new DomainException("Cannot confirm booking without assigned accommodation spot");
+
+        _status = BookingStatus.Confirmed;
+        _lastModifiedDate = DateTime.UtcNow;
+
+        RaiseDomainEvent(new BookingConfirmedEvent(Id.Value, _guestId.Value, _period.StartDate, _period.EndDate));
     }
 
     /// <summary>
-    /// Completes the booking
-    /// </summary>
-    public void Complete()
-    {
-        if (Status != "Confirmed")
-            throw new InvalidOperationException("Only confirmed bookings can be completed");
-
-        Status = "Completed";
-        LastModifiedDate = DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Cancels the booking
+    /// Cancel the booking
     /// </summary>
     public void Cancel()
     {
-        if (Status != "Pending" && Status != "Confirmed")
-            throw new InvalidOperationException("Only pending or confirmed bookings can be cancelled");
+        if (!_status.CanTransitionTo(BookingStatus.Cancelled))
+            throw new DomainException($"Cannot cancel booking in {_status} status");
 
-        Status = "Cancelled";
-        CancellationDate = DateTime.UtcNow;
-        LastModifiedDate = DateTime.UtcNow;
+        _status = BookingStatus.Cancelled;
+        _cancellationDate = DateTime.UtcNow;
+        _lastModifiedDate = DateTime.UtcNow;
+
+        RaiseDomainEvent(new BookingCancelledEvent(Id.Value, _guestId.Value));
     }
 
     /// <summary>
-    /// Calculates the number of nights
+    /// Complete the booking (guest has checked out)
+    /// </summary>
+    public void Complete()
+    {
+        if (!_status.CanTransitionTo(BookingStatus.Completed))
+            throw new DomainException($"Cannot complete booking in {_status} status");
+
+        _status = BookingStatus.Completed;
+        _lastModifiedDate = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Update the total price (e.g., after applying discounts or adding extras)
+    /// </summary>
+    public void UpdateTotalPrice(Money newTotalPrice)
+    {
+        if (_status == BookingStatus.Cancelled || _status == BookingStatus.Completed)
+            throw new DomainException("Cannot update price of cancelled or completed booking");
+
+        if (newTotalPrice.Amount < 0)
+            throw new DomainException("Total price cannot be negative");
+
+        _totalPrice = newTotalPrice;
+        _lastModifiedDate = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Update special requests
+    /// </summary>
+    public void UpdateSpecialRequests(string specialRequests)
+    {
+        if (_status == BookingStatus.Cancelled || _status == BookingStatus.Completed)
+            throw new DomainException("Cannot update special requests of cancelled or completed booking");
+
+        _specialRequests = specialRequests ?? string.Empty;
+        _lastModifiedDate = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Check if booking is active (not cancelled or completed)
+    /// </summary>
+    public bool IsActive()
+    {
+        return _status != BookingStatus.Cancelled && _status != BookingStatus.Completed;
+    }
+
+    /// <summary>
+    /// Check if booking can be modified
+    /// </summary>
+    public bool CanBeModified()
+    {
+        return _status == BookingStatus.Pending || _status == BookingStatus.Confirmed;
+    }
+
+    /// <summary>
+    /// Calculate number of nights
     /// </summary>
     public int GetNumberOfNights()
     {
-        return (CheckOutDate - CheckInDate).Days;
+        return _period.GetNumberOfDays();
+    }
+
+    /// <summary>
+    /// Get total number of guests
+    /// </summary>
+    public int GetTotalGuests()
+    {
+        return _numberOfAdults + _numberOfChildren;
     }
 }
-

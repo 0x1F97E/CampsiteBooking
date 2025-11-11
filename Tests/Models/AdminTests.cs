@@ -1,4 +1,5 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
 namespace CampsiteBooking.Tests.Models;
@@ -11,14 +12,14 @@ public class AdminTests
         // Arrange & Act
         var admin = new Admin
         {
-            Email = "admin@campsite.com",
+            Email = Email.Create("admin@campsite.com"),
             FirstName = "John",
             LastName = "Admin"
         };
 
         // Assert
         Assert.IsAssignableFrom<User>(admin);
-        Assert.Equal("admin@campsite.com", admin.Email);
+        Assert.Equal("admin@campsite.com", admin.Email?.Value);
         Assert.Equal("John Admin", admin.FullName);
     }
 
@@ -28,7 +29,7 @@ public class AdminTests
         // Arrange
         var admin = new Admin
         {
-            Email = "admin@campsite.com",
+            Email = Email.Create("admin@campsite.com"),
             FirstName = "John",
             LastName = "Admin"
         };
@@ -47,7 +48,7 @@ public class AdminTests
         // Arrange
         var admin = new Admin
         {
-            Email = "admin@campsite.com",
+            Email = Email.Create("admin@campsite.com"),
             FirstName = "John",
             LastName = "Admin"
         };
@@ -63,7 +64,7 @@ public class AdminTests
         // Arrange
         var admin = new Admin
         {
-            Email = "admin@campsite.com",
+            Email = Email.Create("admin@campsite.com"),
             FirstName = "John",
             LastName = "Admin"
         };
@@ -80,7 +81,7 @@ public class AdminTests
         // Arrange
         var admin = new Admin
         {
-            Email = "admin@campsite.com",
+            Email = Email.Create("admin@campsite.com"),
             FirstName = "John",
             LastName = "Admin"
         };
@@ -102,7 +103,7 @@ public class AdminTests
         // Arrange
         var admin = new Admin
         {
-            Email = "admin@campsite.com",
+            Email = Email.Create("admin@campsite.com"),
             FirstName = "John",
             LastName = "Admin"
         };
@@ -118,7 +119,7 @@ public class AdminTests
         // Arrange
         var admin = new Admin
         {
-            Email = "admin@campsite.com",
+            Email = Email.Create("admin@campsite.com"),
             FirstName = "John",
             LastName = "Admin"
         };
@@ -134,7 +135,7 @@ public class AdminTests
         // Arrange
         var admin = new Admin
         {
-            Email = "admin@campsite.com",
+            Email = Email.Create("admin@campsite.com"),
             FirstName = "John",
             LastName = "Admin"
         };
@@ -153,7 +154,7 @@ public class AdminTests
         // Arrange
         var admin = new Admin
         {
-            Email = "admin@campsite.com",
+            Email = Email.Create("admin@campsite.com"),
             FirstName = "John",
             LastName = "Admin"
         };

@@ -1,187 +1,102 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
 namespace CampsiteBooking.Tests.Models;
 
 public class BookingTests
 {
-    [Fact]
-    public void Booking_CheckOutDate_MustBeAfterCheckInDate()
+    // Helper method to create a valid booking for testing
+    private Booking CreateValidBooking(
+        int numberOfAdults = 2,
+        int numberOfChildren = 0,
+        int daysFromNow = 5,
+        int numberOfNights = 2)
     {
-        // Arrange
-        var booking = new Booking
-        {
-            UserId = 1,
-            CampsiteId = 1,
-            AccommodationTypeId = 1,
-            CheckInDate = DateTime.UtcNow.AddDays(5)
-        };
-        
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => booking.CheckOutDate = DateTime.UtcNow.AddDays(3));
-    }
-    
-    [Fact]
-    public void Booking_NumberOfGuests_MustBeGreaterThanZero()
-    {
-        // Arrange
-        var booking = new Booking
-        {
-            UserId = 1,
-            CampsiteId = 1,
-            AccommodationTypeId = 1
-        };
-        
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => booking.NumberOfGuests = 0);
-        Assert.Throws<ArgumentException>(() => booking.NumberOfGuests = -1);
-    }
-    
-    [Fact]
-    public void Booking_ValidateGuestCount_ReturnsTrue_WhenAdultsAndChildrenMatchTotal()
-    {
-        // Arrange
-        var booking = new Booking
-        {
-            UserId = 1,
-            CampsiteId = 1,
-            AccommodationTypeId = 1,
-            CheckInDate = DateTime.UtcNow.AddDays(5),
-            CheckOutDate = DateTime.UtcNow.AddDays(7),
-            NumberOfGuests = 4,
-            NumberOfAdults = 2,
-            NumberOfChildren = 2
-        };
-        
-        // Act
-        var isValid = booking.ValidateGuestCount();
-        
-        // Assert
-        Assert.True(isValid);
-    }
-    
-    [Fact]
-    public void Booking_ValidateGuestCount_ReturnsFalse_WhenMismatch()
-    {
-        // Arrange
-        var booking = new Booking
-        {
-            UserId = 1,
-            CampsiteId = 1,
-            AccommodationTypeId = 1,
-            CheckInDate = DateTime.UtcNow.AddDays(5),
-            CheckOutDate = DateTime.UtcNow.AddDays(7),
-            NumberOfGuests = 5,
-            NumberOfAdults = 2,
-            NumberOfChildren = 2
-        };
-        
-        // Act
-        var isValid = booking.ValidateGuestCount();
-        
-        // Assert
-        Assert.False(isValid);
-    }
-    
-    [Fact]
-    public void Booking_CanTransition_FromPendingToConfirmed()
-    {
-        // Arrange
-        var booking = new Booking
-        {
-            UserId = 1,
-            CampsiteId = 1,
-            AccommodationTypeId = 1,
-            CheckInDate = DateTime.UtcNow.AddDays(5),
-            CheckOutDate = DateTime.UtcNow.AddDays(7),
-            NumberOfGuests = 2,
-            Status = "Pending"
-        };
-        
-        // Act
-        booking.Confirm();
-        
-        // Assert
-        Assert.Equal("Confirmed", booking.Status);
-    }
-    
-    [Fact]
-    public void Booking_CanTransition_FromConfirmedToCompleted()
-    {
-        // Arrange
-        var booking = new Booking
-        {
-            UserId = 1,
-            CampsiteId = 1,
-            AccommodationTypeId = 1,
-            CheckInDate = DateTime.UtcNow.AddDays(5),
-            CheckOutDate = DateTime.UtcNow.AddDays(7),
-            NumberOfGuests = 2,
-            Status = "Confirmed"
-        };
-        
-        // Act
-        booking.Complete();
-        
-        // Assert
-        Assert.Equal("Completed", booking.Status);
-    }
-    
-    [Fact]
-    public void Booking_CanBeCancelled_WhenPendingOrConfirmed()
-    {
-        // Arrange
-        var booking = new Booking
-        {
-            UserId = 1,
-            CampsiteId = 1,
-            AccommodationTypeId = 1,
-            CheckInDate = DateTime.UtcNow.AddDays(5),
-            CheckOutDate = DateTime.UtcNow.AddDays(7),
-            NumberOfGuests = 2,
-            Status = "Pending"
-        };
-        
-        // Act
-        booking.Cancel();
-        
-        // Assert
-        Assert.Equal("Cancelled", booking.Status);
-        Assert.NotNull(booking.CancellationDate);
+        var guestId = GuestId.Create(1);
+        var campsiteId = CampsiteId.Create(1);
+        var accommodationTypeId = AccommodationTypeId.Create(1);
+        var checkIn = DateTime.UtcNow.Date.AddDays(daysFromNow);
+        var checkOut = checkIn.AddDays(numberOfNights);
+        var period = DateRange.Create(checkIn, checkOut);
+        var basePrice = Money.Create(100.00m, "DKK");
+
+        return Booking.Create(
+            guestId,
+            campsiteId,
+            accommodationTypeId,
+            period,
+            basePrice,
+            numberOfAdults,
+            numberOfChildren
+        );
     }
 
     [Fact]
-    public void Booking_CannotBeCancelled_WhenCompleted()
+    public void Booking_CanBeCreated_WithValidData()
     {
-        // Arrange
-        var booking = new Booking
-        {
-            UserId = 1,
-            CampsiteId = 1,
-            AccommodationTypeId = 1,
-            CheckInDate = DateTime.UtcNow.AddDays(5),
-            CheckOutDate = DateTime.UtcNow.AddDays(7),
-            NumberOfGuests = 2,
-            Status = "Completed"
-        };
+        // Arrange & Act
+        var booking = CreateValidBooking(numberOfAdults: 2, numberOfChildren: 1);
 
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => booking.Cancel());
+        // Assert
+        Assert.NotNull(booking);
+        Assert.Equal(2, booking.NumberOfAdults);
+        Assert.Equal(1, booking.NumberOfChildren);
+        Assert.Equal(3, booking.GetTotalGuests());
+        Assert.Equal(BookingStatus.Pending, booking.Status);
     }
 
     [Fact]
-    public void Booking_GetNumberOfNights_CalculatesCorrectly()
+    public void Booking_Create_ThrowsException_WhenCheckInDateIsInPast()
     {
         // Arrange
-        var booking = new Booking
-        {
-            UserId = 1,
-            CampsiteId = 1,
-            AccommodationTypeId = 1,
-            CheckInDate = DateTime.UtcNow.AddDays(5),
-            CheckOutDate = DateTime.UtcNow.AddDays(8),
-            NumberOfGuests = 2
-        };
+        var guestId = GuestId.Create(1);
+        var campsiteId = CampsiteId.Create(1);
+        var accommodationTypeId = AccommodationTypeId.Create(1);
+        var pastDate = DateTime.UtcNow.Date.AddDays(-1);
+        var period = DateRange.Create(pastDate, pastDate.AddDays(2));
+        var basePrice = Money.Create(100.00m, "DKK");
+
+        // Act & Assert
+        Assert.Throws<DomainException>(() => Booking.Create(
+            guestId, campsiteId, accommodationTypeId, period, basePrice, 2));
+    }
+
+    [Fact]
+    public void Booking_Create_ThrowsException_WhenNumberOfAdultsIsZero()
+    {
+        // Arrange
+        var guestId = GuestId.Create(1);
+        var campsiteId = CampsiteId.Create(1);
+        var accommodationTypeId = AccommodationTypeId.Create(1);
+        var checkIn = DateTime.UtcNow.Date.AddDays(5);
+        var period = DateRange.Create(checkIn, checkIn.AddDays(2));
+        var basePrice = Money.Create(100.00m, "DKK");
+
+        // Act & Assert
+        Assert.Throws<DomainException>(() => Booking.Create(
+            guestId, campsiteId, accommodationTypeId, period, basePrice, 0));
+    }
+
+    [Fact]
+    public void Booking_GetTotalGuests_ReturnsCorrectSum()
+    {
+        // Arrange
+        var booking = CreateValidBooking(numberOfAdults: 2, numberOfChildren: 3);
+
+        // Act
+        var totalGuests = booking.GetTotalGuests();
+
+        // Assert
+        Assert.Equal(5, totalGuests);
+    }
+
+    [Fact]
+    public void Booking_GetNumberOfNights_ReturnsCorrectValue()
+    {
+        // Arrange
+        var booking = CreateValidBooking(numberOfNights: 3);
 
         // Act
         var nights = booking.GetNumberOfNights();
@@ -191,33 +106,143 @@ public class BookingTests
     }
 
     [Fact]
-    public void Booking_NumberOfChildren_CannotBeNegative()
+    public void Booking_Confirm_ChangesStatusToConfirmed()
     {
         // Arrange
-        var booking = new Booking
-        {
-            UserId = 1,
-            CampsiteId = 1,
-            AccommodationTypeId = 1
-        };
+        var booking = CreateValidBooking();
+        var spotId = AccommodationSpotId.Create(1);
+        booking.AssignAccommodationSpot(spotId);
 
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => booking.NumberOfChildren = -1);
+        // Act
+        booking.Confirm();
+
+        // Assert
+        Assert.Equal(BookingStatus.Confirmed, booking.Status);
+        Assert.Contains(booking.DomainEvents, e => e is CampsiteBooking.Models.DomainEvents.BookingConfirmedEvent);
     }
 
     [Fact]
-    public void Booking_NumberOfAdults_CannotBeNegative()
+    public void Booking_Confirm_ThrowsException_WhenNoAccommodationSpotAssigned()
     {
         // Arrange
-        var booking = new Booking
-        {
-            UserId = 1,
-            CampsiteId = 1,
-            AccommodationTypeId = 1
-        };
+        var booking = CreateValidBooking();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => booking.NumberOfAdults = -1);
+        Assert.Throws<DomainException>(() => booking.Confirm());
+    }
+
+    [Fact]
+    public void Booking_Complete_ChangesStatusToCompleted()
+    {
+        // Arrange
+        var booking = CreateValidBooking();
+        var spotId = AccommodationSpotId.Create(1);
+        booking.AssignAccommodationSpot(spotId);
+        booking.Confirm();
+
+        // Act
+        booking.Complete();
+
+        // Assert
+        Assert.Equal(BookingStatus.Completed, booking.Status);
+    }
+
+    [Fact]
+    public void Booking_Cancel_ChangesStatusToCancelled()
+    {
+        // Arrange
+        var booking = CreateValidBooking();
+
+        // Act
+        booking.Cancel();
+
+        // Assert
+        Assert.Equal(BookingStatus.Cancelled, booking.Status);
+        Assert.NotNull(booking.CancellationDate);
+        Assert.Contains(booking.DomainEvents, e => e is CampsiteBooking.Models.DomainEvents.BookingCancelledEvent);
+    }
+
+    [Fact]
+    public void Booking_Cancel_ThrowsException_WhenAlreadyCompleted()
+    {
+        // Arrange
+        var booking = CreateValidBooking();
+        var spotId = AccommodationSpotId.Create(1);
+        booking.AssignAccommodationSpot(spotId);
+        booking.Confirm();
+        booking.Complete();
+
+        // Act & Assert
+        Assert.Throws<DomainException>(() => booking.Cancel());
+    }
+
+    [Fact]
+    public void Booking_Create_ThrowsException_WhenNumberOfChildrenIsNegative()
+    {
+        // Arrange
+        var guestId = GuestId.Create(1);
+        var campsiteId = CampsiteId.Create(1);
+        var accommodationTypeId = AccommodationTypeId.Create(1);
+        var checkIn = DateTime.UtcNow.Date.AddDays(5);
+        var period = DateRange.Create(checkIn, checkIn.AddDays(2));
+        var basePrice = Money.Create(100.00m, "DKK");
+
+        // Act & Assert
+        Assert.Throws<DomainException>(() => Booking.Create(
+            guestId, campsiteId, accommodationTypeId, period, basePrice, 2, -1));
+    }
+
+    [Fact]
+    public void Booking_UpdateTotalPrice_UpdatesPrice()
+    {
+        // Arrange
+        var booking = CreateValidBooking();
+        var newPrice = Money.Create(150.00m, "DKK");
+
+        // Act
+        booking.UpdateTotalPrice(newPrice);
+
+        // Assert
+        Assert.Equal(150.00m, booking.TotalPrice.Amount);
+    }
+
+    [Fact]
+    public void Booking_UpdateTotalPrice_ThrowsException_WhenBookingIsCancelled()
+    {
+        // Arrange
+        var booking = CreateValidBooking();
+        booking.Cancel();
+        var newPrice = Money.Create(150.00m, "DKK");
+
+        // Act & Assert
+        Assert.Throws<DomainException>(() => booking.UpdateTotalPrice(newPrice));
+    }
+
+    [Fact]
+    public void Booking_IsActive_ReturnsTrueForPendingBooking()
+    {
+        // Arrange
+        var booking = CreateValidBooking();
+
+        // Act
+        var isActive = booking.IsActive();
+
+        // Assert
+        Assert.True(isActive);
+    }
+
+    [Fact]
+    public void Booking_IsActive_ReturnsFalseForCancelledBooking()
+    {
+        // Arrange
+        var booking = CreateValidBooking();
+        booking.Cancel();
+
+        // Act
+        var isActive = booking.IsActive();
+
+        // Assert
+        Assert.False(isActive);
     }
 }
 

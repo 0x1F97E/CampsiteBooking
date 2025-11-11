@@ -1,4 +1,5 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
 namespace CampsiteBooking.Tests.Models;
@@ -11,14 +12,14 @@ public class GuestTests
         // Arrange & Act
         var guest = new Guest
         {
-            Email = "guest@example.com",
+            Email = Email.Create("guest@example.com"),
             FirstName = "Jane",
             LastName = "Smith"
         };
         
         // Assert
         Assert.IsAssignableFrom<User>(guest);
-        Assert.Equal("guest@example.com", guest.Email);
+        Assert.Equal("guest@example.com", guest.Email?.Value);
         Assert.Equal("Jane", guest.FirstName);
         Assert.Equal("Jane Smith", guest.FullName);
     }
@@ -29,7 +30,7 @@ public class GuestTests
         // Arrange
         var guest = new Guest
         {
-            Email = "guest@example.com",
+            Email = Email.Create("guest@example.com"),
             FirstName = "Jane",
             LastName = "Smith"
         };
@@ -44,7 +45,7 @@ public class GuestTests
         // Arrange
         var guest = new Guest
         {
-            Email = "guest@example.com",
+            Email = Email.Create("guest@example.com"),
             FirstName = "Jane",
             LastName = "Smith",
             LoyaltyPoints = 100
@@ -63,7 +64,7 @@ public class GuestTests
         // Arrange
         var guest = new Guest
         {
-            Email = "guest@example.com",
+            Email = Email.Create("guest@example.com"),
             FirstName = "Jane",
             LastName = "Smith"
         };
@@ -78,7 +79,7 @@ public class GuestTests
         // Arrange
         var guest = new Guest
         {
-            Email = "guest@example.com",
+            Email = Email.Create("guest@example.com"),
             FirstName = "Jane",
             LastName = "Smith",
             LoyaltyPoints = 100
@@ -97,7 +98,7 @@ public class GuestTests
         // Arrange
         var guest = new Guest
         {
-            Email = "guest@example.com",
+            Email = Email.Create("guest@example.com"),
             FirstName = "Jane",
             LastName = "Smith",
             LoyaltyPoints = 50
@@ -113,7 +114,7 @@ public class GuestTests
         // Arrange
         var guest = new Guest
         {
-            Email = "guest@example.com",
+            Email = Email.Create("guest@example.com"),
             FirstName = "Jane",
             LastName = "Smith",
             LoyaltyPoints = 100
@@ -133,7 +134,7 @@ public class GuestTests
         // Arrange
         var guest = new Guest
         {
-            Email = "guest@example.com",
+            Email = Email.Create("guest@example.com"),
             FirstName = "Jane",
             LastName = "Smith",
             PreferredCommunication = communication

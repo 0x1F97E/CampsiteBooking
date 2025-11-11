@@ -1,4 +1,5 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
 namespace CampsiteBooking.Tests.Models;
@@ -11,7 +12,7 @@ public class StaffTests
         // Arrange & Act
         var staff = new Staff
         {
-            Email = "staff@campsite.com",
+            Email = Email.Create("staff@campsite.com"),
             FirstName = "Jane",
             LastName = "Staff",
             EmployeeId = "EMP001",
@@ -21,7 +22,7 @@ public class StaffTests
 
         // Assert
         Assert.IsAssignableFrom<User>(staff);
-        Assert.Equal("staff@campsite.com", staff.Email);
+        Assert.Equal("staff@campsite.com", staff.Email?.Value);
         Assert.Equal("Jane Staff", staff.FullName);
     }
 
@@ -31,7 +32,7 @@ public class StaffTests
         // Arrange
         var staff = new Staff
         {
-            Email = "staff@campsite.com",
+            Email = Email.Create("staff@campsite.com"),
             FirstName = "Jane",
             LastName = "Staff"
         };
@@ -51,7 +52,7 @@ public class StaffTests
         // Arrange
         var staff = new Staff
         {
-            Email = "staff@campsite.com",
+            Email = Email.Create("staff@campsite.com"),
             FirstName = "Jane",
             LastName = "Staff"
         };
@@ -66,7 +67,7 @@ public class StaffTests
         // Arrange
         var staff = new Staff
         {
-            Email = "staff@campsite.com",
+            Email = Email.Create("staff@campsite.com"),
             FirstName = "Jane",
             LastName = "Staff",
             EmployeeId = "EMP001"
@@ -88,7 +89,7 @@ public class StaffTests
         // Arrange
         var staff = new Staff
         {
-            Email = "staff@campsite.com",
+            Email = Email.Create("staff@campsite.com"),
             FirstName = "Jane",
             LastName = "Staff",
             EmployeeId = "EMP001"
@@ -104,7 +105,7 @@ public class StaffTests
         // Arrange
         var staff = new Staff
         {
-            Email = "staff@campsite.com",
+            Email = Email.Create("staff@campsite.com"),
             FirstName = "Jane",
             LastName = "Staff",
             EmployeeId = "EMP001",
@@ -125,7 +126,7 @@ public class StaffTests
         // Arrange
         var staff = new Staff
         {
-            Email = "staff@campsite.com",
+            Email = Email.Create("staff@campsite.com"),
             FirstName = "Jane",
             LastName = "Staff",
             EmployeeId = "EMP001",
@@ -143,7 +144,7 @@ public class StaffTests
         // Arrange
         var staff = new Staff
         {
-            Email = "staff@campsite.com",
+            Email = Email.Create("staff@campsite.com"),
             FirstName = "Jane",
             LastName = "Staff",
             EmployeeId = "EMP001",
