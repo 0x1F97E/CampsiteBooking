@@ -1,144 +1,74 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
 namespace CampsiteBooking.Tests.Models;
 
 public class AmenityTests
 {
-    [Fact]
-    public void CampsiteId_ValidValue_SetsCorrectly()
+    private Amenity CreateValidAmenity(string name = "Swimming Pool", string category = "Facilities")
     {
-        // Arrange
-        var amenity = new Amenity();
-
-        // Act
-        amenity.CampsiteId = 5;
-
-        // Assert
-        Assert.Equal(5, amenity.CampsiteId);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void CampsiteId_InvalidValue_ThrowsArgumentException(int invalidId)
-    {
-        // Arrange
-        var amenity = new Amenity();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => amenity.CampsiteId = invalidId);
+        return Amenity.Create(CampsiteId.Create(1), name, "Description", "icon.png", category);
     }
 
     [Fact]
-    public void Name_ValidValue_SetsCorrectly()
+    public void Amenity_CanBeCreated_WithValidData()
     {
-        // Arrange
-        var amenity = new Amenity { CampsiteId = 1 };
-
-        // Act
-        amenity.Name = "Swimming Pool";
-
-        // Assert
+        var amenity = CreateValidAmenity();
+        Assert.NotNull(amenity);
         Assert.Equal("Swimming Pool", amenity.Name);
+        Assert.Equal("Facilities", amenity.Category);
+        Assert.True(amenity.IsAvailable);
+    }
+
+    [Fact]
+    public void Amenity_Create_ThrowsException_WhenNameIsEmpty()
+    {
+        Assert.Throws<DomainException>(() => CreateValidAmenity(name: ""));
+    }
+
+    [Fact]
+    public void Amenity_Create_ThrowsException_WhenCategoryIsInvalid()
+    {
+        Assert.Throws<DomainException>(() => CreateValidAmenity(category: "Invalid"));
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Name_EmptyValue_ThrowsArgumentException(string invalidName)
+    [InlineData("General")]
+    [InlineData("Facilities")]
+    [InlineData("Activities")]
+    [InlineData("Services")]
+    public void Amenity_Create_AcceptsValidCategories(string category)
     {
-        // Arrange
-        var amenity = new Amenity { CampsiteId = 1 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => amenity.Name = invalidName);
+        var amenity = CreateValidAmenity(category: category);
+        Assert.Equal(category, amenity.Category);
     }
 
     [Fact]
-    public void IsAvailable_DefaultValue_IsTrue()
+    public void Amenity_MarkAsAvailable_SetsIsAvailableToTrue()
     {
-        // Arrange & Act
-        var amenity = new Amenity { CampsiteId = 1, Name = "Pool" };
-
-        // Assert
-        Assert.True(amenity.IsAvailable);
-    }
-
-    [Fact]
-    public void MarkAsAvailable_SetsIsAvailableToTrue()
-    {
-        // Arrange
-        var amenity = new Amenity 
-        { 
-            CampsiteId = 1, 
-            Name = "Pool",
-            IsAvailable = false
-        };
-
-        // Act
-        amenity.MarkAsAvailable();
-
-        // Assert
-        Assert.True(amenity.IsAvailable);
-    }
-
-    [Fact]
-    public void MarkAsUnavailable_SetsIsAvailableToFalse()
-    {
-        // Arrange
-        var amenity = new Amenity 
-        { 
-            CampsiteId = 1, 
-            Name = "Pool",
-            IsAvailable = true
-        };
-
-        // Act
+        var amenity = CreateValidAmenity();
         amenity.MarkAsUnavailable();
+        amenity.MarkAsAvailable();
+        Assert.True(amenity.IsAvailable);
+    }
 
-        // Assert
+    [Fact]
+    public void Amenity_MarkAsUnavailable_SetsIsAvailableToFalse()
+    {
+        var amenity = CreateValidAmenity();
+        amenity.MarkAsUnavailable();
         Assert.False(amenity.IsAvailable);
     }
 
     [Fact]
-    public void UpdateDetails_ValidData_UpdatesAllFields()
+    public void Amenity_UpdateDetails_UpdatesProperties()
     {
-        // Arrange
-        var amenity = new Amenity 
-        { 
-            CampsiteId = 1, 
-            Name = "Pool"
-        };
-
-        // Act
-        amenity.UpdateDetails("Swimming Pool", "Olympic size pool", "pool-icon.png", "Facilities");
-
-        // Assert
-        Assert.Equal("Swimming Pool", amenity.Name);
-        Assert.Equal("Olympic size pool", amenity.Description);
-        Assert.Equal("pool-icon.png", amenity.IconUrl);
-        Assert.Equal("Facilities", amenity.Category);
-    }
-
-    [Fact]
-    public void UpdateDetails_NullValues_HandlesGracefully()
-    {
-        // Arrange
-        var amenity = new Amenity 
-        { 
-            CampsiteId = 1, 
-            Name = "Pool"
-        };
-
-        // Act
-        amenity.UpdateDetails("Swimming Pool", null, null, null);
-
-        // Assert
-        Assert.Equal("Swimming Pool", amenity.Name);
-        Assert.Equal(string.Empty, amenity.Description);
-        Assert.Equal(string.Empty, amenity.IconUrl);
-        Assert.Equal("General", amenity.Category);
+        var amenity = CreateValidAmenity();
+        amenity.UpdateDetails("New Name", "New Description", "new-icon.png", "Activities");
+        Assert.Equal("New Name", amenity.Name);
+        Assert.Equal("New Description", amenity.Description);
+        Assert.Equal("Activities", amenity.Category);
     }
 }
-

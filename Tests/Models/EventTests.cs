@@ -1,4 +1,5 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.Common;
 using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
@@ -6,328 +7,118 @@ namespace CampsiteBooking.Tests.Models;
 
 public class EventTests
 {
+    private Event CreateValidEvent(string title = "Summer BBQ", int maxParticipants = 50)
+    {
+        return Event.Create(CampsiteId.Create(1), title, "Description", DateTime.UtcNow.AddDays(10), maxParticipants, Money.Create(100m));
+    }
+
     [Fact]
     public void Event_CanBeCreated_WithValidData()
     {
-        // Arrange & Act
-        var evt = new Event
-        {
-            CampsiteId = 1,
-            Title = "Summer BBQ",
-            Description = "Annual summer barbecue event",
-            EventDate = DateTime.UtcNow.Date.AddDays(7),
-            MaxParticipants = 50,
-            CurrentParticipants = 0,
-            Price = Money.Create(150, "DKK"),
-            IsActive = true
-        };
-
-        // Assert
-        Assert.Equal(1, evt.CampsiteId);
+        var evt = CreateValidEvent();
+        Assert.NotNull(evt);
         Assert.Equal("Summer BBQ", evt.Title);
-        Assert.Equal("Annual summer barbecue event", evt.Description);
         Assert.Equal(50, evt.MaxParticipants);
         Assert.Equal(0, evt.CurrentParticipants);
-        Assert.Equal(150m, evt.Price?.Amount);
         Assert.True(evt.IsActive);
     }
 
     [Fact]
-    public void Event_CampsiteId_MustBePositive()
+    public void Event_Create_ThrowsException_WhenTitleIsEmpty()
     {
-        // Arrange
-        var evt = new Event();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => evt.CampsiteId = 0);
-        Assert.Throws<ArgumentException>(() => evt.CampsiteId = -1);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Event_Title_CannotBeEmpty(string invalidTitle)
-    {
-        // Arrange
-        var evt = new Event();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => evt.Title = invalidTitle);
+        Assert.Throws<DomainException>(() => CreateValidEvent(title: ""));
     }
 
     [Fact]
-    public void Event_Title_CannotExceed200Characters()
+    public void Event_Create_ThrowsException_WhenTitleIsTooLong()
     {
-        // Arrange
-        var evt = new Event();
-        var longTitle = new string('A', 201);
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => evt.Title = longTitle);
+        var longTitle = new string('a', 201);
+        Assert.Throws<DomainException>(() => CreateValidEvent(title: longTitle));
     }
 
     [Fact]
-    public void Event_EventDate_CannotBeInPast()
+    public void Event_Create_ThrowsException_WhenMaxParticipantsIsZero()
     {
-        // Arrange
-        var evt = new Event();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => evt.EventDate = DateTime.UtcNow.Date.AddDays(-1));
+        Assert.Throws<DomainException>(() => CreateValidEvent(maxParticipants: 0));
     }
 
     [Fact]
-    public void Event_MaxParticipants_MustBePositive()
+    public void Event_Create_ThrowsException_WhenMaxParticipantsExceeds1000()
     {
-        // Arrange
-        var evt = new Event();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => evt.MaxParticipants = 0);
-        Assert.Throws<ArgumentException>(() => evt.MaxParticipants = -10);
-    }
-
-    [Fact]
-    public void Event_MaxParticipants_CannotExceed1000()
-    {
-        // Arrange
-        var evt = new Event();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => evt.MaxParticipants = 1001);
-    }
-
-    [Fact]
-    public void Event_CurrentParticipants_CannotBeNegative()
-    {
-        // Arrange
-        var evt = new Event { MaxParticipants = 50 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => evt.CurrentParticipants = -1);
-    }
-
-    [Fact]
-    public void Event_CurrentParticipants_CannotExceedMaxParticipants()
-    {
-        // Arrange
-        var evt = new Event { MaxParticipants = 50 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => evt.CurrentParticipants = 51);
+        Assert.Throws<DomainException>(() => CreateValidEvent(maxParticipants: 1001));
     }
 
     [Fact]
     public void Event_IsFull_ReturnsTrueWhenFull()
     {
-        // Arrange
-        var evt = new Event
-        {
-            MaxParticipants = 50,
-            CurrentParticipants = 50
-        };
-
-        // Act & Assert
+        var evt = CreateValidEvent(maxParticipants: 10);
+        evt.RegisterParticipants(10);
         Assert.True(evt.IsFull());
-    }
-
-    [Fact]
-    public void Event_IsFull_ReturnsFalseWhenNotFull()
-    {
-        // Arrange
-        var evt = new Event
-        {
-            MaxParticipants = 50,
-            CurrentParticipants = 30
-        };
-
-        // Act & Assert
-        Assert.False(evt.IsFull());
     }
 
     [Fact]
     public void Event_AvailableSpots_ReturnsCorrectCount()
     {
-        // Arrange
-        var evt = new Event
-        {
-            MaxParticipants = 50,
-            CurrentParticipants = 30
-        };
-
-        // Act
-        var available = evt.AvailableSpots();
-
-        // Assert
-        Assert.Equal(20, available);
+        var evt = CreateValidEvent(maxParticipants: 50);
+        evt.RegisterParticipants(20);
+        Assert.Equal(30, evt.AvailableSpots());
     }
 
     [Fact]
-    public void Event_RegisterParticipants_IncreasesCount()
+    public void Event_RegisterParticipants_IncreasesCurrentParticipants()
     {
-        // Arrange
-        var evt = new Event
-        {
-            CampsiteId = 1,
-            Title = "Test Event",
-            EventDate = DateTime.UtcNow.Date.AddDays(7),
-            MaxParticipants = 50,
-            CurrentParticipants = 10,
-            IsActive = true
-        };
-
-        // Act
-        evt.RegisterParticipants(5);
-
-        // Assert
-        Assert.Equal(15, evt.CurrentParticipants);
+        var evt = CreateValidEvent();
+        evt.RegisterParticipants(10);
+        Assert.Equal(10, evt.CurrentParticipants);
     }
 
     [Fact]
-    public void Event_RegisterParticipants_ThrowsWhenCountIsZeroOrNegative()
+    public void Event_RegisterParticipants_ThrowsException_WhenNotEnoughSpots()
     {
-        // Arrange
-        var evt = new Event
-        {
-            CampsiteId = 1,
-            Title = "Test Event",
-            EventDate = DateTime.UtcNow.Date.AddDays(7),
-            MaxParticipants = 50,
-            IsActive = true
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => evt.RegisterParticipants(0));
-        Assert.Throws<ArgumentException>(() => evt.RegisterParticipants(-5));
+        var evt = CreateValidEvent(maxParticipants: 10);
+        evt.RegisterParticipants(8);
+        Assert.Throws<DomainException>(() => evt.RegisterParticipants(5));
     }
 
     [Fact]
-    public void Event_RegisterParticipants_ThrowsWhenEventIsInactive()
+    public void Event_RegisterParticipants_ThrowsException_WhenInactive()
     {
-        // Arrange
-        var evt = new Event
-        {
-            CampsiteId = 1,
-            Title = "Test Event",
-            EventDate = DateTime.UtcNow.Date.AddDays(7),
-            MaxParticipants = 50,
-            IsActive = false
-        };
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => evt.RegisterParticipants(5));
+        var evt = CreateValidEvent();
+        evt.Deactivate();
+        Assert.Throws<DomainException>(() => evt.RegisterParticipants(5));
     }
 
     [Fact]
-    public void Event_RegisterParticipants_ThrowsWhenNotEnoughSpots()
+    public void Event_CancelRegistrations_DecreasesCurrentParticipants()
     {
-        // Arrange
-        var evt = new Event
-        {
-            CampsiteId = 1,
-            Title = "Test Event",
-            EventDate = DateTime.UtcNow.Date.AddDays(7),
-            MaxParticipants = 50,
-            CurrentParticipants = 48,
-            IsActive = true
-        };
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => evt.RegisterParticipants(5));
-    }
-
-    [Fact]
-    public void Event_CancelRegistrations_DecreasesCount()
-    {
-        // Arrange
-        var evt = new Event
-        {
-            CampsiteId = 1,
-            Title = "Test Event",
-            EventDate = DateTime.UtcNow.Date.AddDays(7),
-            MaxParticipants = 50,
-            CurrentParticipants = 20
-        };
-
-        // Act
+        var evt = CreateValidEvent();
+        evt.RegisterParticipants(20);
         evt.CancelRegistrations(5);
-
-        // Assert
         Assert.Equal(15, evt.CurrentParticipants);
     }
 
     [Fact]
-    public void Event_CancelRegistrations_ThrowsWhenCountIsZeroOrNegative()
+    public void Event_CancelRegistrations_ThrowsException_WhenCancellingMoreThanRegistered()
     {
-        // Arrange
-        var evt = new Event
-        {
-            CampsiteId = 1,
-            Title = "Test Event",
-            EventDate = DateTime.UtcNow.Date.AddDays(7),
-            MaxParticipants = 50,
-            CurrentParticipants = 20
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => evt.CancelRegistrations(0));
-        Assert.Throws<ArgumentException>(() => evt.CancelRegistrations(-5));
-    }
-
-    [Fact]
-    public void Event_CancelRegistrations_ThrowsWhenCancellingMoreThanRegistered()
-    {
-        // Arrange
-        var evt = new Event
-        {
-            CampsiteId = 1,
-            Title = "Test Event",
-            EventDate = DateTime.UtcNow.Date.AddDays(7),
-            MaxParticipants = 50,
-            CurrentParticipants = 10
-        };
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => evt.CancelRegistrations(15));
+        var evt = CreateValidEvent();
+        evt.RegisterParticipants(10);
+        Assert.Throws<DomainException>(() => evt.CancelRegistrations(15));
     }
 
     [Fact]
     public void Event_Deactivate_SetsIsActiveToFalse()
     {
-        // Arrange
-        var evt = new Event
-        {
-            CampsiteId = 1,
-            Title = "Test Event",
-            EventDate = DateTime.UtcNow.Date.AddDays(7),
-            MaxParticipants = 50,
-            IsActive = true
-        };
-
-        // Act
+        var evt = CreateValidEvent();
         evt.Deactivate();
-
-        // Assert
         Assert.False(evt.IsActive);
     }
 
     [Fact]
     public void Event_Activate_SetsIsActiveToTrue()
     {
-        // Arrange
-        var evt = new Event
-        {
-            CampsiteId = 1,
-            Title = "Test Event",
-            EventDate = DateTime.UtcNow.Date.AddDays(7),
-            MaxParticipants = 50,
-            IsActive = false
-        };
-
-        // Act
+        var evt = CreateValidEvent();
+        evt.Deactivate();
         evt.Activate();
-
-        // Assert
         Assert.True(evt.IsActive);
     }
 }

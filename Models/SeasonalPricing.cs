@@ -1,110 +1,109 @@
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
+
 namespace CampsiteBooking.Models;
 
-public class SeasonalPricing
+/// <summary>
+/// SeasonalPricing entity representing seasonal price adjustments
+/// Part of the Campsite aggregate
+/// </summary>
+public class SeasonalPricing : Entity<SeasonalPricingId>
 {
-    public int SeasonalPricingId { get; set; }
-
-    private int _campsiteId;
-    public int CampsiteId
-    {
-        get => _campsiteId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("CampsiteId must be greater than 0", nameof(CampsiteId));
-            _campsiteId = value;
-        }
-    }
-
-    private int _accommodationTypeId;
-    public int AccommodationTypeId
-    {
-        get => _accommodationTypeId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("AccommodationTypeId must be greater than 0", nameof(AccommodationTypeId));
-            _accommodationTypeId = value;
-        }
-    }
-
+    private CampsiteId _campsiteId = null!;
+    private AccommodationTypeId _accommodationTypeId = null!;
     private string _seasonName = string.Empty;
-    public string SeasonName
-    {
-        get => _seasonName;
-        set
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                throw new ArgumentException("SeasonName cannot be empty", nameof(SeasonName));
-            _seasonName = value;
-        }
-    }
-
     private DateTime _startDate;
-    public DateTime StartDate
-    {
-        get => _startDate;
-        set => _startDate = value.Date; // Store only the date part
-    }
-
     private DateTime _endDate;
-    public DateTime EndDate
-    {
-        get => _endDate;
-        set
-        {
-            if (value.Date <= StartDate.Date)
-                throw new ArgumentException("EndDate must be after StartDate", nameof(EndDate));
-            _endDate = value.Date; // Store only the date part
-        }
-    }
-
     private decimal _priceMultiplier = 1.0m;
-    public decimal PriceMultiplier
+    private bool _isActive;
+    private DateTime _createdDate;
+    private DateTime _updatedDate;
+    
+    public CampsiteId CampsiteId => _campsiteId;
+    public AccommodationTypeId AccommodationTypeId => _accommodationTypeId;
+    public string SeasonName => _seasonName;
+    public DateTime StartDate => _startDate;
+    public DateTime EndDate => _endDate;
+    public decimal PriceMultiplier => _priceMultiplier;
+    public bool IsActive => _isActive;
+    public DateTime CreatedDate => _createdDate;
+    public DateTime UpdatedDate => _updatedDate;
+    
+    public int SeasonalPricingId
     {
-        get => _priceMultiplier;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("PriceMultiplier must be greater than 0", nameof(PriceMultiplier));
-            _priceMultiplier = value;
-        }
+        get => Id?.Value ?? 0;
+        private set => Id = value > 0 ? ValueObjects.SeasonalPricingId.Create(value) : ValueObjects.SeasonalPricingId.CreateNew();
     }
-
-    public bool IsActive { get; set; } = true;
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
-
-    // Business methods
+    
+    public static SeasonalPricing Create(
+        CampsiteId campsiteId,
+        AccommodationTypeId accommodationTypeId,
+        string seasonName,
+        DateTime startDate,
+        DateTime endDate,
+        decimal priceMultiplier)
+    {
+        if (string.IsNullOrWhiteSpace(seasonName))
+            throw new DomainException("Season name cannot be empty");
+        
+        if (endDate.Date <= startDate.Date)
+            throw new DomainException("End date must be after start date");
+        
+        if (priceMultiplier <= 0)
+            throw new DomainException("Price multiplier must be greater than 0");
+        
+        return new SeasonalPricing
+        {
+            Id = ValueObjects.SeasonalPricingId.CreateNew(),
+            _campsiteId = campsiteId,
+            _accommodationTypeId = accommodationTypeId,
+            _seasonName = seasonName.Trim(),
+            _startDate = startDate.Date,
+            _endDate = endDate.Date,
+            _priceMultiplier = priceMultiplier,
+            _isActive = true,
+            _createdDate = DateTime.UtcNow,
+            _updatedDate = DateTime.UtcNow
+        };
+    }
+    
+    private SeasonalPricing() { }
+    
     public bool IsDateInSeason(DateTime date)
     {
         var checkDate = date.Date;
-        return checkDate >= StartDate.Date && checkDate <= EndDate.Date;
+        return checkDate >= _startDate.Date && checkDate <= _endDate.Date;
     }
-
+    
     public decimal CalculatePrice(decimal basePrice)
     {
         if (basePrice <= 0)
-            throw new ArgumentException("Base price must be positive", nameof(basePrice));
-
-        return basePrice * PriceMultiplier;
+            throw new DomainException("Base price must be positive");
+        
+        return basePrice * _priceMultiplier;
     }
-
+    
     public void Activate()
     {
-        IsActive = true;
-        UpdatedDate = DateTime.UtcNow;
+        _isActive = true;
+        _updatedDate = DateTime.UtcNow;
     }
-
+    
     public void Deactivate()
     {
-        IsActive = false;
-        UpdatedDate = DateTime.UtcNow;
+        _isActive = false;
+        _updatedDate = DateTime.UtcNow;
     }
-
-    public int GetSeasonDuration()
+    
+    public int GetSeasonDuration() => (_endDate.Date - _startDate.Date).Days + 1;
+    
+    public void UpdatePriceMultiplier(decimal newMultiplier)
     {
-        return (EndDate.Date - StartDate.Date).Days + 1;
+        if (newMultiplier <= 0)
+            throw new DomainException("Price multiplier must be greater than 0");
+        
+        _priceMultiplier = newMultiplier;
+        _updatedDate = DateTime.UtcNow;
     }
 }
 

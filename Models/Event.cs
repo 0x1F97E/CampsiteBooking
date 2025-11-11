@@ -1,158 +1,104 @@
+using CampsiteBooking.Models.Common;
 using CampsiteBooking.Models.ValueObjects;
 
 namespace CampsiteBooking.Models;
 
-/// <summary>
-/// Event entity representing campsite events and activities
-/// </summary>
-public class Event
+public class Event : Entity<ValueObjects.EventId>
 {
-    public int EventId { get; set; }
-
-    private int _campsiteId;
-    public int CampsiteId
-    {
-        get => _campsiteId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("CampsiteId must be greater than 0", nameof(CampsiteId));
-            _campsiteId = value;
-        }
-    }
-
+    private CampsiteId _campsiteId = null!;
     private string _title = string.Empty;
-    public string Title
-    {
-        get => _title;
-        set
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                throw new ArgumentException("Title cannot be empty", nameof(Title));
-            if (value.Length > 200)
-                throw new ArgumentException("Title cannot exceed 200 characters", nameof(Title));
-            _title = value;
-        }
-    }
-
-    public string Description { get; set; } = string.Empty;
-
+    private string _description = string.Empty;
     private DateTime _eventDate;
-    public DateTime EventDate
-    {
-        get => _eventDate;
-        set
-        {
-            if (value < DateTime.UtcNow.Date)
-                throw new ArgumentException("Event date cannot be in the past", nameof(EventDate));
-            _eventDate = value;
-        }
-    }
-
     private int _maxParticipants;
-    public int MaxParticipants
-    {
-        get => _maxParticipants;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("MaxParticipants must be greater than 0", nameof(MaxParticipants));
-            if (value > 1000)
-                throw new ArgumentException("MaxParticipants cannot exceed 1000", nameof(MaxParticipants));
-            _maxParticipants = value;
-        }
-    }
-
     private int _currentParticipants;
-    public int CurrentParticipants
-    {
-        get => _currentParticipants;
-        set
-        {
-            if (value < 0)
-                throw new ArgumentException("CurrentParticipants cannot be negative", nameof(CurrentParticipants));
-            if (value > MaxParticipants)
-                throw new ArgumentException("CurrentParticipants cannot exceed MaxParticipants", nameof(CurrentParticipants));
-            _currentParticipants = value;
-        }
-    }
-
-    // Value Object: Money
     private Money? _price;
-    public Money? Price
+    private bool _isActive;
+    private DateTime _createdDate;
+    
+    public CampsiteId CampsiteId => _campsiteId;
+    public string Title => _title;
+    public string Description => _description;
+    public DateTime EventDate => _eventDate;
+    public int MaxParticipants => _maxParticipants;
+    public int CurrentParticipants => _currentParticipants;
+    public Money? Price => _price;
+    public bool IsActive => _isActive;
+    public DateTime CreatedDate => _createdDate;
+    
+    public int EventId
     {
-        get => _price;
-        set => _price = value;
+        get => Id?.Value ?? 0;
+        private set => Id = value > 0 ? ValueObjects.EventId.Create(value) : ValueObjects.EventId.CreateNew();
     }
-
-    public bool IsActive { get; set; } = true;
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Checks if the event is full
-    /// </summary>
-    public bool IsFull()
+    
+    public static Event Create(CampsiteId campsiteId, string title, string description, DateTime eventDate, int maxParticipants, Money? price = null)
     {
-        return CurrentParticipants >= MaxParticipants;
+        if (string.IsNullOrWhiteSpace(title))
+            throw new DomainException("Title cannot be empty");
+        
+        if (title.Length > 200)
+            throw new DomainException("Title cannot exceed 200 characters");
+        
+        if (eventDate < DateTime.UtcNow.Date)
+            throw new DomainException("Event date cannot be in the past");
+        
+        if (maxParticipants <= 0)
+            throw new DomainException("Max participants must be greater than 0");
+        
+        if (maxParticipants > 1000)
+            throw new DomainException("Max participants cannot exceed 1000");
+        
+        return new Event
+        {
+            Id = ValueObjects.EventId.CreateNew(),
+            _campsiteId = campsiteId,
+            _title = title.Trim(),
+            _description = description?.Trim() ?? string.Empty,
+            _eventDate = eventDate,
+            _maxParticipants = maxParticipants,
+            _currentParticipants = 0,
+            _price = price,
+            _isActive = true,
+            _createdDate = DateTime.UtcNow
+        };
     }
-
-    /// <summary>
-    /// Checks if there are available spots
-    /// </summary>
-    public int AvailableSpots()
-    {
-        return MaxParticipants - CurrentParticipants;
-    }
-
-    /// <summary>
-    /// Registers participants for the event
-    /// </summary>
+    
+    private Event() { }
+    
+    public bool IsFull() => _currentParticipants >= _maxParticipants;
+    public int AvailableSpots() => _maxParticipants - _currentParticipants;
+    
     public void RegisterParticipants(int count)
     {
         if (count <= 0)
-            throw new ArgumentException("Participant count must be greater than 0", nameof(count));
-
-        if (!IsActive)
-            throw new InvalidOperationException("Cannot register for inactive event");
-
-        if (CurrentParticipants + count > MaxParticipants)
-            throw new InvalidOperationException($"Not enough spots available. Only {AvailableSpots()} spots remaining");
-
-        CurrentParticipants += count;
+            throw new DomainException("Participant count must be greater than 0");
+        
+        if (!_isActive)
+            throw new DomainException("Cannot register for inactive event");
+        
+        if (_currentParticipants + count > _maxParticipants)
+            throw new DomainException($"Not enough spots available. Only {AvailableSpots()} spots remaining");
+        
+        _currentParticipants += count;
     }
-
-    /// <summary>
-    /// Cancels participant registrations
-    /// </summary>
+    
     public void CancelRegistrations(int count)
     {
         if (count <= 0)
-            throw new ArgumentException("Participant count must be greater than 0", nameof(count));
-
-        if (CurrentParticipants - count < 0)
-            throw new InvalidOperationException("Cannot cancel more participants than registered");
-
-        CurrentParticipants -= count;
+            throw new DomainException("Participant count must be greater than 0");
+        
+        if (_currentParticipants - count < 0)
+            throw new DomainException("Cannot cancel more participants than registered");
+        
+        _currentParticipants -= count;
     }
-
-    /// <summary>
-    /// Deactivates the event
-    /// </summary>
-    public void Deactivate()
-    {
-        IsActive = false;
-    }
-
-    /// <summary>
-    /// Activates the event
-    /// </summary>
+    
+    public void Deactivate() => _isActive = false;
+    
     public void Activate()
     {
-        if (EventDate < DateTime.UtcNow.Date)
-            throw new InvalidOperationException("Cannot activate past events");
-
-        IsActive = true;
+        if (_eventDate < DateTime.UtcNow.Date)
+            throw new DomainException("Cannot activate past events");
+        _isActive = true;
     }
 }
-
-

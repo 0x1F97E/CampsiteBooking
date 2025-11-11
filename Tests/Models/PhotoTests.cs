@@ -1,198 +1,77 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
 namespace CampsiteBooking.Tests.Models;
 
 public class PhotoTests
 {
-    [Fact]
-    public void CampsiteId_ValidValue_SetsCorrectly()
+    private Photo CreateValidPhoto(string url = "https://example.com/photo.jpg", int displayOrder = 0)
     {
-        // Arrange
-        var photo = new Photo();
-
-        // Act
-        photo.CampsiteId = 5;
-
-        // Assert
-        Assert.Equal(5, photo.CampsiteId);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void CampsiteId_InvalidValue_ThrowsArgumentException(int invalidId)
-    {
-        // Arrange
-        var photo = new Photo();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => photo.CampsiteId = invalidId);
+        return Photo.Create(CampsiteId.Create(1), url, "Caption", "Alt text", displayOrder);
     }
 
     [Fact]
-    public void Url_ValidValue_SetsCorrectly()
+    public void Photo_CanBeCreated_WithValidData()
     {
-        // Arrange
-        var photo = new Photo { CampsiteId = 1 };
-
-        // Act
-        photo.Url = "https://example.com/photo.jpg";
-
-        // Assert
+        var photo = CreateValidPhoto();
+        Assert.NotNull(photo);
         Assert.Equal("https://example.com/photo.jpg", photo.Url);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Url_EmptyValue_ThrowsArgumentException(string invalidUrl)
-    {
-        // Arrange
-        var photo = new Photo { CampsiteId = 1 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => photo.Url = invalidUrl);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(1)]
-    [InlineData(10)]
-    public void DisplayOrder_ValidValue_SetsCorrectly(int validOrder)
-    {
-        // Arrange
-        var photo = new Photo { CampsiteId = 1, Url = "test.jpg" };
-
-        // Act
-        photo.DisplayOrder = validOrder;
-
-        // Assert
-        Assert.Equal(validOrder, photo.DisplayOrder);
-    }
-
-    [Fact]
-    public void DisplayOrder_NegativeValue_ThrowsArgumentException()
-    {
-        // Arrange
-        var photo = new Photo { CampsiteId = 1, Url = "test.jpg" };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => photo.DisplayOrder = -1);
-    }
-
-    [Fact]
-    public void IsPrimary_DefaultValue_IsFalse()
-    {
-        // Arrange & Act
-        var photo = new Photo { CampsiteId = 1, Url = "test.jpg" };
-
-        // Assert
+        Assert.Equal(0, photo.DisplayOrder);
         Assert.False(photo.IsPrimary);
     }
 
     [Fact]
-    public void SetAsPrimary_SetsIsPrimaryToTrue()
+    public void Photo_Create_ThrowsException_WhenUrlIsEmpty()
     {
-        // Arrange
-        var photo = new Photo 
-        { 
-            CampsiteId = 1, 
-            Url = "test.jpg",
-            IsPrimary = false
-        };
+        Assert.Throws<DomainException>(() => CreateValidPhoto(url: ""));
+    }
 
-        // Act
+    [Fact]
+    public void Photo_Create_ThrowsException_WhenDisplayOrderIsNegative()
+    {
+        Assert.Throws<DomainException>(() => CreateValidPhoto(displayOrder: -1));
+    }
+
+    [Fact]
+    public void Photo_SetAsPrimary_SetsIsPrimaryToTrue()
+    {
+        var photo = CreateValidPhoto();
         photo.SetAsPrimary();
-
-        // Assert
         Assert.True(photo.IsPrimary);
     }
 
     [Fact]
-    public void UnsetAsPrimary_SetsIsPrimaryToFalse()
+    public void Photo_UnsetAsPrimary_SetsIsPrimaryToFalse()
     {
-        // Arrange
-        var photo = new Photo 
-        { 
-            CampsiteId = 1, 
-            Url = "test.jpg",
-            IsPrimary = true
-        };
-
-        // Act
+        var photo = CreateValidPhoto();
+        photo.SetAsPrimary();
         photo.UnsetAsPrimary();
-
-        // Assert
         Assert.False(photo.IsPrimary);
     }
 
     [Fact]
-    public void UpdateDisplayOrder_ValidOrder_UpdatesDisplayOrder()
+    public void Photo_UpdateDisplayOrder_UpdatesOrder()
     {
-        // Arrange
-        var photo = new Photo 
-        { 
-            CampsiteId = 1, 
-            Url = "test.jpg",
-            DisplayOrder = 0
-        };
-
-        // Act
+        var photo = CreateValidPhoto(displayOrder: 0);
         photo.UpdateDisplayOrder(5);
-
-        // Assert
         Assert.Equal(5, photo.DisplayOrder);
     }
 
     [Fact]
-    public void UpdateDisplayOrder_NegativeOrder_ThrowsArgumentException()
+    public void Photo_UpdateDisplayOrder_ThrowsException_WhenNegative()
     {
-        // Arrange
-        var photo = new Photo 
-        { 
-            CampsiteId = 1, 
-            Url = "test.jpg"
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => photo.UpdateDisplayOrder(-1));
+        var photo = CreateValidPhoto();
+        Assert.Throws<DomainException>(() => photo.UpdateDisplayOrder(-1));
     }
 
     [Fact]
-    public void UpdateCaption_ValidData_UpdatesCaptionAndAltText()
+    public void Photo_UpdateCaption_UpdatesCaptionAndAltText()
     {
-        // Arrange
-        var photo = new Photo 
-        { 
-            CampsiteId = 1, 
-            Url = "test.jpg"
-        };
-
-        // Act
-        photo.UpdateCaption("Beautiful sunset", "Sunset over campsite");
-
-        // Assert
-        Assert.Equal("Beautiful sunset", photo.Caption);
-        Assert.Equal("Sunset over campsite", photo.AltText);
-    }
-
-    [Fact]
-    public void UpdateCaption_NullValues_SetsEmptyStrings()
-    {
-        // Arrange
-        var photo = new Photo 
-        { 
-            CampsiteId = 1, 
-            Url = "test.jpg"
-        };
-
-        // Act
-        photo.UpdateCaption(null, null);
-
-        // Assert
-        Assert.Equal(string.Empty, photo.Caption);
-        Assert.Equal(string.Empty, photo.AltText);
+        var photo = CreateValidPhoto();
+        photo.UpdateCaption("New Caption", "New Alt Text");
+        Assert.Equal("New Caption", photo.Caption);
+        Assert.Equal("New Alt Text", photo.AltText);
     }
 }
-

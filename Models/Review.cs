@@ -1,117 +1,119 @@
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
+
 namespace CampsiteBooking.Models;
 
-public class Review
+public class Review : Entity<ReviewId>
 {
-    public int ReviewId { get; set; }
-
-    private int _campsiteId;
-    public int CampsiteId
-    {
-        get => _campsiteId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("CampsiteId must be greater than 0", nameof(CampsiteId));
-            _campsiteId = value;
-        }
-    }
-
-    private int _userId;
-    public int UserId
-    {
-        get => _userId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("UserId must be greater than 0", nameof(UserId));
-            _userId = value;
-        }
-    }
-
-    public int? BookingId { get; set; } // Optional - link to specific booking
-
+    private CampsiteId _campsiteId = null!;
+    private UserId _userId = null!;
+    private BookingId? _bookingId;
     private int _rating;
-    public int Rating
-    {
-        get => _rating;
-        set
-        {
-            if (value < 1 || value > 5)
-                throw new ArgumentException("Rating must be between 1 and 5", nameof(Rating));
-            _rating = value;
-        }
-    }
-
     private string _comment = string.Empty;
-    public string Comment
+    private string _reviewerName = string.Empty;
+    private DateTime _createdDate;
+    private DateTime _updatedDate;
+    private bool _isApproved;
+    private bool _isVisible;
+    private string _adminResponse = string.Empty;
+    private DateTime? _adminResponseDate;
+    
+    public CampsiteId CampsiteId => _campsiteId;
+    public UserId UserId => _userId;
+    public BookingId? BookingId => _bookingId;
+    public int Rating => _rating;
+    public string Comment => _comment;
+    public string ReviewerName => _reviewerName;
+    public DateTime CreatedDate => _createdDate;
+    public DateTime UpdatedDate => _updatedDate;
+    public bool IsApproved => _isApproved;
+    public bool IsVisible => _isVisible;
+    public string AdminResponse => _adminResponse;
+    public DateTime? AdminResponseDate => _adminResponseDate;
+    
+    public int ReviewId
     {
-        get => _comment;
-        set
-        {
-            if (value != null && value.Length > 2000)
-                throw new ArgumentException("Comment cannot exceed 2000 characters", nameof(Comment));
-            _comment = value ?? string.Empty;
-        }
+        get => Id?.Value ?? 0;
+        private set => Id = value > 0 ? ValueObjects.ReviewId.Create(value) : ValueObjects.ReviewId.CreateNew();
     }
-
-    public string ReviewerName { get; set; } = string.Empty;
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
-    public bool IsApproved { get; set; } = false;
-    public bool IsVisible { get; set; } = true;
-    public string AdminResponse { get; set; } = string.Empty;
-    public DateTime? AdminResponseDate { get; set; }
-
-    // Business methods
+    
+    public static Review Create(CampsiteId campsiteId, UserId userId, int rating, string comment, string reviewerName, BookingId? bookingId = null)
+    {
+        if (rating < 1 || rating > 5)
+            throw new DomainException("Rating must be between 1 and 5");
+        
+        if (comment != null && comment.Length > 2000)
+            throw new DomainException("Comment cannot exceed 2000 characters");
+        
+        if (string.IsNullOrWhiteSpace(reviewerName))
+            throw new DomainException("Reviewer name cannot be empty");
+        
+        return new Review
+        {
+            Id = ValueObjects.ReviewId.CreateNew(),
+            _campsiteId = campsiteId,
+            _userId = userId,
+            _bookingId = bookingId,
+            _rating = rating,
+            _comment = comment?.Trim() ?? string.Empty,
+            _reviewerName = reviewerName.Trim(),
+            _createdDate = DateTime.UtcNow,
+            _updatedDate = DateTime.UtcNow,
+            _isApproved = false,
+            _isVisible = true
+        };
+    }
+    
+    private Review() { }
+    
     public void Approve()
     {
-        IsApproved = true;
-        UpdatedDate = DateTime.UtcNow;
+        _isApproved = true;
+        _updatedDate = DateTime.UtcNow;
     }
-
+    
     public void Reject()
     {
-        IsApproved = false;
-        IsVisible = false;
-        UpdatedDate = DateTime.UtcNow;
+        _isApproved = false;
+        _isVisible = false;
+        _updatedDate = DateTime.UtcNow;
     }
-
+    
     public void Hide()
     {
-        IsVisible = false;
-        UpdatedDate = DateTime.UtcNow;
+        _isVisible = false;
+        _updatedDate = DateTime.UtcNow;
     }
-
+    
     public void Show()
     {
-        IsVisible = true;
-        UpdatedDate = DateTime.UtcNow;
+        _isVisible = true;
+        _updatedDate = DateTime.UtcNow;
     }
-
+    
     public void UpdateReview(int rating, string comment)
     {
         if (rating < 1 || rating > 5)
-            throw new ArgumentException("Rating must be between 1 and 5", nameof(rating));
-
+            throw new DomainException("Rating must be between 1 and 5");
+        
         if (comment != null && comment.Length > 2000)
-            throw new ArgumentException("Comment cannot exceed 2000 characters", nameof(comment));
-
-        Rating = rating;
-        Comment = comment ?? string.Empty;
-        UpdatedDate = DateTime.UtcNow;
+            throw new DomainException("Comment cannot exceed 2000 characters");
+        
+        _rating = rating;
+        _comment = comment?.Trim() ?? string.Empty;
+        _updatedDate = DateTime.UtcNow;
     }
-
+    
     public void AddAdminResponse(string response)
     {
         if (string.IsNullOrWhiteSpace(response))
-            throw new ArgumentException("Admin response cannot be empty", nameof(response));
-
+            throw new DomainException("Admin response cannot be empty");
+        
         if (response.Length > 1000)
-            throw new ArgumentException("Admin response cannot exceed 1000 characters", nameof(response));
-
-        AdminResponse = response;
-        AdminResponseDate = DateTime.UtcNow;
-        UpdatedDate = DateTime.UtcNow;
+            throw new DomainException("Admin response cannot exceed 1000 characters");
+        
+        _adminResponse = response.Trim();
+        _adminResponseDate = DateTime.UtcNow;
+        _updatedDate = DateTime.UtcNow;
     }
 }
-

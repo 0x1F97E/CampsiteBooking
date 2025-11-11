@@ -1,107 +1,78 @@
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
+
 namespace CampsiteBooking.Models;
 
-public class Availability
+/// <summary>
+/// Availability entity representing daily availability for an accommodation type
+/// Part of the Campsite aggregate
+/// </summary>
+public class Availability : Entity<AvailabilityId>
 {
-    public int AvailabilityId { get; set; }
-
-    private int _campsiteId;
-    public int CampsiteId
-    {
-        get => _campsiteId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("CampsiteId must be greater than 0", nameof(CampsiteId));
-            _campsiteId = value;
-        }
-    }
-
-    private int _accommodationTypeId;
-    public int AccommodationTypeId
-    {
-        get => _accommodationTypeId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("AccommodationTypeId must be greater than 0", nameof(AccommodationTypeId));
-            _accommodationTypeId = value;
-        }
-    }
-
+    private CampsiteId _campsiteId = null!;
+    private AccommodationTypeId _accommodationTypeId = null!;
     private DateTime _date;
-    public DateTime Date
-    {
-        get => _date;
-        set
-        {
-            if (value.Date < DateTime.UtcNow.Date)
-                throw new ArgumentException("Date cannot be in the past", nameof(Date));
-            _date = value.Date; // Store only the date part
-        }
-    }
-
     private int _availableUnits;
-    public int AvailableUnits
-    {
-        get => _availableUnits;
-        set
-        {
-            if (value < 0)
-                throw new ArgumentException("AvailableUnits cannot be negative", nameof(AvailableUnits));
-            _availableUnits = value;
-        }
-    }
-
     private int _reservedUnits;
-    public int ReservedUnits
+    private DateTime _createdDate;
+    private DateTime _updatedDate;
+    
+    public CampsiteId CampsiteId => _campsiteId;
+    public AccommodationTypeId AccommodationTypeId => _accommodationTypeId;
+    public DateTime Date => _date;
+    public int AvailableUnits => _availableUnits;
+    public int ReservedUnits => _reservedUnits;
+    public DateTime CreatedDate => _createdDate;
+    public DateTime UpdatedDate => _updatedDate;
+    
+    public int AvailabilityId
     {
-        get => _reservedUnits;
-        set
-        {
-            if (value < 0)
-                throw new ArgumentException("ReservedUnits cannot be negative", nameof(ReservedUnits));
-            _reservedUnits = value;
-        }
+        get => Id?.Value ?? 0;
+        private set => Id = value > 0 ? ValueObjects.AvailabilityId.Create(value) : ValueObjects.AvailabilityId.CreateNew();
     }
-
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
-
-    // Business methods
+    
+    public static Availability Create(CampsiteId campsiteId, AccommodationTypeId accommodationTypeId, DateTime date, int totalUnits)
+    {
+        if (date.Date < DateTime.UtcNow.Date)
+            throw new DomainException("Date cannot be in the past");
+        
+        if (totalUnits < 0)
+            throw new DomainException("Total units cannot be negative");
+        
+        return new Availability
+        {
+            Id = ValueObjects.AvailabilityId.CreateNew(),
+            _campsiteId = campsiteId,
+            _accommodationTypeId = accommodationTypeId,
+            _date = date.Date,
+            _availableUnits = totalUnits,
+            _reservedUnits = 0,
+            _createdDate = DateTime.UtcNow,
+            _updatedDate = DateTime.UtcNow
+        };
+    }
+    
+    private Availability() { }
+    
     public void ReserveUnits(int count)
     {
-        if (count <= 0)
-            throw new ArgumentException("Count must be positive", nameof(count));
-
-        if (count > AvailableUnits)
-            throw new InvalidOperationException("Not enough available units to reserve");
-
-        AvailableUnits -= count;
-        ReservedUnits += count;
-        UpdatedDate = DateTime.UtcNow;
+        if (count <= 0) throw new DomainException("Count must be positive");
+        if (count > _availableUnits) throw new DomainException("Not enough available units to reserve");
+        _availableUnits -= count;
+        _reservedUnits += count;
+        _updatedDate = DateTime.UtcNow;
     }
-
+    
     public void ReleaseUnits(int count)
     {
-        if (count <= 0)
-            throw new ArgumentException("Count must be positive", nameof(count));
-
-        if (count > ReservedUnits)
-            throw new InvalidOperationException("Cannot release more units than reserved");
-
-        ReservedUnits -= count;
-        AvailableUnits += count;
-        UpdatedDate = DateTime.UtcNow;
+        if (count <= 0) throw new DomainException("Count must be positive");
+        if (count > _reservedUnits) throw new DomainException("Cannot release more units than reserved");
+        _reservedUnits -= count;
+        _availableUnits += count;
+        _updatedDate = DateTime.UtcNow;
     }
-
-    public int GetTotalCapacity()
-    {
-        return AvailableUnits + ReservedUnits;
-    }
-
-    public bool HasAvailability(int requestedUnits)
-    {
-        return AvailableUnits >= requestedUnits;
-    }
+    
+    public int GetTotalCapacity() => _availableUnits + _reservedUnits;
+    public bool HasAvailability(int requestedUnits) => _availableUnits >= requestedUnits;
 }
 

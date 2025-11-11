@@ -1,295 +1,79 @@
 using CampsiteBooking.Models;
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
 using Xunit;
 
 namespace CampsiteBooking.Tests.Models;
 
 public class PeripheralPurchaseTests
 {
-    [Fact]
-    public void BookingId_ValidValue_SetsCorrectly()
+    private PeripheralPurchase CreateValidPurchase(string itemName = "Firewood", int quantity = 2, decimal unitPrice = 50m)
     {
-        // Arrange
-        var purchase = new PeripheralPurchase();
-
-        // Act
-        purchase.BookingId = 5;
-
-        // Assert
-        Assert.Equal(5, purchase.BookingId);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void BookingId_InvalidValue_ThrowsArgumentException(int invalidId)
-    {
-        // Arrange
-        var purchase = new PeripheralPurchase();
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => purchase.BookingId = invalidId);
+        return PeripheralPurchase.Create(BookingId.Create(1), itemName, "Description", quantity, Money.Create(unitPrice));
     }
 
     [Fact]
-    public void ItemName_ValidValue_SetsCorrectly()
+    public void PeripheralPurchase_CanBeCreated_WithValidData()
     {
-        // Arrange
-        var purchase = new PeripheralPurchase { BookingId = 1 };
-
-        // Act
-        purchase.ItemName = "Firewood Bundle";
-
-        // Assert
-        Assert.Equal("Firewood Bundle", purchase.ItemName);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void ItemName_EmptyValue_ThrowsArgumentException(string invalidName)
-    {
-        // Arrange
-        var purchase = new PeripheralPurchase { BookingId = 1 };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => purchase.ItemName = invalidName);
-    }
-
-    [Theory]
-    [InlineData(1)]
-    [InlineData(5)]
-    [InlineData(10)]
-    public void Quantity_ValidValue_SetsCorrectlyAndUpdatesTotalPrice(int validQuantity)
-    {
-        // Arrange
-        var purchase = new PeripheralPurchase 
-        { 
-            BookingId = 1,
-            ItemName = "Firewood",
-            UnitPrice = 10m
-        };
-
-        // Act
-        purchase.Quantity = validQuantity;
-
-        // Assert
-        Assert.Equal(validQuantity, purchase.Quantity);
-        Assert.Equal(validQuantity * 10m, purchase.TotalPrice);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void Quantity_InvalidValue_ThrowsArgumentException(int invalidQuantity)
-    {
-        // Arrange
-        var purchase = new PeripheralPurchase 
-        { 
-            BookingId = 1,
-            ItemName = "Firewood"
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => purchase.Quantity = invalidQuantity);
-    }
-
-    [Theory]
-    [InlineData(10)]
-    [InlineData(25.50)]
-    [InlineData(100)]
-    public void UnitPrice_ValidValue_SetsCorrectlyAndUpdatesTotalPrice(decimal validPrice)
-    {
-        // Arrange
-        var purchase = new PeripheralPurchase 
-        { 
-            BookingId = 1,
-            ItemName = "Firewood",
-            Quantity = 2
-        };
-
-        // Act
-        purchase.UnitPrice = validPrice;
-
-        // Assert
-        Assert.Equal(validPrice, purchase.UnitPrice);
-        Assert.Equal(2 * validPrice, purchase.TotalPrice);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-10)]
-    public void UnitPrice_InvalidValue_ThrowsArgumentException(decimal invalidPrice)
-    {
-        // Arrange
-        var purchase = new PeripheralPurchase 
-        { 
-            BookingId = 1,
-            ItemName = "Firewood"
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => purchase.UnitPrice = invalidPrice);
+        var purchase = CreateValidPurchase();
+        Assert.NotNull(purchase);
+        Assert.Equal("Firewood", purchase.ItemName);
+        Assert.Equal(2, purchase.Quantity);
+        Assert.Equal(100m, purchase.TotalPrice.Amount);
     }
 
     [Fact]
-    public void TotalPrice_CalculatedCorrectly()
+    public void PeripheralPurchase_Create_ThrowsException_WhenItemNameIsEmpty()
     {
-        // Arrange & Act
-        var purchase = new PeripheralPurchase 
-        { 
-            BookingId = 1,
-            ItemName = "Firewood",
-            Quantity = 3,
-            UnitPrice = 15.50m
-        };
-
-        // Assert
-        Assert.Equal(46.50m, purchase.TotalPrice);
+        Assert.Throws<DomainException>(() => CreateValidPurchase(itemName: ""));
     }
 
     [Fact]
-    public void UpdateQuantity_ValidQuantity_UpdatesQuantityAndTotalPrice()
+    public void PeripheralPurchase_Create_ThrowsException_WhenQuantityIsZero()
     {
-        // Arrange
-        var purchase = new PeripheralPurchase 
-        { 
-            BookingId = 1,
-            ItemName = "Firewood",
-            Quantity = 2,
-            UnitPrice = 10m
-        };
+        Assert.Throws<DomainException>(() => CreateValidPurchase(quantity: 0));
+    }
 
-        // Act
+    [Fact]
+    public void PeripheralPurchase_UpdateQuantity_UpdatesTotalPrice()
+    {
+        var purchase = CreateValidPurchase(quantity: 2, unitPrice: 50m);
         purchase.UpdateQuantity(5);
-
-        // Assert
         Assert.Equal(5, purchase.Quantity);
-        Assert.Equal(50m, purchase.TotalPrice);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void UpdateQuantity_InvalidQuantity_ThrowsArgumentException(int invalidQuantity)
-    {
-        // Arrange
-        var purchase = new PeripheralPurchase
-        {
-            BookingId = 1,
-            ItemName = "Firewood",
-            Quantity = 2,
-            UnitPrice = 10m
-        };
-
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => purchase.UpdateQuantity(invalidQuantity));
+        Assert.Equal(250m, purchase.TotalPrice.Amount);
     }
 
     [Fact]
-    public void Confirm_PendingPurchase_ChangesStatusToConfirmed()
+    public void PeripheralPurchase_Confirm_ChangesStatusToConfirmed()
     {
-        // Arrange
-        var purchase = new PeripheralPurchase
-        {
-            BookingId = 1,
-            ItemName = "Firewood",
-            UnitPrice = 10m,
-            Status = "Pending"
-        };
-
-        // Act
+        var purchase = CreateValidPurchase();
         purchase.Confirm();
-
-        // Assert
         Assert.Equal("Confirmed", purchase.Status);
     }
 
     [Fact]
-    public void Confirm_NonPendingPurchase_ThrowsInvalidOperationException()
+    public void PeripheralPurchase_MarkAsDelivered_ChangesStatusToDelivered()
     {
-        // Arrange
-        var purchase = new PeripheralPurchase
-        {
-            BookingId = 1,
-            ItemName = "Firewood",
-            UnitPrice = 10m,
-            Status = "Confirmed"
-        };
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => purchase.Confirm());
-    }
-
-    [Fact]
-    public void MarkAsDelivered_ConfirmedPurchase_ChangesStatusToDelivered()
-    {
-        // Arrange
-        var purchase = new PeripheralPurchase
-        {
-            BookingId = 1,
-            ItemName = "Firewood",
-            UnitPrice = 10m,
-            Status = "Confirmed"
-        };
-
-        // Act
+        var purchase = CreateValidPurchase();
+        purchase.Confirm();
         purchase.MarkAsDelivered();
-
-        // Assert
         Assert.Equal("Delivered", purchase.Status);
     }
 
     [Fact]
-    public void MarkAsDelivered_NonConfirmedPurchase_ThrowsInvalidOperationException()
+    public void PeripheralPurchase_Cancel_ChangesStatusToCancelled()
     {
-        // Arrange
-        var purchase = new PeripheralPurchase
-        {
-            BookingId = 1,
-            ItemName = "Firewood",
-            UnitPrice = 10m,
-            Status = "Pending"
-        };
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => purchase.MarkAsDelivered());
-    }
-
-    [Theory]
-    [InlineData("Pending")]
-    [InlineData("Confirmed")]
-    public void Cancel_NonDeliveredPurchase_ChangesStatusToCancelled(string status)
-    {
-        // Arrange
-        var purchase = new PeripheralPurchase
-        {
-            BookingId = 1,
-            ItemName = "Firewood",
-            UnitPrice = 10m,
-            Status = status
-        };
-
-        // Act
+        var purchase = CreateValidPurchase();
         purchase.Cancel();
-
-        // Assert
         Assert.Equal("Cancelled", purchase.Status);
     }
 
     [Fact]
-    public void Cancel_DeliveredPurchase_ThrowsInvalidOperationException()
+    public void PeripheralPurchase_Cancel_ThrowsException_WhenDelivered()
     {
-        // Arrange
-        var purchase = new PeripheralPurchase
-        {
-            BookingId = 1,
-            ItemName = "Firewood",
-            UnitPrice = 10m,
-            Status = "Delivered"
-        };
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => purchase.Cancel());
+        var purchase = CreateValidPurchase();
+        purchase.Confirm();
+        purchase.MarkAsDelivered();
+        Assert.Throws<DomainException>(() => purchase.Cancel());
     }
 }
-

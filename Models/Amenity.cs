@@ -1,62 +1,83 @@
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
+
 namespace CampsiteBooking.Models;
 
-public class Amenity
+public class Amenity : Entity<AmenityId>
 {
-    public int AmenityId { get; set; }
-
-    private int _campsiteId;
-    public int CampsiteId
-    {
-        get => _campsiteId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("CampsiteId must be greater than 0", nameof(CampsiteId));
-            _campsiteId = value;
-        }
-    }
-
+    private CampsiteId _campsiteId = null!;
     private string _name = string.Empty;
-    public string Name
+    private string _description = string.Empty;
+    private string _iconUrl = string.Empty;
+    private string _category = "General";
+    private bool _isAvailable;
+    private DateTime _createdDate;
+    private DateTime _updatedDate;
+    
+    public CampsiteId CampsiteId => _campsiteId;
+    public string Name => _name;
+    public string Description => _description;
+    public string IconUrl => _iconUrl;
+    public string Category => _category;
+    public bool IsAvailable => _isAvailable;
+    public DateTime CreatedDate => _createdDate;
+    public DateTime UpdatedDate => _updatedDate;
+    
+    public int AmenityId
     {
-        get => _name;
-        set
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                throw new ArgumentException("Name cannot be empty", nameof(Name));
-            _name = value;
-        }
+        get => Id?.Value ?? 0;
+        private set => Id = value > 0 ? ValueObjects.AmenityId.Create(value) : ValueObjects.AmenityId.CreateNew();
     }
-
-    public string Description { get; set; } = string.Empty;
-    public string IconUrl { get; set; } = string.Empty;
-    public string Category { get; set; } = "General"; // General, Facilities, Activities, Services
-    public bool IsAvailable { get; set; } = true;
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
-
-    // Business methods
+    
+    public static Amenity Create(CampsiteId campsiteId, string name, string description, string iconUrl, string category)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException("Name cannot be empty");
+        
+        var validCategories = new[] { "General", "Facilities", "Activities", "Services" };
+        if (!validCategories.Contains(category))
+            throw new DomainException("Category must be General, Facilities, Activities, or Services");
+        
+        return new Amenity
+        {
+            Id = ValueObjects.AmenityId.CreateNew(),
+            _campsiteId = campsiteId,
+            _name = name.Trim(),
+            _description = description?.Trim() ?? string.Empty,
+            _iconUrl = iconUrl?.Trim() ?? string.Empty,
+            _category = category,
+            _isAvailable = true,
+            _createdDate = DateTime.UtcNow,
+            _updatedDate = DateTime.UtcNow
+        };
+    }
+    
+    private Amenity() { }
+    
     public void MarkAsAvailable()
     {
-        IsAvailable = true;
-        UpdatedDate = DateTime.UtcNow;
+        _isAvailable = true;
+        _updatedDate = DateTime.UtcNow;
     }
-
+    
     public void MarkAsUnavailable()
     {
-        IsAvailable = false;
-        UpdatedDate = DateTime.UtcNow;
+        _isAvailable = false;
+        _updatedDate = DateTime.UtcNow;
     }
-
+    
     public void UpdateDetails(string name, string description, string iconUrl, string category)
     {
         if (!string.IsNullOrWhiteSpace(name))
-            Name = name;
-
-        Description = description ?? string.Empty;
-        IconUrl = iconUrl ?? string.Empty;
-        Category = category ?? "General";
-        UpdatedDate = DateTime.UtcNow;
+            _name = name.Trim();
+        
+        _description = description?.Trim() ?? string.Empty;
+        _iconUrl = iconUrl?.Trim() ?? string.Empty;
+        
+        var validCategories = new[] { "General", "Facilities", "Activities", "Services" };
+        if (validCategories.Contains(category))
+            _category = category;
+        
+        _updatedDate = DateTime.UtcNow;
     }
 }
-

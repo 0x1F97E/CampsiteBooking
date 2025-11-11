@@ -1,81 +1,86 @@
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
+
 namespace CampsiteBooking.Models;
 
-public class Photo
+public class Photo : Entity<PhotoId>
 {
-    public int PhotoId { get; set; }
-
-    private int _campsiteId;
-    public int CampsiteId
-    {
-        get => _campsiteId;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("CampsiteId must be greater than 0", nameof(CampsiteId));
-            _campsiteId = value;
-        }
-    }
-
-    public int? AccommodationTypeId { get; set; } // Nullable - photo can be for campsite or specific accommodation type
-
+    private CampsiteId _campsiteId = null!;
+    private AccommodationTypeId? _accommodationTypeId;
     private string _url = string.Empty;
-    public string Url
-    {
-        get => _url;
-        set
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                throw new ArgumentException("Url cannot be empty", nameof(Url));
-            _url = value;
-        }
-    }
-
-    public string Caption { get; set; } = string.Empty;
-    public string AltText { get; set; } = string.Empty;
-
+    private string _caption = string.Empty;
+    private string _altText = string.Empty;
     private int _displayOrder;
-    public int DisplayOrder
+    private bool _isPrimary;
+    private DateTime _uploadedDate;
+    private DateTime _updatedDate;
+    
+    public CampsiteId CampsiteId => _campsiteId;
+    public AccommodationTypeId? AccommodationTypeId => _accommodationTypeId;
+    public string Url => _url;
+    public string Caption => _caption;
+    public string AltText => _altText;
+    public int DisplayOrder => _displayOrder;
+    public bool IsPrimary => _isPrimary;
+    public DateTime UploadedDate => _uploadedDate;
+    public DateTime UpdatedDate => _updatedDate;
+    
+    public int PhotoId
     {
-        get => _displayOrder;
-        set
-        {
-            if (value < 0)
-                throw new ArgumentException("DisplayOrder cannot be negative", nameof(DisplayOrder));
-            _displayOrder = value;
-        }
+        get => Id?.Value ?? 0;
+        private set => Id = value > 0 ? ValueObjects.PhotoId.Create(value) : ValueObjects.PhotoId.CreateNew();
     }
-
-    public bool IsPrimary { get; set; } = false;
-    public DateTime UploadedDate { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
-
-    // Business methods
+    
+    public static Photo Create(CampsiteId campsiteId, string url, string caption, string altText, int displayOrder, AccommodationTypeId? accommodationTypeId = null)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            throw new DomainException("URL cannot be empty");
+        
+        if (displayOrder < 0)
+            throw new DomainException("Display order cannot be negative");
+        
+        return new Photo
+        {
+            Id = ValueObjects.PhotoId.CreateNew(),
+            _campsiteId = campsiteId,
+            _accommodationTypeId = accommodationTypeId,
+            _url = url.Trim(),
+            _caption = caption?.Trim() ?? string.Empty,
+            _altText = altText?.Trim() ?? string.Empty,
+            _displayOrder = displayOrder,
+            _isPrimary = false,
+            _uploadedDate = DateTime.UtcNow,
+            _updatedDate = DateTime.UtcNow
+        };
+    }
+    
+    private Photo() { }
+    
     public void SetAsPrimary()
     {
-        IsPrimary = true;
-        UpdatedDate = DateTime.UtcNow;
+        _isPrimary = true;
+        _updatedDate = DateTime.UtcNow;
     }
-
+    
     public void UnsetAsPrimary()
     {
-        IsPrimary = false;
-        UpdatedDate = DateTime.UtcNow;
+        _isPrimary = false;
+        _updatedDate = DateTime.UtcNow;
     }
-
+    
     public void UpdateDisplayOrder(int newOrder)
     {
         if (newOrder < 0)
-            throw new ArgumentException("Display order cannot be negative", nameof(newOrder));
-
-        DisplayOrder = newOrder;
-        UpdatedDate = DateTime.UtcNow;
+            throw new DomainException("Display order cannot be negative");
+        
+        _displayOrder = newOrder;
+        _updatedDate = DateTime.UtcNow;
     }
-
+    
     public void UpdateCaption(string caption, string altText)
     {
-        Caption = caption ?? string.Empty;
-        AltText = altText ?? string.Empty;
-        UpdatedDate = DateTime.UtcNow;
+        _caption = caption?.Trim() ?? string.Empty;
+        _altText = altText?.Trim() ?? string.Empty;
+        _updatedDate = DateTime.UtcNow;
     }
 }
-

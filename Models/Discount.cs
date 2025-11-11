@@ -1,139 +1,140 @@
+using CampsiteBooking.Models.Common;
+using CampsiteBooking.Models.ValueObjects;
+
 namespace CampsiteBooking.Models;
 
-public class Discount
+/// <summary>
+/// Discount entity representing promotional discount codes
+/// Can be a standalone aggregate root or part of a Marketing aggregate
+/// </summary>
+public class Discount : Entity<DiscountId>
 {
-    public int DiscountId { get; set; }
-
     private string _code = string.Empty;
-    public string Code
-    {
-        get => _code;
-        set
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                throw new ArgumentException("Code cannot be empty", nameof(Code));
-            _code = value.ToUpper(); // Store codes in uppercase for consistency
-        }
-    }
-
-    public string Description { get; set; } = string.Empty;
-
-    private string _type = "Percentage"; // Percentage or Fixed
-    public string Type
-    {
-        get => _type;
-        set
-        {
-            var validTypes = new[] { "Percentage", "Fixed" };
-            if (!validTypes.Contains(value))
-                throw new ArgumentException($"Type must be one of: {string.Join(", ", validTypes)}", nameof(Type));
-            _type = value;
-        }
-    }
-
+    private string _description = string.Empty;
+    private string _type = "Percentage";
     private decimal _value;
-    public decimal Value
-    {
-        get => _value;
-        set
-        {
-            if (value <= 0)
-                throw new ArgumentException("Value must be greater than 0", nameof(Value));
-
-            if (Type == "Percentage" && value > 100)
-                throw new ArgumentException("Percentage value cannot exceed 100", nameof(Value));
-
-            _value = value;
-        }
-    }
-
     private DateTime _validFrom;
-    public DateTime ValidFrom
-    {
-        get => _validFrom;
-        set => _validFrom = value.Date; // Store only the date part
-    }
-
     private DateTime _validUntil;
-    public DateTime ValidUntil
-    {
-        get => _validUntil;
-        set
-        {
-            if (value.Date < ValidFrom.Date)
-                throw new ArgumentException("ValidUntil must be on or after ValidFrom", nameof(ValidUntil));
-            _validUntil = value.Date; // Store only the date part
-        }
-    }
-
-    public int UsedCount { get; set; } = 0;
-
+    private int _usedCount;
     private int _maxUses;
-    public int MaxUses
-    {
-        get => _maxUses;
-        set
-        {
-            if (value < 0)
-                throw new ArgumentException("MaxUses cannot be negative (use 0 for unlimited)", nameof(MaxUses));
-            _maxUses = value;
-        }
-    }
-
     private decimal _minimumBookingAmount;
-    public decimal MinimumBookingAmount
+    private readonly List<int> _applicableCampsites = new();
+    private readonly List<string> _applicableAccommodationTypes = new();
+    private bool _isActive;
+    private DateTime _createdDate;
+    
+    public string Code => _code;
+    public string Description => _description;
+    public string Type => _type;
+    public decimal Value => _value;
+    public DateTime ValidFrom => _validFrom;
+    public DateTime ValidUntil => _validUntil;
+    public int UsedCount => _usedCount;
+    public int MaxUses => _maxUses;
+    public decimal MinimumBookingAmount => _minimumBookingAmount;
+    public IReadOnlyList<int> ApplicableCampsites => _applicableCampsites.AsReadOnly();
+    public IReadOnlyList<string> ApplicableAccommodationTypes => _applicableAccommodationTypes.AsReadOnly();
+    public bool IsActive => _isActive;
+    public DateTime CreatedDate => _createdDate;
+    
+    public int DiscountId
     {
-        get => _minimumBookingAmount;
-        set
-        {
-            if (value < 0)
-                throw new ArgumentException("MinimumBookingAmount cannot be negative", nameof(MinimumBookingAmount));
-            _minimumBookingAmount = value;
-        }
+        get => Id?.Value ?? 0;
+        private set => Id = value > 0 ? ValueObjects.DiscountId.Create(value) : ValueObjects.DiscountId.CreateNew();
     }
-
-    public List<int> ApplicableCampsites { get; set; } = new();
-    public List<string> ApplicableAccommodationTypes { get; set; } = new();
-    public bool IsActive { get; set; } = true;
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-
-    // Business methods
+    
+    public static Discount Create(
+        string code,
+        string description,
+        string type,
+        decimal value,
+        DateTime validFrom,
+        DateTime validUntil,
+        int maxUses = 0,
+        decimal minimumBookingAmount = 0)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            throw new DomainException("Code cannot be empty");
+        
+        var validTypes = new[] { "Percentage", "Fixed" };
+        if (!validTypes.Contains(type))
+            throw new DomainException("Type must be Percentage or Fixed");
+        
+        if (value <= 0)
+            throw new DomainException("Value must be greater than 0");
+        
+        if (type == "Percentage" && value > 100)
+            throw new DomainException("Percentage value cannot exceed 100");
+        
+        if (validUntil.Date < validFrom.Date)
+            throw new DomainException("Valid until must be on or after valid from");
+        
+        if (maxUses < 0)
+            throw new DomainException("Max uses cannot be negative (use 0 for unlimited)");
+        
+        if (minimumBookingAmount < 0)
+            throw new DomainException("Minimum booking amount cannot be negative");
+        
+        return new Discount
+        {
+            Id = ValueObjects.DiscountId.CreateNew(),
+            _code = code.ToUpper().Trim(),
+            _description = description?.Trim() ?? string.Empty,
+            _type = type,
+            _value = value,
+            _validFrom = validFrom.Date,
+            _validUntil = validUntil.Date,
+            _usedCount = 0,
+            _maxUses = maxUses,
+            _minimumBookingAmount = minimumBookingAmount,
+            _isActive = true,
+            _createdDate = DateTime.UtcNow
+        };
+    }
+    
+    private Discount() { }
+    
     public bool IsValid(DateTime bookingDate)
     {
         var checkDate = bookingDate.Date;
-        return IsActive 
-            && checkDate >= ValidFrom.Date 
-            && checkDate <= ValidUntil.Date
-            && (MaxUses == 0 || UsedCount < MaxUses);
+        return _isActive 
+            && checkDate >= _validFrom.Date 
+            && checkDate <= _validUntil.Date
+            && (_maxUses == 0 || _usedCount < _maxUses);
     }
-
+    
     public decimal CalculateDiscount(decimal bookingAmount)
     {
-        if (bookingAmount < MinimumBookingAmount)
-            throw new InvalidOperationException($"Booking amount must be at least {MinimumBookingAmount}");
-
-        if (Type == "Percentage")
-            return bookingAmount * (Value / 100);
-        else // Fixed
-            return Math.Min(Value, bookingAmount); // Don't discount more than the booking amount
+        if (bookingAmount < _minimumBookingAmount)
+            throw new DomainException($"Booking amount must be at least {_minimumBookingAmount}");
+        
+        if (_type == "Percentage")
+            return bookingAmount * (_value / 100);
+        else
+            return Math.Min(_value, bookingAmount);
     }
-
+    
     public void IncrementUsage()
     {
-        if (MaxUses > 0 && UsedCount >= MaxUses)
-            throw new InvalidOperationException("Discount has reached maximum usage limit");
-
-        UsedCount++;
+        if (_maxUses > 0 && _usedCount >= _maxUses)
+            throw new DomainException("Discount has reached maximum usage limit");
+        
+        _usedCount++;
     }
-
-    public void Activate()
+    
+    public void Activate() => _isActive = true;
+    public void Deactivate() => _isActive = false;
+    
+    public void AddApplicableCampsite(int campsiteId)
     {
-        IsActive = true;
+        if (!_applicableCampsites.Contains(campsiteId))
+            _applicableCampsites.Add(campsiteId);
     }
-
-    public void Deactivate()
+    
+    public void AddApplicableAccommodationType(string accommodationType)
     {
-        IsActive = false;
+        if (!_applicableAccommodationTypes.Contains(accommodationType))
+            _applicableAccommodationTypes.Add(accommodationType);
     }
 }
 
