@@ -12,9 +12,11 @@ builder.Services.AddRazorComponents()
 // Add MudBlazor services
 builder.Services.AddMudServices();
 
-// Add Entity Framework DbContext
+// Add Entity Framework DbContext with MySQL
 builder.Services.AddDbContext<CampsiteBookingDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseMySql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        new MySqlServerVersion(new Version(8, 0, 21))));
 
 var app = builder.Build();
 
