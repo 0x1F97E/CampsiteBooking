@@ -1,6 +1,8 @@
+using CampsiteBooking.Application.Common;
 using CampsiteBooking.Components;
 using CampsiteBooking.Data;
 using CampsiteBooking.Data.Repositories;
+using CampsiteBooking.Infrastructure.Kafka;
 using CampsiteBooking.Models.Repositories;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
@@ -24,6 +26,15 @@ builder.Services.AddDbContext<CampsiteBookingDbContext>(options =>
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ICampsiteRepository, CampsiteRepository>();
+
+// Register Unit of Work (Application Layer - Transaction Management)
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Register Kafka Producer (Event-Driven Architecture)
+builder.Services.AddSingleton<IKafkaProducer, KafkaProducer>();
+
+// Register Kafka Consumer as Hosted Service (Background Processing)
+builder.Services.AddHostedService<KafkaConsumer>();
 
 var app = builder.Build();
 

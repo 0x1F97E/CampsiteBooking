@@ -41,6 +41,14 @@ public abstract class AggregateRoot<TId> : Entity<TId>
     }
 
     /// <summary>
+    /// Get all domain events (for publishing)
+    /// </summary>
+    public IReadOnlyList<IDomainEvent> GetDomainEvents()
+    {
+        return _domainEvents.AsReadOnly();
+    }
+
+    /// <summary>
     /// Clear all domain events (typically called after events are dispatched)
     /// </summary>
     public void ClearDomainEvents()

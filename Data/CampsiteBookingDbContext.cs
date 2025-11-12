@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using CampsiteBooking.Models;
 using CampsiteBooking.Models.ValueObjects;
+using CampsiteBooking.Models.Common;
 
 namespace CampsiteBooking.Data;
 
@@ -116,5 +117,6 @@ public class CampsiteBookingDbContext : DbContext
         configurationBuilder.Properties<NewsletterAnalyticsId>().HaveConversion<NewsletterAnalyticsIdConverter>();
         configurationBuilder.Properties<MaintenanceTaskId>().HaveConversion<MaintenanceTaskIdConverter>();
     }
+
 }
 
