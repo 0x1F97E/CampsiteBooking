@@ -1,10 +1,26 @@
 version: '3.8'
 
 services:
-  # MySQL Database
+  # NGINX - Reverse Proxy + Security Layer
+  nginx:
+    image: nginx:alpine
+    container_name: bookmyhome-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - bookmyhome
+    networks:
+      - bookmyhome-network
+    restart: unless-stopped
+
+  # MySQL Database (Vertical Scaling)
   mysql:
     image: mysql:8.0
-    container_name: campsitebooking-mysql
+    container_name: bookmyhome-mysql
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: CampsiteBookingDb
@@ -13,35 +29,39 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
-      - campsitebooking-network
+      - bookmyhome-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
       interval: 10s
       timeout: 3s
       retries: 10
       start_period: 30s
+    restart: unless-stopped
 
-  # Zookeeper (required for Kafka)
+  # Zookeeper (Kafka dependency)
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
-    container_name: campsitebooking-zookeeper
+    container_name: bookmyhome-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
     networks:
-      - campsitebooking-network
+      - bookmyhome-network
+    restart: unless-stopped
 
-  # Kafka Message Broker
+  # Kafka (Event Streaming)
   kafka:
     image: confluentinc/cp-kafka:7.5.0
-    container_name: campsitebooking-kafka
+    container_name: bookmyhome-kafka
     depends_on:
       - zookeeper
     ports:
       - "9092:9092"
-      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -51,36 +71,24 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks:
-      - campsitebooking-network
+      - bookmyhome-network
     healthcheck:
       test: kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1
       interval: 10s
       timeout: 10s
       retries: 10
       start_period: 20s
+    restart: unless-stopped
 
-  # Nginx Load Balancer for Horizontal Scaling
-  nginx:
-    image: nginx:alpine
-    container_name: campsitebooking-loadbalancer
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - bookmyhome-app-1
-      - bookmyhome-app-2
-    networks:
-      - campsitebooking-network
-
-  # BookMyHome App Instance 1 (Horizontal Scaling)
-  bookmyhome-app-1:
+  # BookMyHome App (Vertical Scaling)
+  bookmyhome:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: bookmyhome-app-1
+    container_name: bookmyhome-app
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=CampsiteBookingDb;User=root;Password=rootpassword;
       - Kafka__BootstrapServers=kafka:29092
     depends_on:
@@ -89,31 +97,35 @@ services:
       kafka:
         condition: service_healthy
     networks:
-      - campsitebooking-network
+      - bookmyhome-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    restart: unless-stopped
 
-  # BookMyHome App Instance 2 (Horizontal Scaling)
-  bookmyhome-app-2:
+  # Email Worker (Kafka Consumer)
+  email-worker:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: bookmyhome-app-2
+      dockerfile: Dockerfile.EmailWorker
+    container_name: bookmyhome-email-worker
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=CampsiteBookingDb;User=root;Password=rootpassword;
       - Kafka__BootstrapServers=kafka:29092
+      - SMTP__Host=smtp.gmail.com
+      - SMTP__Port=587
     depends_on:
-      mysql:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+      - kafka
     networks:
-      - campsitebooking-network
+      - bookmyhome-network
+    restart: unless-stopped
 
 volumes:
   mysql-data:
     driver: local
 
 networks:
-  campsitebooking-network:
+  bookmyhome-network:
     driver: bridge
 

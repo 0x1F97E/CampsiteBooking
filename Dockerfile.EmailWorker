@@ -1,0 +1,14 @@
+# Dockerfile for Email Worker (Kafka Consumer)
+# This is a placeholder - will be implemented when Kafka integration is added
+
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+WORKDIR /app
+
+# TODO: Implement Email Worker
+# - Consume events from Kafka (BookingConfirmed, NewsletterSubscribed, etc.)
+# - Send emails via SMTP
+# - Send SMS notifications
+
+# For now, just a placeholder that keeps container running
+ENTRYPOINT ["tail", "-f", "/dev/null"]
+
