@@ -4,9 +4,8 @@ namespace CampsiteBooking.Models.Repositories;
 
 /// <summary>
 /// Repository interface for User aggregate.
-/// TODO: Implement after User is converted to AggregateRoot
 /// </summary>
-public interface IUserRepository // : IRepository<User, UserId>
+public interface IUserRepository : IRepository<User, UserId>
 {
     /// <summary>
     /// Get user by email

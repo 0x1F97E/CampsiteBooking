@@ -16,6 +16,92 @@ builder.Services.AddRazorComponents()
 // Add MudBlazor services
 builder.Services.AddMudServices();
 
+// Add HttpClient for Blazor components to call REST API
+builder.Services.AddHttpClient("BookMyHomeAPI", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7001/"); // HTTPS port
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
+// Register ApiService for Blazor components
+builder.Services.AddScoped<CampsiteBooking.Services.ApiService>();
+
+// Add API Controllers (REST API)
+builder.Services.AddControllers();
+
+// Add JWT Authentication
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer(options =>
+    {
+        var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+        var secretKey = jwtSettings["SecretKey"] ?? "BookMyHome-SuperSecret-Key-For-3Semester-Exam-Project-2025";
+
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"] ?? "BookMyHome",
+            ValidAudience = jwtSettings["Audience"] ?? "BookMyHomeUsers",
+            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+                System.Text.Encoding.UTF8.GetBytes(secretKey))
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+// Add Anti-forgery for CSRF protection (Blazor Server already has this, but explicit for API)
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.Name = "X-CSRF-TOKEN";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Require HTTPS
+    options.Cookie.SameSite = SameSiteMode.Strict; // CSRF protection
+});
+
+// Add Swagger/OpenAPI documentation
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "BookMyHome API",
+        Version = "v1",
+        Description = "REST API for campsite booking system - 3. semester exam project",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "BookMyHome Team"
+        }
+    });
+
+    // Add JWT authentication to Swagger
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token.",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
 // Add Entity Framework DbContext with MySQL
 builder.Services.AddDbContext<CampsiteBookingDbContext>(options =>
     options.UseMySql(
@@ -39,7 +125,17 @@ builder.Services.AddHostedService<KafkaConsumer>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
+{
+    // Enable Swagger in development
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "BookMyHome API v1");
+        options.RoutePrefix = "swagger"; // Access at /swagger
+    });
+}
+else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
@@ -48,11 +144,20 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Add Authentication & Authorization middleware (MUST be before MapControllers!)
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Health check endpoint for YARP
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
 app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Map API Controllers
+app.MapControllers();
 
 app.Run();

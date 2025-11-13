@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "ASnygdpM+9A=",
+  "success": true,
+  "projectFilePath": "/home/pc/Documents/CampsiteBooking/ApiGateway/ApiGateway.csproj",
+  "expectedPackageFiles": [
+    "/home/pc/.nuget/packages/system.io.hashing/7.0.0/system.io.hashing.7.0.0.nupkg.sha512",
+    "/home/pc/.nuget/packages/yarp.reverseproxy/2.1.0/yarp.reverseproxy.2.1.0.nupkg.sha512"
+  ],
+  "logs": []
+}

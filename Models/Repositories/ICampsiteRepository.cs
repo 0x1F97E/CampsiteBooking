@@ -4,9 +4,8 @@ namespace CampsiteBooking.Models.Repositories;
 
 /// <summary>
 /// Repository interface for Campsite aggregate.
-/// TODO: Implement after Campsite is converted to AggregateRoot
 /// </summary>
-public interface ICampsiteRepository // : IRepository<Campsite, CampsiteId>
+public interface ICampsiteRepository : IRepository<Campsite, CampsiteId>
 {
     /// <summary>
     /// Get all active campsites
