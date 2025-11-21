@@ -1,0 +1,141 @@
+I need a UML Class Diagram showing the domain model for the campsite booking system.
+
+CLASSES (show with UML class boxes):
+
+1. Booking (Entity)
+   - BookingId: BookingId
+   - GuestId: GuestId
+   - CampsiteId: CampsiteId
+   - AccommodationTypeId: AccommodationTypeId
+   - CheckInDate: DateOnly
+   - CheckOutDate: DateOnly
+   - Status: BookingStatus
+   - TotalPrice: Money
+   - NumberOfAdults: int
+   - NumberOfChildren: int
+   - SpecialRequests: string
+   + Create(guestId, campsiteId, ...): Booking
+   + Confirm(): void
+   + Cancel(): void
+   + Complete(): void
+   + UpdateSpecialRequests(requests): void
+
+2. Guest (Entity)
+   - GuestId: GuestId
+   - Email: Email
+   - FirstName: string
+   - LastName: string
+   - Phone: string
+   - Country: string
+   - DateOfBirth: DateOnly
+   + Create(email, firstName, ...): Guest
+   + UpdateContactInfo(phone, country): void
+
+3. User (Entity)
+   - UserId: UserId
+   - Email: Email
+   - FirstName: string
+   - LastName: string
+   - PasswordHash: string
+   - IsActive: bool
+   + Create(email, firstName, ...): User
+   + ChangePassword(newHash): void
+   + Deactivate(): void
+
+4. Campsite (Entity)
+   - CampsiteId: CampsiteId
+   - Name: string
+   - Region: string
+   - Description: string
+   - Location: Location
+   - IsActive: bool
+   + Create(name, region, ...): Campsite
+   + AddAccommodationType(type): void
+   + AddAmenity(amenity): void
+
+5. AccommodationType (Entity)
+   - AccommodationTypeId: AccommodationTypeId
+   - CampsiteId: CampsiteId
+   - Name: string
+   - Capacity: int
+   - BasePrice: Money
+   + Create(campsiteId, name, ...): AccommodationType
+
+6. Payment (Entity)
+   - PaymentId: PaymentId
+   - BookingId: BookingId
+   - Amount: Money
+   - Status: PaymentStatus
+   - TransactionId: string
+   + Create(bookingId, amount): Payment
+   + MarkAsPaid(): void
+   + ProcessRefund(): void
+
+VALUE OBJECTS (show with <<value object>> stereotype):
+
+7. BookingId (Strongly-Typed ID)
+   - Value: Guid
+   + Create(): BookingId
+   + Create(guid): BookingId
+
+8. Email (Value Object)
+   - Value: string
+   + Create(email): Email
+   - Validate(email): bool
+
+9. Money (Value Object)
+   - Amount: decimal
+   - Currency: string
+   + Create(amount, currency): Money
+   + Add(other): Money
+   + Multiply(factor): Money
+
+10. Location (Value Object)
+    - Latitude: decimal
+    - Longitude: decimal
+    + Create(lat, lon): Location
+
+11. DateRange (Value Object)
+    - StartDate: DateOnly
+    - EndDate: DateOnly
+    + Create(start, end): DateRange
+    + GetNumberOfNights(): int
+    + Overlaps(other): bool
+
+ENUMS:
+
+12. BookingStatus (Enum)
+    - Pending
+    - Confirmed
+    - Cancelled
+    - Completed
+
+13. PaymentStatus (Enum)
+    - Pending
+    - Paid
+    - Failed
+    - Refunded
+
+RELATIONSHIPS:
+
+Booking → Guest (Many-to-One)
+Booking → Campsite (Many-to-One)
+Booking → AccommodationType (Many-to-One)
+Booking → Payment (One-to-One)
+Campsite → AccommodationType (One-to-Many, composition)
+Booking uses→ BookingId (composition)
+Booking uses→ Money (composition)
+Booking uses→ BookingStatus (dependency)
+Guest uses→ Email (composition)
+Payment uses→ PaymentStatus (dependency)
+
+VISUAL STYLE:
+- Use standard UML class notation
+- Show attributes with visibility (- private, + public)
+- Show methods with return types
+- Use composition (filled diamond) for value objects
+- Use aggregation (hollow diamond) for entities
+- Show multiplicity on associations (1, *, 0..1)
+- Add <<value object>> stereotype
+- Add <<entity>> stereotype
+

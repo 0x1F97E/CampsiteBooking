@@ -1,0 +1,101 @@
+I need a UML Component Diagram for the campsite booking system showing components and their interfaces.
+
+COMPONENTS (use component boxes with <<component>> stereotype):
+
+1. Blazor UI Component
+   Provides: IUserInterface
+   Requires: IApiClient
+   
+2. API Gateway Component (YARP)
+   Provides: IReverseProxy, ILoadBalancer
+   Requires: IHealthCheck
+   
+3. Bookings API Component
+   Provides: IBookingService, IBookingController
+   Requires: IBookingRepository, IKafkaProducer
+   
+4. Users API Component
+   Provides: IUserService, IUserController
+   Requires: IUserRepository, IAuthService
+   
+5. Auth Component
+   Provides: IAuthService, IJwtTokenGenerator
+   Requires: IUserRepository
+   
+6. Repository Component
+   Provides: IBookingRepository, IUserRepository, ICampsiteRepository
+   Requires: IDbContext
+   
+7. EF Core Component
+   Provides: IDbContext
+   Requires: IDatabaseConnection
+   
+8. Kafka Producer Component
+   Provides: IKafkaProducer
+   Requires: IKafkaBroker
+   
+9. Kafka Consumer Component
+   Provides: IEventHandler
+   Requires: IKafkaBroker, IEmailService
+
+INTERFACES (show with lollipop notation):
+
+Provided Interfaces (lollipop - circle on line):
+- IUserInterface
+- IReverseProxy
+- ILoadBalancer
+- IBookingService
+- IUserService
+- IAuthService
+- IBookingRepository
+- IDbContext
+- IKafkaProducer
+- IEventHandler
+
+Required Interfaces (socket - half-circle):
+- IApiClient
+- IHealthCheck
+- IBookingRepository
+- IKafkaProducer
+- IUserRepository
+- IAuthService
+- IDbContext
+- IDatabaseConnection
+- IKafkaBroker
+- IEmailService
+
+DEPENDENCIES (show with dashed arrows):
+
+Blazor UI → API Gateway
+API Gateway → Bookings API
+API Gateway → Users API
+Bookings API → Repository
+Bookings API → Kafka Producer
+Users API → Repository
+Users API → Auth
+Auth → Repository
+Repository → EF Core
+EF Core → MySQL Database
+Kafka Producer → Kafka Broker
+Kafka Consumer → Kafka Broker
+Kafka Consumer → Email Service
+
+PORTS (show connection points):
+
+API Gateway:
+- Port 8001 (HTTPS in)
+- Port 7001, 7002, 7003 (HTTPS out to API instances)
+
+Bookings API:
+- Port 7001 (HTTPS in)
+- Port 3306 (MySQL out)
+- Port 9092 (Kafka out)
+
+VISUAL STYLE:
+- Use UML component boxes (rectangle with component icon)
+- Show provided interfaces as lollipops (○—)
+- Show required interfaces as sockets (—◐)
+- Use dashed arrows for dependencies
+- Group related components
+- Add port numbers on connections
+

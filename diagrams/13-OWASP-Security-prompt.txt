@@ -1,0 +1,182 @@
+I need an OWASP Security Diagram showing the 4 main security threats and protection layers.
+
+Create a layered defense diagram with threats on the left and protection mechanisms on the right.
+
+THREATS (Left side - Red boxes with warning icons):
+
+1. SQL Injection
+   Risk Level: HIGH
+   Attack Vector: Malicious SQL in user input
+   Example: "'; DROP TABLE Bookings; --"
+   Target: Database queries
+
+2. Cross-Site Scripting (XSS)
+   Risk Level: HIGH
+   Attack Vector: Malicious JavaScript in input
+   Example: "<script>alert('XSS')</script>"
+   Target: Web UI, user browsers
+
+3. Cross-Site Request Forgery (CSRF)
+   Risk Level: MEDIUM
+   Attack Vector: Forged requests from malicious sites
+   Example: Fake form submission
+   Target: Authenticated user sessions
+
+4. Broken Authentication
+   Risk Level: HIGH
+   Attack Vector: Weak passwords, session hijacking
+   Example: Brute force, token theft
+   Target: User accounts, JWT tokens
+
+PROTECTION LAYERS (Right side - Green boxes with shield icons):
+
+LAYER 1 - INPUT VALIDATION:
+Protection against: SQL Injection, XSS
+
+Mechanisms:
+✅ InputValidator.ValidateInput()
+   - Regex validation
+   - Whitelist allowed characters
+   - Max length checks
+   - Email format validation
+
+✅ Strongly-Typed Value Objects
+   - Email class validates format
+   - Money class validates amount
+   - DateRange validates dates
+
+✅ EF Core Parameterized Queries
+   - Automatic SQL parameterization
+   - No string concatenation
+   - Prevents SQL injection
+
+Code Example:
+// SAFE - Parameterized
+var booking = await _context.Bookings
+    .Where(b => b.BookingId == bookingId)
+    .FirstOrDefaultAsync();
+
+// UNSAFE - String concatenation (NOT USED)
+// var sql = $"SELECT * FROM Bookings WHERE Id = '{bookingId}'";
+
+LAYER 2 - OUTPUT ENCODING:
+Protection against: XSS
+
+Mechanisms:
+✅ Blazor Auto-Encoding
+   - Automatic HTML encoding
+   - Prevents script injection
+   - Safe rendering of user input
+
+✅ Content Security Policy (CSP)
+   - Restrict script sources
+   - Block inline scripts
+   - Prevent XSS execution
+
+Code Example:
+// Blazor automatically encodes this
+<p>@booking.SpecialRequests</p>
+
+LAYER 3 - AUTHENTICATION & AUTHORIZATION:
+Protection against: Broken Authentication
+
+Mechanisms:
+✅ JWT Token Authentication
+   - Secure token generation
+   - HMAC SHA256 signing
+   - Expiration (24 hours)
+   - Refresh token support
+
+✅ Password Hashing
+   - BCrypt algorithm
+   - Salt per password
+   - Work factor: 12
+
+✅ Role-Based Access Control (RBAC)
+   - [Authorize] attributes
+   - Role claims in JWT
+   - Least privilege principle
+
+Code Example:
+[Authorize(Roles = "Admin")]
+public async Task<IActionResult> DeleteBooking(Guid id)
+
+✅ HTTPS Only
+   - TLS 1.2+
+   - Certificate validation
+   - Encrypted communication
+
+LAYER 4 - CSRF PROTECTION:
+Protection against: CSRF
+
+Mechanisms:
+✅ Anti-Forgery Tokens
+   - Blazor built-in CSRF protection
+   - Unique token per session
+   - Validated on POST/PUT/DELETE
+
+✅ SameSite Cookies
+   - SameSite=Strict
+   - Prevents cross-site cookie sending
+
+✅ Origin Validation
+   - Check Referer header
+   - Validate request origin
+
+Code Example:
+// Blazor automatically adds anti-forgery token
+<EditForm Model="@booking" OnValidSubmit="HandleSubmit">
+    <AntiforgeryToken />
+</EditForm>
+
+ADDITIONAL SECURITY MEASURES:
+
+✅ Rate Limiting (YARP Gateway)
+   - Max 100 requests per minute per IP
+   - Prevents brute force attacks
+
+✅ Input Sanitization
+   - Remove dangerous characters
+   - Trim whitespace
+   - Normalize Unicode
+
+✅ Logging & Monitoring
+   - Log all authentication attempts
+   - Log failed validations
+   - Alert on suspicious activity
+
+✅ Secure Configuration
+   - Secrets in environment variables
+   - No hardcoded passwords
+   - Connection strings in appsettings
+
+VISUAL LAYOUT:
+
+Left side (Threats):
+[SQL Injection] ──────────────────> [Layer 1: Input Validation]
+[XSS] ────────────────────────────> [Layer 2: Output Encoding]
+[CSRF] ───────────────────────────> [Layer 4: CSRF Protection]
+[Broken Auth] ────────────────────> [Layer 3: Authentication]
+
+Center (Application):
+[Blazor UI] → [API Gateway] → [API] → [Database]
+
+Right side (Protection):
+Show shields blocking arrows from threats
+
+LEGEND:
+🔴 Red = Threat
+🟢 Green = Protection
+✅ = Implemented
+⚠️ = Partial
+❌ = Not implemented
+→ = Attack vector
+🛡️ = Defense mechanism
+
+OWASP TOP 10 COVERAGE:
+✅ A01:2021 - Broken Access Control (JWT + RBAC)
+✅ A02:2021 - Cryptographic Failures (HTTPS, BCrypt)
+✅ A03:2021 - Injection (Parameterized queries, validation)
+✅ A05:2021 - Security Misconfiguration (Secure defaults)
+✅ A07:2021 - XSS (Output encoding, CSP)
+

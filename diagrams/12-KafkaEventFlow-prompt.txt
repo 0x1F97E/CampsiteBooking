@@ -1,0 +1,161 @@
+I need a Kafka Event Flow Diagram showing producers, topics, consumers, and event processing.
+
+PRODUCERS (left side - blue boxes):
+
+1. BookingsController
+   Produces:
+   - BookingCreatedEvent
+   - BookingConfirmedEvent
+   - BookingCancelledEvent
+   - BookingCompletedEvent
+   
+2. UsersController
+   Produces:
+   - UserCreatedEvent
+   - UserUpdatedEvent
+   
+3. PaymentsController
+   Produces:
+   - PaymentProcessedEvent
+   - RefundProcessedEvent
+
+KAFKA TOPICS (center - orange cylinders):
+
+1. booking-events
+   Partitions: 3
+   Replication: 1
+   Retention: 7 days
+   Events:
+   - BookingCreatedEvent
+   - BookingConfirmedEvent
+   - BookingCancelledEvent
+   - BookingCompletedEvent
+
+2. user-events
+   Partitions: 1
+   Replication: 1
+   Retention: 7 days
+   Events:
+   - UserCreatedEvent
+   - UserUpdatedEvent
+
+3. payment-events
+   Partitions: 2
+   Replication: 1
+   Retention: 30 days
+   Events:
+   - PaymentProcessedEvent
+   - RefundProcessedEvent
+
+CONSUMERS (right side - green boxes):
+
+1. EmailEventHandler
+   Subscribes to: booking-events, user-events, payment-events
+   Group ID: email-consumer-group
+   Actions:
+   - BookingCreatedEvent → Send confirmation email
+   - BookingCancelledEvent → Send cancellation email
+   - UserCreatedEvent → Send welcome email
+   - PaymentProcessedEvent → Send receipt email
+
+2. NotificationEventHandler
+   Subscribes to: booking-events, payment-events
+   Group ID: notification-consumer-group
+   Actions:
+   - BookingCreatedEvent → Create in-app notification
+   - BookingConfirmedEvent → Create in-app notification
+   - PaymentProcessedEvent → Create in-app notification
+
+3. AnalyticsEventHandler (Future)
+   Subscribes to: booking-events, payment-events
+   Group ID: analytics-consumer-group
+   Actions:
+   - All events → Store in analytics database
+
+EVENT STRUCTURE (show as JSON):
+
+BookingCreatedEvent:
+{
+  "EventId": "guid",
+  "EventType": "BookingCreated",
+  "Timestamp": "2024-01-15T10:30:00Z",
+  "BookingId": "guid",
+  "GuestId": "guid",
+  "CampsiteId": "guid",
+  "CheckInDate": "2024-06-01",
+  "CheckOutDate": "2024-06-07",
+  "TotalPrice": 1500.00,
+  "GuestEmail": "guest@example.com"
+}
+
+UserCreatedEvent:
+{
+  "EventId": "guid",
+  "EventType": "UserCreated",
+  "Timestamp": "2024-01-15T10:30:00Z",
+  "UserId": "guid",
+  "Email": "user@example.com",
+  "FirstName": "John",
+  "LastName": "Doe"
+}
+
+FLOW (show with arrows):
+
+1. BookingsController → booking-events topic
+   (Async publish, fire-and-forget)
+
+2. booking-events topic → EmailEventHandler
+   (Consumer poll, batch processing)
+
+3. EmailEventHandler → External Email Service
+   (SMTP or API call)
+
+4. booking-events topic → NotificationEventHandler
+   (Consumer poll, batch processing)
+
+5. NotificationEventHandler → Database
+   (Store notification)
+
+KAFKA BROKER (center - show as server):
+
+Kafka Broker (Port 9092)
+- Manages topics
+- Handles partitioning
+- Ensures message ordering within partition
+- Stores messages temporarily
+
+Zookeeper (Port 2181)
+- Manages Kafka cluster
+- Tracks consumer offsets
+- Handles leader election
+
+CONFIGURATION:
+
+Producer Config:
+- Acks: 1 (leader acknowledgment)
+- Compression: gzip
+- Batch size: 16KB
+- Linger: 10ms
+
+Consumer Config:
+- Auto offset reset: earliest
+- Enable auto commit: true
+- Max poll records: 500
+- Session timeout: 30s
+
+VISUAL STYLE:
+- Use blue boxes for producers
+- Use orange cylinders for topics
+- Use green boxes for consumers
+- Use solid arrows for message flow
+- Show event types inside topics
+- Add timing/sequence numbers
+- Group related components
+
+LEGEND:
+- Blue = Producer (API Controllers)
+- Orange = Kafka Topic
+- Green = Consumer (Event Handlers)
+- Solid arrow = Event flow
+- Dashed arrow = External service call
+
