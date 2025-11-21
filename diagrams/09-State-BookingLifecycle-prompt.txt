@@ -1,0 +1,209 @@
+I need a UML State Diagram showing the complete lifecycle of a booking in the campsite system.
+
+Please create a state diagram with the following states and transitions:
+
+STATES (use rounded rectangles):
+
+1. [Initial State]
+   Symbol: Solid black circle (●)
+   Description: Starting point
+
+2. Pending
+   Color: Yellow
+   Description: Booking created, awaiting payment
+   Entry action: Send confirmation email
+   Do activity: Reserve accommodation
+   Exit action: None
+
+3. Confirmed
+   Color: Green
+   Description: Payment received, booking confirmed
+   Entry action: Send booking voucher email
+   Do activity: Block accommodation in calendar
+   Exit action: None
+
+4. Cancelled
+   Color: Red
+   Description: Booking cancelled by user or admin
+   Entry action: Send cancellation email
+   Do activity: Process refund (if applicable)
+   Exit action: Release accommodation
+
+5. Completed
+   Color: Blue
+   Description: Guest checked out, booking finished
+   Entry action: Send review request email
+   Do activity: Archive booking data
+   Exit action: None
+
+6. [Final State]
+   Symbol: Solid black circle with outer ring (◉)
+   Description: End point
+
+TRANSITIONS (use arrows with labels):
+
+1. [Initial] → Pending
+   Trigger: Create booking
+   Guard: None
+   Action: booking.Create()
+   
+2. Pending → Confirmed
+   Trigger: Confirm()
+   Guard: [payment.Status == Paid]
+   Action: booking.Confirm()
+   
+3. Pending → Cancelled
+   Trigger: Cancel()
+   Guard: [user requests cancellation OR admin cancels]
+   Action: booking.Cancel()
+   
+4. Confirmed → Cancelled
+   Trigger: Cancel()
+   Guard: [cancellation.RefundAmount > 0]
+   Action: booking.Cancel(), ProcessRefund()
+   
+5. Confirmed → Completed
+   Trigger: Complete()
+   Guard: [currentDate >= checkOutDate]
+   Action: booking.Complete()
+   
+6. Cancelled → [Final]
+   Trigger: Archive
+   Guard: [archiveDate reached]
+   Action: MoveToArchive()
+   
+7. Completed → [Final]
+   Trigger: Archive
+   Guard: [archiveDate reached]
+   Action: MoveToArchive()
+
+SELF-TRANSITIONS (loops back to same state):
+
+1. Pending → Pending
+   Trigger: UpdateSpecialRequests()
+   Guard: [booking.Status == Pending]
+   Action: booking.UpdateSpecialRequests()
+
+2. Confirmed → Confirmed
+   Trigger: UpdateSpecialRequests()
+   Guard: [booking.Status == Confirmed]
+   Action: booking.UpdateSpecialRequests()
+
+COMPOSITE STATES (optional - show substates):
+
+Pending state contains:
+- Substate: AwaitingPayment
+- Substate: PaymentProcessing
+
+Cancelled state contains:
+- Substate: RefundPending
+- Substate: RefundProcessed
+
+GUARDS (conditions in square brackets):
+
+[payment.Status == Paid]
+- Payment has been successfully processed
+- Payment gateway returned success
+
+[user requests cancellation OR admin cancels]
+- User clicked "Cancel Booking" button
+- OR Admin cancelled the booking
+
+[cancellation.RefundAmount > 0]
+- Booking was paid
+- Refund policy allows refund
+- Cancellation is before check-in date
+
+[currentDate >= checkOutDate]
+- Current date is on or after check-out date
+- Guest has checked out
+
+[archiveDate reached]
+- Booking is older than retention period (e.g., 2 years)
+- Ready for archival
+
+ACTIONS (what happens during transition):
+
+booking.Create()
+- Validate dates
+- Check availability
+- Calculate total price
+- Assign booking ID
+
+booking.Confirm()
+- Update status to Confirmed
+- Record payment details
+- Send confirmation email
+- Raise BookingConfirmedEvent
+
+booking.Cancel()
+- Update status to Cancelled
+- Calculate refund amount
+- Send cancellation email
+- Raise BookingCancelledEvent
+
+booking.Complete()
+- Update status to Completed
+- Send review request
+- Raise BookingCompletedEvent
+
+ProcessRefund()
+- Calculate refund amount based on policy
+- Initiate refund transaction
+- Update payment status
+
+ENTRY/EXIT ACTIONS:
+
+State: Pending
+- Entry: Log("Booking created"), SendEmail("Confirmation")
+- Exit: None
+
+State: Confirmed
+- Entry: Log("Booking confirmed"), SendEmail("Voucher")
+- Exit: None
+
+State: Cancelled
+- Entry: Log("Booking cancelled"), SendEmail("Cancellation")
+- Exit: ReleaseAccommodation()
+
+State: Completed
+- Entry: Log("Booking completed"), SendEmail("Review request")
+- Exit: None
+
+VISUAL STYLE:
+
+- Use rounded rectangles for states
+- Use solid arrows for transitions
+- Label transitions with: trigger [guard] / action
+- Use different colors for different states:
+  * Yellow: Pending
+  * Green: Confirmed
+  * Red: Cancelled
+  * Blue: Completed
+- Show entry/exit actions inside state boxes
+- Use notes to explain complex guards or actions
+
+NOTES TO ADD:
+
+Note near Pending → Confirmed:
+"Payment must be completed within 24 hours, otherwise booking is automatically cancelled"
+
+Note near Confirmed → Cancelled:
+"Refund amount depends on cancellation policy:
+- >7 days before check-in: 100% refund
+- 3-7 days before: 50% refund
+- <3 days before: No refund"
+
+Note near Completed:
+"Booking is automatically completed at midnight on check-out date"
+
+LEGEND:
+- ● = Initial state
+- ◉ = Final state
+- Rounded rectangle = State
+- Arrow = Transition
+- [condition] = Guard
+- action() = Action
+- entry: = Entry action
+- exit: = Exit action
+

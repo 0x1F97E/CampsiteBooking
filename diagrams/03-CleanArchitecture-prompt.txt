@@ -1,0 +1,122 @@
+I need a Clean Architecture (Onion Architecture) diagram showing the layered structure of a .NET campsite booking system.
+
+Please create concentric circles (like an onion) with 4 layers:
+
+LAYER 1 - DOMAIN LAYER (Innermost Circle - Core):
+Color: Dark Blue
+Contains:
+- Entities
+  * Booking
+  * User
+  * Guest
+  * Campsite
+  * AccommodationType
+  * Payment
+  * Review
+  * Amenity
+  * Availability
+  * Pricing
+  
+- Value Objects
+  * Email
+  * Money
+  * DateRange
+  * BookingStatus (enum)
+  * PaymentStatus (enum)
+  
+- Domain Events
+  * BookingCreatedEvent
+  * BookingCancelledEvent
+  * UserCreatedEvent
+  * PaymentProcessedEvent
+  
+- Repository Interfaces
+  * IBookingRepository
+  * IUserRepository
+  * ICampsiteRepository
+  
+- Strongly-Typed IDs
+  * BookingId
+  * UserId
+  * CampsiteId
+  * GuestId
+
+LAYER 2 - APPLICATION LAYER (Second Circle):
+Color: Light Blue
+Contains:
+- Application Services
+  * ApiService (HTTP client wrapper)
+  * KafkaProducer
+  * KafkaConsumer
+  
+- DTOs (Data Transfer Objects)
+  * BookingDto
+  * UserDto
+  * CampsiteDto
+  * CreateBookingRequest
+  * UpdateBookingRequest
+  
+- Event Handlers
+  * EmailEventHandler
+  * NotificationEventHandler
+
+LAYER 3 - INFRASTRUCTURE LAYER (Third Circle):
+Color: Green
+Contains:
+- Persistence
+  * BookMyHomeDbContext (EF Core)
+  * BookingRepository (implementation)
+  * UserRepository (implementation)
+  * CampsiteRepository (implementation)
+  
+- External Services
+  * Kafka Integration
+  * Email Service
+  * SMS Service
+  
+- Security
+  * InputValidator
+  * JwtTokenGenerator
+  * PasswordHasher
+  
+- Database
+  * MySQL 8.0
+
+LAYER 4 - PRESENTATION LAYER (Outermost Circle):
+Color: Orange
+Contains:
+- Web UI
+  * Blazor Server Components
+  * Razor Pages
+  * MudBlazor Components
+  
+- API
+  * BookingsController
+  * UsersController
+  * CampsitesController
+  * AuthController
+  
+- API Gateway
+  * YARP Reverse Proxy
+
+DEPENDENCY RULE:
+- Draw arrows pointing INWARD from outer layers to inner layers
+- Add text: "Dependencies point inward - outer layers depend on inner layers, NEVER the reverse"
+- Show that Domain Layer has NO dependencies on other layers
+- Show that Application Layer only depends on Domain Layer
+- Show that Infrastructure Layer depends on Domain + Application Layers
+- Show that Presentation Layer depends on all inner layers
+
+ADDITIONAL NOTES:
+- Label the center as "DOMAIN CORE - Business Logic"
+- Add a legend showing the dependency direction
+- Use different colors for each layer
+- Make the Domain Layer (center) the most prominent
+- Add small icons or symbols to represent different component types
+
+This diagram should clearly demonstrate the Clean Architecture principle where:
+1. Business logic is isolated in the center
+2. Dependencies flow inward
+3. Inner layers know nothing about outer layers
+4. The domain is independent of frameworks, UI, and databases
+

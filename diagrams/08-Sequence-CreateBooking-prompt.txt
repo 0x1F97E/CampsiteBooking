@@ -1,0 +1,148 @@
+I need a UML Sequence Diagram showing the complete flow for creating a booking in the campsite system.
+
+Please create a sequence diagram with the following participants (lifelines):
+
+PARTICIPANTS (from left to right):
+
+1. User (actor - stick figure)
+2. Browser (Blazor UI)
+3. API Gateway (YARP)
+4. BookingsController
+5. Booking (Domain Entity)
+6. BookingRepository
+7. DbContext (EF Core)
+8. MySQL Database
+9. KafkaProducer
+10. Kafka Broker
+
+SEQUENCE OF INTERACTIONS:
+
+1. User → Browser: Fill booking form
+   (User enters: campsite, dates, guests, special requests)
+
+2. Browser → Browser: Validate input (client-side)
+   (Check required fields, date format, etc.)
+
+3. Browser → API Gateway: POST /api/bookings
+   (HTTP request with JWT token in Authorization header)
+   Body: CreateBookingRequest JSON
+
+4. API Gateway → API Gateway: Route request
+   (Load balancing - select API instance)
+
+5. API Gateway → BookingsController: Forward POST /api/bookings
+   (Proxied request)
+
+6. BookingsController → BookingsController: Validate JWT token
+   (Extract user claims, verify signature)
+
+7. BookingsController → BookingsController: Validate input (XSS check)
+   (Call InputValidator.ValidateInput())
+
+8. BookingsController → Booking: Create(guestId, campsiteId, ...)
+   (Static factory method)
+
+9. Booking → Booking: Validate business rules
+   (Check dates, capacity, pricing)
+   Note: "Throws exception if invalid"
+
+10. Booking → BookingsController: Return booking instance
+
+11. BookingsController → BookingRepository: AddAsync(booking)
+
+12. BookingRepository → DbContext: Add(booking)
+    (Add to change tracker)
+
+13. BookingRepository → DbContext: SaveChangesAsync()
+    (Begin transaction)
+
+14. DbContext → MySQL: BEGIN TRANSACTION
+
+15. DbContext → MySQL: INSERT INTO Bookings (...)
+    (Parameterized query)
+
+16. MySQL → DbContext: Success (BookingId)
+
+17. DbContext → MySQL: COMMIT TRANSACTION
+
+18. MySQL → DbContext: Transaction committed
+
+19. DbContext → BookingRepository: Success
+
+20. BookingRepository → BookingsController: Success
+
+21. BookingsController → Booking: GetDomainEvents()
+    (Retrieve BookingCreatedEvent)
+
+22. Booking → BookingsController: Return [BookingCreatedEvent]
+
+23. BookingsController → KafkaProducer: PublishAsync(BookingCreatedEvent)
+    (Async fire-and-forget)
+
+24. KafkaProducer → Kafka Broker: Send event to "booking-events" topic
+    (Serialized JSON)
+
+25. Kafka Broker → KafkaProducer: Ack (event received)
+
+26. BookingsController → BookingsController: Map to BookingDto
+
+27. BookingsController → API Gateway: 201 Created
+    (Response with BookingDto JSON)
+    Location header: /api/bookings/{id}
+
+28. API Gateway → Browser: 201 Created
+    (Proxied response)
+
+29. Browser → User: Show success message
+    (Display confirmation with booking details)
+
+ALTERNATIVE FLOWS (show with alt frame):
+
+Alt 1: Validation fails (step 7-8)
+- BookingsController → API Gateway: 400 Bad Request
+- API Gateway → Browser: 400 Bad Request
+- Browser → User: Show error message
+
+Alt 2: Business rule violation (step 9)
+- Booking throws DomainException
+- BookingsController catches exception
+- BookingsController → API Gateway: 400 Bad Request
+- API Gateway → Browser: 400 Bad Request
+- Browser → User: Show error message
+
+Alt 3: Database error (step 15-16)
+- MySQL → DbContext: Error
+- DbContext → MySQL: ROLLBACK TRANSACTION
+- DbContext → BookingRepository: Exception
+- BookingRepository → BookingsController: Exception
+- BookingsController → API Gateway: 500 Internal Server Error
+- API Gateway → Browser: 500 Internal Server Error
+- Browser → User: Show error message
+
+VISUAL ELEMENTS:
+
+- Use lifelines (vertical dashed lines) for each participant
+- Use activation boxes (rectangles) to show when objects are active
+- Use solid arrows for synchronous calls
+- Use dashed arrows for return values
+- Use notes for important information
+- Use alt/opt frames for alternative flows
+- Number the interactions (1, 2, 3, ...)
+- Add timing information if relevant
+
+NOTES TO ADD:
+
+Note over BookingsController: "JWT authentication ensures only logged-in users can create bookings"
+
+Note over Booking: "Domain entity enforces business rules: check-in before check-out, valid dates, capacity limits"
+
+Note over DbContext, MySQL: "EF Core uses parameterized queries to prevent SQL injection"
+
+Note over KafkaProducer: "Async event publishing - doesn't block API response"
+
+LEGEND:
+- Solid arrow → = Synchronous call
+- Dashed arrow ← = Return value
+- Rectangle on lifeline = Object is active
+- X at end of lifeline = Object is destroyed
+

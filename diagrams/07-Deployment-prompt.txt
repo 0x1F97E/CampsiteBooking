@@ -1,0 +1,177 @@
+I need a UML Deployment Diagram showing the physical deployment architecture with Docker containers.
+
+Please create a UML deployment diagram using standard notation (3D boxes for nodes).
+
+NODES (3D boxes):
+
+1. Developer Machine
+   Type: <<device>>
+   OS: Windows/Linux/Mac
+   Contains:
+   - <<artifact>> Visual Studio Code
+   - <<artifact>> Docker Desktop
+   - <<artifact>> Git
+   Connection: Docker CLI → Docker Host
+
+2. Docker Host
+   Type: <<execution environment>>
+   Contains:
+   - <<artifact>> Docker Engine
+   - <<artifact>> Docker Compose
+   Manages all containers below
+
+3. MySQL Container
+   Type: <<container>>
+   Image: mysql:8.0
+   Ports: 3306
+   Contains:
+   - <<artifact>> MySQL Server
+   - <<database>> bookmyhome_db
+   Volume: mysql_data (persistent)
+   Network: bookmyhome-network
+
+4. Kafka Container
+   Type: <<container>>
+   Image: confluentinc/cp-kafka:7.5.0
+   Ports: 9092
+   Contains:
+   - <<artifact>> Kafka Broker
+   Topics:
+   - booking-events
+   - user-events
+   - payment-events
+   Network: bookmyhome-network
+
+5. Zookeeper Container
+   Type: <<container>>
+   Image: confluentinc/cp-zookeeper:7.5.0
+   Ports: 2181
+   Contains:
+   - <<artifact>> Zookeeper Service
+   Purpose: Kafka coordination
+   Network: bookmyhome-network
+
+6. API Gateway Container
+   Type: <<container>>
+   Image: bookmyhome-gateway:latest
+   Ports: 8000 (HTTP), 8001 (HTTPS)
+   Contains:
+   - <<artifact>> YARP Reverse Proxy (.NET 9.0)
+   - <<artifact>> appsettings.json
+   Network: bookmyhome-network
+
+7. BookMyHome API Container (Instance 1)
+   Type: <<container>>
+   Image: bookmyhome-api:latest
+   Ports: 7001 (HTTPS)
+   Contains:
+   - <<artifact>> ASP.NET Core API (.NET 9.0)
+   - <<artifact>> Blazor Server UI
+   - <<artifact>> EF Core
+   - <<artifact>> Kafka Producer
+   Network: bookmyhome-network
+
+8. BookMyHome API Container (Instance 2)
+   Type: <<container>>
+   Image: bookmyhome-api:latest
+   Ports: 7002 (HTTPS)
+   Contains: (Same as Instance 1)
+   Network: bookmyhome-network
+
+9. BookMyHome API Container (Instance 3)
+   Type: <<container>>
+   Image: bookmyhome-api:latest
+   Ports: 7003 (HTTPS)
+   Contains: (Same as Instance 1)
+   Network: bookmyhome-network
+
+10. Nginx Container (Optional)
+    Type: <<container>>
+    Image: nginx:alpine
+    Ports: 80 (HTTP), 443 (HTTPS)
+    Contains:
+    - <<artifact>> Nginx Reverse Proxy
+    - <<artifact>> SSL/TLS Certificates
+    Network: bookmyhome-network
+
+COMMUNICATION PATHS (show with arrows):
+
+1. Developer Machine → Docker Host
+   Protocol: Docker CLI
+   Type: <<deploy>>
+
+2. API Gateway → BookMyHome API (all instances)
+   Protocol: HTTPS
+   Type: <<HTTP>>
+   Load Balancing: RoundRobin
+
+3. BookMyHome API → MySQL
+   Protocol: TCP
+   Port: 3306
+   Type: <<JDBC>>
+   Technology: EF Core
+
+4. BookMyHome API → Kafka
+   Protocol: TCP
+   Port: 9092
+   Type: <<message>>
+   Technology: Confluent.Kafka
+
+5. Kafka → Zookeeper
+   Protocol: TCP
+   Port: 2181
+   Type: <<coordinate>>
+
+6. Nginx → API Gateway (if used)
+   Protocol: HTTPS
+   Type: <<HTTP>>
+
+NETWORKS:
+
+bookmyhome-network
+Type: Bridge network
+Purpose: Internal container communication
+DNS: Automatic service discovery
+
+VOLUMES:
+
+mysql_data
+Type: Named volume
+Mount: /var/lib/mysql
+Persistence: Yes
+
+kafka_data
+Type: Named volume
+Mount: /var/lib/kafka
+Persistence: Yes
+
+DEPLOYMENT SPECIFICATIONS:
+
+Add notes showing:
+- Container restart policy: always
+- Health check intervals: 30s
+- Memory limits: 512MB per API instance
+- CPU limits: 0.5 CPU per API instance
+- Environment variables: Loaded from .env file
+
+VISUAL STYLE:
+- Use 3D boxes (cubes) for all nodes
+- Use different colors for different node types:
+  * Blue: Application containers
+  * Green: Data containers
+  * Orange: Infrastructure containers
+  * Gray: Developer machine
+- Show communication paths with labeled arrows
+- Include port numbers on connections
+- Add stereotypes (<<container>>, <<artifact>>, <<database>>)
+- Group containers that belong to the same network
+- Show volumes as cylinders attached to containers
+
+LEGEND:
+- <<device>> = Physical or virtual machine
+- <<container>> = Docker container
+- <<artifact>> = Software component
+- <<database>> = Database
+- Solid arrow = Synchronous communication
+- Dashed arrow = Asynchronous communication
+

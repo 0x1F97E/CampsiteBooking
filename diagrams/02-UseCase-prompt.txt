@@ -1,0 +1,89 @@
+I need a UML Use Case Diagram for a campsite booking system. Please create it with standard UML notation.
+
+ACTORS:
+
+1. Guest (stick figure) - Primary actor, unregistered visitor
+2. Registered User (stick figure) - Extends Guest, logged-in user
+3. Admin (stick figure) - Extends Registered User, system administrator
+4. System (stick figure) - Automated background processes
+
+USE CASES:
+
+For Guest (unregistered):
+- Search Campsites
+- View Campsite Details
+- View Accommodation Types
+- View Availability Calendar
+- View Pricing Information
+- Register Account
+
+For Registered User (logged-in):
+- Login
+- Logout
+- Create Booking
+- View My Bookings
+- Update Booking Details
+- Cancel Booking
+- Make Payment
+- Write Review
+- Subscribe to Newsletter
+- View Notifications
+- Update Profile
+
+For Admin:
+- Manage Campsites (CRUD)
+- Manage Accommodation Types (CRUD)
+- Manage Amenities (CRUD)
+- Manage Pricing Rules
+- View All Bookings
+- View Analytics Dashboard
+- Manage Users
+- Send Notifications
+
+For System (automated):
+- Send Booking Confirmation Email
+- Send Payment Receipt Email
+- Send Cancellation Email
+- Process Scheduled Notifications
+- Update Availability
+- Generate Reports
+
+RELATIONSHIPS:
+
+<<include>> relationships (mandatory):
+- "Login" includes "Authenticate User"
+- "Create Booking" includes "Check Availability"
+- "Create Booking" includes "Calculate Total Price"
+- "Make Payment" includes "Process Payment Gateway"
+- "Cancel Booking" includes "Process Refund"
+
+<<extend>> relationships (optional):
+- "Send Booking Confirmation Email" extends "Create Booking"
+- "Send Payment Receipt Email" extends "Make Payment"
+- "Send Cancellation Email" extends "Cancel Booking"
+- "Write Review" extends "View My Bookings"
+- "Subscribe to Newsletter" extends "Register Account"
+
+Generalization (inheritance):
+- Registered User generalizes Guest (Registered User is-a Guest)
+- Admin generalizes Registered User (Admin is-a Registered User)
+
+SYSTEM BOUNDARY:
+- Draw a rectangle labeled "BookMyHome Campsite Booking System"
+- All use cases should be inside this boundary
+- Actors should be outside the boundary
+
+NOTATION:
+- Use stick figures for actors
+- Use ovals for use cases
+- Use solid lines for associations (actor to use case)
+- Use dashed arrows with <<include>> for include relationships
+- Use dashed arrows with <<extend>> for extend relationships
+- Use solid arrows with hollow triangle for generalization
+
+Please arrange the diagram with:
+- Actors on the left side
+- Use cases in the center (inside system boundary)
+- Group related use cases together
+- Show all relationships clearly
+

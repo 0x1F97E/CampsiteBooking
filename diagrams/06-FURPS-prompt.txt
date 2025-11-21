@@ -1,0 +1,180 @@
+I need a FURPS+ quality attributes diagram as a mind map for a campsite booking system.
+
+Please create a mind map with "BookMyHome System" in the center and 6 main branches representing FURPS+ categories.
+
+CENTER NODE:
+"BookMyHome System"
+(Large circle in the center)
+
+BRANCH 1 - FUNCTIONALITY (What the system does):
+Color: Blue
+✅ CRUD Operations
+   - Create, Read, Update, Delete bookings
+   - User management
+   - Campsite management
+   
+✅ Authentication & Authorization
+   - JWT token-based authentication
+   - Role-based access control (Guest, User, Admin)
+   - Password hashing (BCrypt)
+   
+✅ Search & Filter
+   - Search campsites by region
+   - Filter by amenities
+   - Filter by availability
+   
+✅ Payment Processing
+   - Payment status tracking
+   - Refund handling
+   - Transaction history
+   
+✅ Email Notifications
+   - Booking confirmation
+   - Cancellation emails
+   - Welcome emails
+   - Via Kafka event-driven architecture
+
+BRANCH 2 - USABILITY (User experience):
+Color: Green
+✅ Responsive UI
+   - MudBlazor Material Design
+   - Mobile-friendly
+   - Adaptive layouts
+   
+✅ Intuitive Navigation
+   - Clear menu structure
+   - Breadcrumbs
+   - Search functionality
+   
+✅ Clear Error Messages
+   - User-friendly validation messages
+   - Input validation feedback
+   - API error responses
+   
+✅ API Documentation
+   - Swagger/OpenAPI
+   - Interactive API testing
+   - Code examples
+   
+⚠️ Accessibility
+   - Basic ARIA labels
+   - Keyboard navigation (partial)
+   - Screen reader support (basic)
+
+BRANCH 3 - RELIABILITY (System dependability):
+Color: Orange
+✅ Data Validation
+   - Input validation (XSS protection)
+   - Business rule validation
+   - Strongly-typed value objects
+   
+✅ Error Handling
+   - Try-catch blocks
+   - Global exception handling
+   - Logging (ILogger)
+   
+✅ Transaction Management
+   - EF Core transactions
+   - ACID compliance
+   - Rollback on failure
+   
+✅ Health Checks
+   - YARP health monitoring
+   - API health endpoints
+   - Database connectivity checks
+   
+⚠️ Retry Logic
+   - Kafka retry (partial)
+   - No HTTP retry policy yet
+
+BRANCH 4 - PERFORMANCE (Speed and efficiency):
+Color: Red
+✅ Database Indexing
+   - Primary key indexes
+   - Foreign key indexes
+   - Query optimization
+   
+✅ Async/Await
+   - Non-blocking I/O
+   - Async database operations
+   - Async API endpoints
+   
+✅ Load Balancing
+   - YARP RoundRobin
+   - 3 API instances
+   - Horizontal scaling
+   
+⚠️ Caching
+   - Not implemented yet
+   - Future: Redis cache
+   
+⚠️ CDN
+   - Not implemented
+   - Future: Static asset CDN
+
+BRANCH 5 - SUPPORTABILITY (Maintainability):
+Color: Purple
+✅ Logging
+   - ILogger framework
+   - Structured logging
+   - Error tracking
+   
+✅ Docker Deployment
+   - Docker Compose
+   - Container orchestration
+   - Easy deployment
+   
+✅ API Versioning Ready
+   - Prepared for versioning
+   - DTOs for API contracts
+   
+✅ Comprehensive Documentation
+   - 8 markdown files
+   - API documentation (Swagger)
+   - Deployment guides
+   
+✅ Unit Tests
+   - 372 passing tests
+   - Domain model coverage
+   - xUnit framework
+
+BRANCH 6 - PLUS (+) (Additional constraints):
+Color: Gray
+
+Design Constraints:
+✅ Clean Architecture
+✅ Domain-Driven Design (DDD)
+✅ SOLID Principles
+✅ Repository Pattern
+
+Implementation Constraints:
+✅ .NET 9.0
+✅ C# 12
+✅ Entity Framework Core 8.0.2
+✅ MySQL 8.0
+
+Interface Constraints:
+✅ REST API (Level 2)
+✅ Swagger/OpenAPI
+✅ JSON data format
+✅ JWT authentication
+
+Physical Constraints:
+✅ Docker containers
+✅ MySQL database
+✅ Kafka message broker
+✅ YARP API Gateway
+
+LEGEND (add at bottom):
+✅ Green checkmark = Fully implemented
+⚠️ Yellow warning = Partially implemented
+❌ Red X = Not implemented
+
+VISUAL STYLE:
+- Use different colors for each main branch
+- Make implemented features larger/bolder
+- Use icons where appropriate (e.g., lock for security, speed gauge for performance)
+- Connect all branches to the center node
+- Use sub-branches for detailed features
+- Add status indicators (✅, ⚠️, ❌) to each feature
+

@@ -1,0 +1,143 @@
+I need an Entity Relationship Diagram (ERD) for a campsite booking system. Please create it using crow's foot notation.
+
+ENTITIES AND ATTRIBUTES:
+
+1. BOOKING
+   - BookingId (PK, GUID)
+   - GuestId (FK → GUEST)
+   - CampsiteId (FK → CAMPSITE)
+   - AccommodationTypeId (FK → ACCOMMODATION_TYPE)
+   - CheckInDate (DATE)
+   - CheckOutDate (DATE)
+   - Status (ENUM: Pending, Confirmed, Cancelled, Completed)
+   - TotalPrice (DECIMAL)
+   - NumberOfAdults (INT)
+   - NumberOfChildren (INT)
+   - SpecialRequests (TEXT)
+   - CreatedAt (DATETIME)
+
+2. GUEST
+   - GuestId (PK, GUID)
+   - Email (VARCHAR, UNIQUE)
+   - FirstName (VARCHAR)
+   - LastName (VARCHAR)
+   - Phone (VARCHAR)
+   - Country (VARCHAR)
+   - DateOfBirth (DATE)
+   - CreatedAt (DATETIME)
+
+3. USER
+   - UserId (PK, GUID)
+   - Email (VARCHAR, UNIQUE)
+   - FirstName (VARCHAR)
+   - LastName (VARCHAR)
+   - Phone (VARCHAR)
+   - Country (VARCHAR)
+   - PasswordHash (VARCHAR)
+   - IsActive (BOOLEAN)
+   - JoinedDate (DATETIME)
+
+4. CAMPSITE
+   - CampsiteId (PK, GUID)
+   - Name (VARCHAR)
+   - Region (VARCHAR)
+   - Description (TEXT)
+   - Latitude (DECIMAL)
+   - Longitude (DECIMAL)
+   - IsActive (BOOLEAN)
+
+5. ACCOMMODATION_TYPE
+   - AccommodationTypeId (PK, GUID)
+   - CampsiteId (FK → CAMPSITE)
+   - Name (VARCHAR)
+   - Description (TEXT)
+   - Capacity (INT)
+   - BasePrice (DECIMAL)
+   - IsActive (BOOLEAN)
+
+6. PAYMENT
+   - PaymentId (PK, GUID)
+   - BookingId (FK → BOOKING, UNIQUE)
+   - Amount (DECIMAL)
+   - Currency (VARCHAR)
+   - Status (ENUM: Pending, Paid, Failed, Refunded)
+   - PaymentMethod (VARCHAR)
+   - TransactionId (VARCHAR)
+   - ProcessedAt (DATETIME)
+
+7. REVIEW
+   - ReviewId (PK, GUID)
+   - BookingId (FK → BOOKING)
+   - GuestId (FK → GUEST)
+   - Rating (INT, 1-5)
+   - Comment (TEXT)
+   - CreatedAt (DATETIME)
+
+8. AMENITY
+   - AmenityId (PK, GUID)
+   - Name (VARCHAR)
+   - Description (TEXT)
+   - IconName (VARCHAR)
+
+9. CAMPSITE_AMENITY (Junction Table)
+   - CampsiteId (FK → CAMPSITE)
+   - AmenityId (FK → AMENITY)
+   - PRIMARY KEY (CampsiteId, AmenityId)
+
+10. ACCOMMODATION_TYPE_AMENITY (Junction Table)
+    - AccommodationTypeId (FK → ACCOMMODATION_TYPE)
+    - AmenityId (FK → AMENITY)
+    - PRIMARY KEY (AccommodationTypeId, AmenityId)
+
+11. AVAILABILITY
+    - AvailabilityId (PK, GUID)
+    - AccommodationTypeId (FK → ACCOMMODATION_TYPE)
+    - Date (DATE)
+    - AvailableUnits (INT)
+    - IsBlocked (BOOLEAN)
+
+12. PRICING
+    - PricingId (PK, GUID)
+    - AccommodationTypeId (FK → ACCOMMODATION_TYPE)
+    - StartDate (DATE)
+    - EndDate (DATE)
+    - PricePerNight (DECIMAL)
+
+13. NEWSLETTER_SUBSCRIPTION
+    - SubscriptionId (PK, GUID)
+    - UserId (FK → USER)
+    - Email (VARCHAR)
+    - IsActive (BOOLEAN)
+    - SubscribedAt (DATETIME)
+
+14. NOTIFICATION
+    - NotificationId (PK, GUID)
+    - UserId (FK → USER)
+    - Type (VARCHAR)
+    - Title (VARCHAR)
+    - Message (TEXT)
+    - IsRead (BOOLEAN)
+    - CreatedAt (DATETIME)
+
+RELATIONSHIPS (Crow's Foot Notation):
+
+- BOOKING ──< GUEST (Many-to-One: Many bookings belong to one guest)
+- BOOKING ──< CAMPSITE (Many-to-One: Many bookings for one campsite)
+- BOOKING ──< ACCOMMODATION_TYPE (Many-to-One: Many bookings for one accommodation type)
+- BOOKING ──── PAYMENT (One-to-One: One booking has one payment)
+- BOOKING >──< REVIEW (One-to-Many: One booking can have many reviews)
+- CAMPSITE >──< ACCOMMODATION_TYPE (One-to-Many: One campsite has many accommodation types)
+- CAMPSITE >──<< AMENITY (Many-to-Many through CAMPSITE_AMENITY)
+- ACCOMMODATION_TYPE >──<< AMENITY (Many-to-Many through ACCOMMODATION_TYPE_AMENITY)
+- ACCOMMODATION_TYPE >──< AVAILABILITY (One-to-Many: One accommodation type has many availability records)
+- ACCOMMODATION_TYPE >──< PRICING (One-to-Many: One accommodation type has many pricing records)
+- USER >──< NEWSLETTER_SUBSCRIPTION (One-to-Many: One user can have many subscriptions)
+- USER >──< NOTIFICATION (One-to-Many: One user can have many notifications)
+
+Please use standard ERD notation with:
+- Rectangles for entities
+- Diamonds or lines for relationships
+- Crow's foot notation for cardinality (one, many, zero-or-one, zero-or-many)
+- Primary keys marked with (PK)
+- Foreign keys marked with (FK)
+

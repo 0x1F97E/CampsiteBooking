@@ -1,0 +1,114 @@
+I need a System Architecture Diagram showing the complete deployment architecture for a campsite booking system with Docker containers.
+
+Please create a layered architecture diagram with 4 tiers:
+
+TIER 1 - CLIENT TIER (Top):
+- Web Browser
+  * Blazor WebAssembly UI
+  * HTTPS connection
+  * Port: 443
+  
+- API Testing Tools
+  * Postman
+  * Swagger UI
+
+TIER 2 - API GATEWAY TIER:
+- YARP API Gateway Container
+  * Technology: .NET 9.0 + YARP 2.1.0
+  * Ports: 8000 (HTTP), 8001 (HTTPS)
+  * Features:
+    - Load Balancing (RoundRobin)
+    - Health Checks (every 10s)
+    - Rate Limiting
+    - Request Routing
+  * Routes:
+    - /api/bookings → BookMyHome API
+    - /api/users → BookMyHome API
+    - /api/auth → BookMyHome API
+    - /api/campsites → BookMyHome API
+
+TIER 3 - APPLICATION TIER:
+- BookMyHome API Instance 1
+  * Technology: .NET 9.0 + ASP.NET Core
+  * Port: 7001 (HTTPS)
+  * Features: REST API, JWT Auth, Swagger
+  
+- BookMyHome API Instance 2
+  * Port: 7002 (HTTPS)
+  * (Same as Instance 1 - for load balancing)
+  
+- BookMyHome API Instance 3
+  * Port: 7003 (HTTPS)
+  * (Same as Instance 1 - for load balancing)
+  
+- Kafka Consumer Service
+  * Technology: .NET 9.0 Background Service
+  * Purpose: Process events from Kafka
+  * Actions:
+    - Send emails
+    - Send SMS
+    - Create notifications
+
+TIER 4 - DATA TIER:
+- MySQL Database Container
+  * Image: mysql:8.0
+  * Port: 3306
+  * Volume: mysql_data (persistent storage)
+  * Database: bookmyhome_db
+  
+- Kafka Broker Container
+  * Image: confluentinc/cp-kafka:7.5.0
+  * Port: 9092
+  * Topics: booking-events, user-events, payment-events
+  
+- Zookeeper Container
+  * Image: confluentinc/cp-zookeeper:7.5.0
+  * Port: 2181
+  * Purpose: Kafka coordination
+
+INFRASTRUCTURE LAYER (Bottom):
+- Docker Compose
+  * Orchestrates all containers
+  * Manages networks and volumes
+  
+- Nginx Reverse Proxy (Optional)
+  * Ports: 80 (HTTP), 443 (HTTPS)
+  * SSL/TLS termination
+  * DDoS protection
+  * Rate limiting
+
+NETWORKS:
+- bookmyhome-network (Bridge network)
+  * Connects all containers
+  * Internal DNS resolution
+
+VOLUMES:
+- mysql_data (persistent)
+- kafka_data (persistent)
+
+CONNECTIONS (show with arrows):
+1. Browser → API Gateway (HTTPS, port 8001)
+2. API Gateway → API Instance 1/2/3 (Load balanced, HTTPS)
+3. API Instances → MySQL (TCP, port 3306, EF Core)
+4. API Instances → Kafka Producer (TCP, port 9092)
+5. Kafka Consumer → Kafka Broker (TCP, port 9092)
+6. Kafka → Zookeeper (TCP, port 2181)
+7. Kafka Consumer → External Services (Email/SMS APIs)
+
+VISUAL STYLE:
+- Use boxes/rectangles for containers
+- Use different colors for different tiers
+- Show port numbers on connections
+- Use solid arrows for synchronous communication
+- Use dashed arrows for asynchronous communication (Kafka)
+- Group containers by tier with labeled sections
+- Add Docker logo to show containerization
+- Add technology stack labels (e.g., ".NET 9.0", "MySQL 8.0")
+
+LEGEND:
+- Solid line = Synchronous HTTP/HTTPS
+- Dashed line = Asynchronous messaging (Kafka)
+- Blue boxes = Application containers
+- Green boxes = Data containers
+- Orange boxes = Infrastructure containers
+

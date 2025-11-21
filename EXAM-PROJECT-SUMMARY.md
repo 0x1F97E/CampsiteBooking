@@ -184,6 +184,7 @@ docker-compose down
 | `MICROSERVICES-ARCHITECTURE.md` | Microservices analyse (Modular Monolith) |
 | `OWASP-SECURITY.md` | OWASP Top 10 sikkerhed implementering |
 | `API-GATEWAY-YARP.md` | YARP API Gateway implementering og konfiguration |
+| `DIAGRAM-PROMPTS.md` | Lucidchart prompts til 13 UML/ERD diagrammer |
 
 ---
 
