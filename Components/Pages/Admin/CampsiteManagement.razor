@@ -92,6 +92,37 @@
                                   HelperText="Provide information about the campsite location, features, and attractions" />
                 </MudItem>
 
+                <!-- Location Coordinates Section -->
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
+                        Latitude
+                    </MudText>
+                    <MudNumericField @bind-Value="_selectedCampsite.Latitude"
+                                     Label="Latitude"
+                                     Variant="Variant.Outlined"
+                                     Min="-90"
+                                     Max="90"
+                                     Step="0.0001"
+                                     Placeholder="e.g., 55.6761"
+                                     HelperText="Latitude coordinate (-90 to 90)" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
+                        Longitude
+                    </MudText>
+                    <MudNumericField @bind-Value="_selectedCampsite.Longitude"
+                                     Label="Longitude"
+                                     Variant="Variant.Outlined"
+                                     Min="-180"
+                                     Max="180"
+                                     Step="0.0001"
+                                     Placeholder="e.g., 12.5683"
+                                     HelperText="Longitude coordinate (-180 to 180)" />
+                </MudItem>
+
                 <!-- Main Image Section -->
                 <MudItem xs="12" md="6">
                     <MudText Typo="Typo.subtitle1" Class="mb-2">
@@ -186,7 +217,7 @@
                                                 <div>
                                                     <MudText Typo="Typo.h5">@accType.Type</MudText>
                                                     <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                        @accType.AvailableUnits units • Max @accType.MaxCapacity guests • @accType.PricePerNight.ToString("C") per night
+                                                        @accType.Spots.Count spots • Max @accType.MaxCapacity guests • @accType.PricePerNight.ToString("C") per night
                                                     </MudText>
                                                 </div>
                                             </div>
@@ -217,16 +248,78 @@
                                                               FullWidth="true" />
                                             </MudItem>
 
-                                            <!-- Available Units -->
+                                            <!-- Spots Management -->
                                             <MudItem xs="12">
-                                                <MudText Typo="Typo.subtitle1" Class="mb-2">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Numbers" Size="Size.Small" Class="mr-1" />
-                                                    Available Units
-                                                </MudText>
-                                                <MudNumericField @bind-Value="accType.AvailableUnits"
-                                                                 Label="Number of Units"
-                                                                 Variant="Variant.Outlined"
-                                                                 Min="0" />
+                                                <div class="d-flex justify-space-between align-center mb-2">
+                                                    <MudText Typo="Typo.subtitle1">
+                                                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
+                                                        Accommodation Spots (@accType.Spots.Count)
+                                                    </MudText>
+                                                    <MudButton Variant="Variant.Filled"
+                                                               Color="Color.Primary"
+                                                               Size="Size.Small"
+                                                               StartIcon="@Icons.Material.Filled.Add"
+                                                               OnClick="@(() => AddSpot(accType))">
+                                                        Add Spot
+                                                    </MudButton>
+                                                </div>
+
+                                                @if (accType.Spots.Any())
+                                                {
+                                                    <MudPaper Elevation="0" Class="pa-3" Style="background-color: #f5f5f5; max-height: 400px; overflow-y: auto;">
+                                                        <MudGrid Spacing="2">
+                                                            @foreach (var spot in accType.Spots.OrderBy(s => int.TryParse(s.SpotNumber, out var num) ? num : 0))
+                                                            {
+                                                                <MudItem xs="12" sm="6" md="4">
+                                                                    <MudPaper Elevation="2" Class="pa-3">
+                                                                        <div class="d-flex justify-space-between align-center mb-2">
+                                                                            <MudText Typo="Typo.subtitle2">
+                                                                                <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Color="Color.Primary" />
+                                                                                Spot #@spot.SpotNumber
+                                                                            </MudText>
+                                                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                                           Size="Size.Small"
+                                                                                           Color="Color.Error"
+                                                                                           OnClick="@(() => RemoveSpot(accType, spot))" />
+                                                                        </div>
+                                                                        <MudNumericField @bind-Value="spot.Latitude"
+                                                                                         Label="Latitude"
+                                                                                         Variant="Variant.Outlined"
+                                                                                         Margin="Margin.Dense"
+                                                                                         Min="-90"
+                                                                                         Max="90"
+                                                                                         Step="0.0001"
+                                                                                         Format="F4" />
+                                                                        <MudNumericField @bind-Value="spot.Longitude"
+                                                                                         Label="Longitude"
+                                                                                         Variant="Variant.Outlined"
+                                                                                         Margin="Margin.Dense"
+                                                                                         Min="-180"
+                                                                                         Max="180"
+                                                                                         Step="0.0001"
+                                                                                         Format="F4"
+                                                                                         Class="mt-2" />
+                                                                        <MudSelect @bind-Value="spot.Status"
+                                                                                   Label="Status"
+                                                                                   Variant="Variant.Outlined"
+                                                                                   Margin="Margin.Dense"
+                                                                                   Class="mt-2">
+                                                                            <MudSelectItem Value="@("Available")">Available</MudSelectItem>
+                                                                            <MudSelectItem Value="@("Occupied")">Occupied</MudSelectItem>
+                                                                            <MudSelectItem Value="@("Maintenance")">Maintenance</MudSelectItem>
+                                                                        </MudSelect>
+                                                                    </MudPaper>
+                                                                </MudItem>
+                                                            }
+                                                        </MudGrid>
+                                                    </MudPaper>
+                                                }
+                                                else
+                                                {
+                                                    <MudAlert Severity="Severity.Info" Dense="true">
+                                                        No spots added yet. Click "Add Spot" to create the first spot.
+                                                    </MudAlert>
+                                                }
                                             </MudItem>
 
                                             <!-- Pricing & Capacity -->
@@ -454,6 +547,8 @@
                 Description = "Beautiful beachfront camping with stunning views of the Øresund strait. Our campsite offers direct beach access, modern facilities, and a variety of accommodation options for families and solo travelers alike.",
                 TotalSpots = 50,
                 AvailableSpots = 42,
+                Latitude = 55.6761,
+                Longitude = 12.5683,
                 AccommodationTypes = new List<string> { "Cabin", "Tent Site", "RV Spot", "Glamping" },
                 Amenities = new List<string> { "Near-Beach", "WiFi", "Electric-Hookup", "Water-Access" },
                 IsActive = true,
@@ -476,6 +571,8 @@
                 Description = "Denmark's northernmost campsite with breathtaking views where two seas meet. Experience unique natural phenomena and pristine beaches.",
                 TotalSpots = 40,
                 AvailableSpots = 32,
+                Latitude = 57.7209,
+                Longitude = 10.5882,
                 AccommodationTypes = new List<string> { "Cabin", "Tent Site", "Glamping" },
                 Amenities = new List<string> { "Near-Beach", "WiFi", "Fire-Pit", "Picnic-Table" },
                 IsActive = true,
@@ -490,6 +587,8 @@
                 Description = "Peaceful forest camping surrounded by ancient Danish woodlands. Perfect for nature lovers seeking tranquility and outdoor adventures.",
                 TotalSpots = 35,
                 AvailableSpots = 28,
+                Latitude = 56.1629,
+                Longitude = 10.2039,
                 AccommodationTypes = new List<string> { "Cabin", "Glamping", "Tent Site" },
                 Amenities = new List<string> { "WiFi", "Dog-Friendly", "Fire-Pit", "Water-Access" },
                 IsActive = true,
@@ -504,6 +603,8 @@
                 Description = "Family-friendly campsite with playgrounds, activities, and spacious facilities. Close to Hans Christian Andersen's birthplace and other attractions.",
                 TotalSpots = 60,
                 AvailableSpots = 52,
+                Latitude = 55.4038,
+                Longitude = 10.4024,
                 AccommodationTypes = new List<string> { "Cabin", "RV Spot", "Tent Site" },
                 Amenities = new List<string> { "WiFi", "Electric-Hookup", "Water-Access", "Dog-Friendly" },
                 IsActive = true,
@@ -518,6 +619,8 @@
                 Description = "Island paradise camping on the beautiful Baltic island of Bornholm. Enjoy rocky coastlines, sandy beaches, and charming fishing villages.",
                 TotalSpots = 30,
                 AvailableSpots = 18,
+                Latitude = 55.1367,
+                Longitude = 14.9155,
                 AccommodationTypes = new List<string> { "Cabin", "Tent Site" },
                 Amenities = new List<string> { "Near-Beach", "WiFi", "Fire-Pit" },
                 IsActive = true,
@@ -549,6 +652,9 @@
         await Task.Delay(300); // Simulate API call
 
         // Sample data - will be replaced with actual data from backend
+        var baseLatitude = _selectedCampsite?.Latitude ?? 56.2639;
+        var baseLongitude = _selectedCampsite?.Longitude ?? 10.4515;
+
         _accommodationTypes = new List<AccommodationTypeDto>
         {
             new() {
@@ -560,7 +666,7 @@
                 PricePerNight = 150,
                 ImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800",
                 Amenities = new List<string> { "WiFi", "Electric-Hookup", "Water-Access", "Heating", "Kitchen", "Bathroom" },
-                AvailableUnits = 12,
+                Spots = GenerateSampleSpots(12, baseLatitude, baseLongitude, 0),
                 GalleryImages = new List<string>(),
                 IsActive = true
             },
@@ -573,7 +679,7 @@
                 PricePerNight = 50,
                 ImageUrl = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800",
                 Amenities = new List<string> { "Fire-Pit", "Picnic-Table", "Water-Access" },
-                AvailableUnits = 20,
+                Spots = GenerateSampleSpots(20, baseLatitude, baseLongitude, 0.001),
                 GalleryImages = new List<string>(),
                 IsActive = true
             },
@@ -586,7 +692,7 @@
                 PricePerNight = 80,
                 ImageUrl = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=800",
                 Amenities = new List<string> { "Electric-Hookup", "Water-Access", "Sewage-Hookup", "WiFi" },
-                AvailableUnits = 15,
+                Spots = GenerateSampleSpots(15, baseLatitude, baseLongitude, 0.002),
                 GalleryImages = new List<string>(),
                 IsActive = true
             },
@@ -599,7 +705,7 @@
                 PricePerNight = 200,
                 ImageUrl = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800",
                 Amenities = new List<string> { "WiFi", "Electric-Hookup", "Heating", "Kitchen" },
-                AvailableUnits = 8,
+                Spots = GenerateSampleSpots(8, baseLatitude, baseLongitude, 0.003),
                 GalleryImages = new List<string>(),
                 IsActive = true
             }
@@ -719,6 +825,75 @@
         }
     }
 
+    private void AddSpot(AccommodationTypeDto accType)
+    {
+        // Get the next spot number
+        var nextNumber = 1;
+        if (accType.Spots.Any())
+        {
+            var maxNumber = accType.Spots
+                .Select(s => int.TryParse(s.SpotNumber, out var num) ? num : 0)
+                .Max();
+            nextNumber = maxNumber + 1;
+        }
+
+        // Use campsite coordinates as default, with small offset for each spot
+        var baseLatitude = _selectedCampsite?.Latitude ?? 56.2639;
+        var baseLongitude = _selectedCampsite?.Longitude ?? 10.4515;
+
+        // Add small offset to spread spots around the campsite (0.0001 degrees ≈ 11 meters)
+        var offset = (nextNumber - 1) * 0.0001;
+
+        var newSpot = new AccommodationSpotDto
+        {
+            Id = 0, // Will be assigned by backend
+            SpotNumber = nextNumber.ToString(),
+            Latitude = baseLatitude + offset,
+            Longitude = baseLongitude + offset,
+            Status = "Available"
+        };
+
+        accType.Spots.Add(newSpot);
+        Snackbar.Add($"Spot #{nextNumber} added to {accType.Type}", Severity.Success);
+        StateHasChanged();
+    }
+
+    private async Task RemoveSpot(AccommodationTypeDto accType, AccommodationSpotDto spot)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to remove Spot #{spot.SpotNumber}? This action cannot be undone.",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            accType.Spots.Remove(spot);
+            Snackbar.Add($"Spot #{spot.SpotNumber} removed from {accType.Type}", Severity.Success);
+            StateHasChanged();
+        }
+    }
+
+    private List<AccommodationSpotDto> GenerateSampleSpots(int count, double baseLatitude, double baseLongitude, double baseOffset)
+    {
+        var spots = new List<AccommodationSpotDto>();
+        for (int i = 1; i <= count; i++)
+        {
+            // Create a grid-like pattern for spots
+            var row = (i - 1) / 5; // 5 spots per row
+            var col = (i - 1) % 5;
+
+            spots.Add(new AccommodationSpotDto
+            {
+                Id = i,
+                SpotNumber = i.ToString(),
+                Latitude = baseLatitude + baseOffset + (row * 0.0001),
+                Longitude = baseLongitude + baseOffset + (col * 0.0001),
+                Status = "Available"
+            });
+        }
+        return spots;
+    }
+
 
 
     private string GetAccommodationIcon(string type)
@@ -746,9 +921,18 @@
         public decimal PricePerNight { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
         public List<string> Amenities { get; set; } = new();
-        public int AvailableUnits { get; set; }
+        public List<AccommodationSpotDto> Spots { get; set; } = new();
         public List<string> GalleryImages { get; set; } = new();
         public bool IsActive { get; set; } = true;
+    }
+
+    private class AccommodationSpotDto
+    {
+        public int Id { get; set; }
+        public string SpotNumber { get; set; } = string.Empty; // e.g., "1", "2", "3"
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+        public string Status { get; set; } = "Available"; // Available, Occupied, Maintenance
     }
 
     private class CampsiteManagementDto
@@ -759,6 +943,8 @@
         public string Description { get; set; } = string.Empty;
         public int TotalSpots { get; set; }
         public int AvailableSpots { get; set; }
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
         public List<string> AccommodationTypes { get; set; } = new();
         public List<string> Amenities { get; set; } = new();
         public bool IsActive { get; set; }

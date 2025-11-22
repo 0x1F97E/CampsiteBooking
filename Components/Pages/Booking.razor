@@ -1,7 +1,10 @@
-@page "/booking/{accommodationId:int}"
+@page "/booking"
+@page "/booking/{CampsiteIdParam:int}"
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 @using CampsiteBooking.Models
+@using Microsoft.AspNetCore.WebUtilities
 
 <PageTitle>Book Accommodation - Campsite Booking</PageTitle>
 
@@ -268,25 +271,18 @@
 
             <MudItem xs="12">
                 <MudPaper Elevation="3" Class="pa-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">Campsite Map</MudText>
+                    <MudText Typo="Typo.h6" GutterBottom="true">
+                        @(_campsite?.Name ?? "Campsite") - Accommodation Spots
+                    </MudText>
                     <MudText Typo="Typo.body2" Class="mb-3">
-                        Reference map showing campsite layout and available spots.
+                        Interactive satellite map showing all accommodation spots at this campsite.
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">Green = Available</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text">Red = Occupied</MudChip>
                     </MudText>
 
-                    @if (!string.IsNullOrWhiteSpace(_campsiteMapUrl))
-                    {
-                        <div style="width: 100%; border-radius: 8px; overflow: hidden;">
-                            <img src="@_campsiteMapUrl" alt="Campsite Layout Map" style="width: 100%; height: auto; display: block;" />
-                        </div>
-                    }
-                    else
-                    {
-                        <div style="height: 400px; width: 100%; border-radius: 8px; overflow: hidden; background-color: #f5f5f5; display: flex; align-items: center; justify-content: center;">
-                            <MudText Typo="Typo.h6" Color="Color.Secondary">
-                                Campsite Layout Map - Coming Soon
-                            </MudText>
-                        </div>
-                    }
+                    <div style="height: 500px; width: 100%; border-radius: 8px; overflow: hidden;">
+                        <div id="booking-map" style="width: 100%; height: 100%; border-radius: 8px; z-index: 1;"></div>
+                    </div>
                 </MudPaper>
             </MudItem>
         </MudGrid>
@@ -299,7 +295,10 @@
 
 @code {
     [Parameter]
-    public int AccommodationId { get; set; }
+    public int? CampsiteIdParam { get; set; }
+
+    private int _campsiteId;
+    private CampsiteDto? _campsite;
 
     private MudForm? _form;
     private bool _formValid;
@@ -316,6 +315,10 @@
     private List<PeripheralPurchaseDto> _accommodationPeripheralPurchases = new();
     private List<PeripheralPurchaseDto> _campsitePeripheralPurchases = new();
     private string _campsiteMapUrl = string.Empty;
+
+    // Base coordinates - will be set based on selected campsite
+    private double _baseLat = 55.6761;
+    private double _baseLng = 12.5683;
 
     // Discount code fields
     private string _discountCode = string.Empty;
@@ -347,49 +350,154 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Check if campsiteId comes from route parameter (old format: /booking/1)
+        if (CampsiteIdParam.HasValue)
+        {
+            _campsiteId = CampsiteIdParam.Value;
+        }
+        else
+        {
+            // Get campsiteId from query parameter (new format: /booking?campsiteId=1)
+            var uri = new Uri(Navigation.Uri);
+            var queryParams = QueryHelpers.ParseQuery(uri.Query);
+
+            if (queryParams.TryGetValue("campsiteId", out var campsiteIdStr) && int.TryParse(campsiteIdStr, out var campsiteId))
+            {
+                _campsiteId = campsiteId;
+            }
+            else
+            {
+                _campsiteId = 1; // Default to first campsite
+            }
+        }
+
         await Task.Delay(300); // Simulate API call
 
-        // Mock data - will be replaced with actual API call
+        // Load campsite data based on ID
+        LoadCampsiteData();
+
+        // Mock accommodation data - will be replaced with actual API call
         _accommodation = new AccommodationDto
         {
-            Id = AccommodationId,
-            Name = "Lakeside Cabin",
-            Type = "Cabin",
-            Description = "Cozy cabin with beautiful lake view and modern amenities",
-            Capacity = 4,
-            PricePerNight = 120,
+            Id = _campsiteId,
+            Name = _campsite?.Name ?? "Campsite Accommodation",
+            Type = "Mixed",
+            Description = _campsite?.Description ?? "Various accommodation types available",
+            Capacity = 6,
+            PricePerNight = 100,
             ImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400"
         };
 
-        // Load campsite map URL (in real app, this would come from API based on campsite ID)
-        // For demo purposes, using a sample campsite map image
-        _campsiteMapUrl = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800";
-
-        // Load camping spots for this accommodation
+        // Load camping spots for this campsite
         LoadCampingSpots();
 
         // Load peripheral purchases
         LoadPeripheralPurchases();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Wait for Google Maps API and scripts to load
+                await Task.Delay(1000);
+
+                // Check if function exists and retry if needed
+                for (int i = 0; i < 10; i++)
+                {
+                    try
+                    {
+                        await UpdateBookingMapAsync();
+                        break; // Success, exit loop
+                    }
+                    catch (Exception)
+                    {
+                        if (i < 9) // Not the last attempt
+                        {
+                            await Task.Delay(500);
+                        }
+                        else
+                        {
+                            throw; // Re-throw on last attempt
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing booking map: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task UpdateBookingMapAsync()
+    {
+        if (_campsite != null && _campingSpots.Any())
+        {
+            var spotsJson = System.Text.Json.JsonSerializer.Serialize(_campingSpots);
+
+            // Call the global JavaScript function
+            await JSRuntime.InvokeVoidAsync("initializeBookingMap",
+                _campsite.Latitude,
+                _campsite.Longitude,
+                _campsite.Name,
+                spotsJson);
+        }
+    }
+
+    private void LoadCampsiteData()
+    {
+        // Load campsite data based on ID - matches the data from google-map.js
+        var campsites = new Dictionary<int, CampsiteDto>
+        {
+            { 1, new CampsiteDto { Id = 1, Name = "Copenhagen Beach Camp", Region = "Zealand", Latitude = 55.6761, Longitude = 12.5683, Description = "Beachfront camping near Copenhagen" } },
+            { 2, new CampsiteDto { Id = 2, Name = "Skagen North Point", Region = "North Jutland", Latitude = 57.7209, Longitude = 10.5882, Description = "Northern tip camping with stunning views" } },
+            { 3, new CampsiteDto { Id = 3, Name = "Aarhus Forest Retreat", Region = "East Jutland", Latitude = 56.1629, Longitude = 10.2039, Description = "Peaceful forest camping near Aarhus" } },
+            { 4, new CampsiteDto { Id = 4, Name = "Odense Family Camp", Region = "Funen", Latitude = 55.4038, Longitude = 10.4024, Description = "Family-friendly camping in central Denmark" } },
+            { 5, new CampsiteDto { Id = 5, Name = "Bornholm Island Camp", Region = "Bornholm", Latitude = 55.1367, Longitude = 14.9155, Description = "Scenic island camping with rocky coastline" } },
+            { 6, new CampsiteDto { Id = 6, Name = "Ribe Viking Camp", Region = "Southwest Jutland", Latitude = 55.3282, Longitude = 8.7619, Description = "Historic campsite near Denmark's oldest town" } },
+            { 7, new CampsiteDto { Id = 7, Name = "Roskilde Fjord Camp", Region = "Zealand", Latitude = 55.6415, Longitude = 12.0803, Description = "Waterfront camping by the beautiful Roskilde Fjord" } },
+            { 8, new CampsiteDto { Id = 8, Name = "Aalborg Limfjord", Region = "North Jutland", Latitude = 57.0488, Longitude = 9.9217, Description = "Camping by the Limfjord with water activities" } }
+        };
+
+        if (campsites.TryGetValue(_campsiteId, out var campsite))
+        {
+            _campsite = campsite;
+            _baseLat = campsite.Latitude;
+            _baseLng = campsite.Longitude;
+        }
+        else
+        {
+            // Default to Copenhagen Beach Camp
+            _campsite = campsites[1];
+            _baseLat = 55.6761;
+            _baseLng = 12.5683;
+        }
+    }
+
     private void LoadCampingSpots()
     {
-        // Generate sample camping spots based on accommodation ID
+        // Generate sample camping spots based on campsite ID
         // In a real app, this would come from a database
 
         var spots = new List<CampingSpot>();
-        var random = new Random(AccommodationId); // Seed with ID for consistency
+        var random = new Random(_campsiteId); // Seed with ID for consistency
 
-        // Section A - Tent pitches (A1-A10)
+        // Section A - Tent pitches (A1-A10) - arranged in 2 rows of 5
         for (int i = 1; i <= 10; i++)
         {
+            int row = (i - 1) / 5;
+            int col = (i - 1) % 5;
+
             spots.Add(new CampingSpot
             {
                 SpotId = $"A{i}",
-                CampsiteId = AccommodationId,
-                CampsiteName = _accommodation?.Name ?? "",
-                Latitude = 0,
-                Longitude = 0,
+                CampsiteId = _campsiteId,
+                CampsiteName = _campsite?.Name ?? "",
+                Latitude = _baseLat + (row * 0.0005),
+                Longitude = _baseLng + (col * 0.0008),
                 Type = "Tent",
                 Amenities = new List<string> { "Picnic-Table" },
                 Status = random.Next(100) < 70 ? "Available" : "Occupied",
@@ -397,16 +505,19 @@
             });
         }
 
-        // Section B - Caravan pitches (B1-B8)
+        // Section B - Caravan pitches (B1-B8) - arranged in 2 rows of 4
         for (int i = 1; i <= 8; i++)
         {
+            int row = (i - 1) / 4;
+            int col = (i - 1) % 4;
+
             spots.Add(new CampingSpot
             {
                 SpotId = $"B{i}",
-                CampsiteId = AccommodationId,
-                CampsiteName = _accommodation?.Name ?? "",
-                Latitude = 0,
-                Longitude = 0,
+                CampsiteId = _campsiteId,
+                CampsiteName = _campsite?.Name ?? "",
+                Latitude = _baseLat + 0.0012 + (row * 0.0006),
+                Longitude = _baseLng + (col * 0.001),
                 Type = "Caravan",
                 Amenities = new List<string> { "Electric-Hookup", "Water-Access" },
                 Status = random.Next(100) < 60 ? "Available" : "Occupied",
@@ -414,16 +525,16 @@
             });
         }
 
-        // Section C - Cabins (C1-C5)
+        // Section C - Cabins (C1-C5) - arranged in a single row
         for (int i = 1; i <= 5; i++)
         {
             spots.Add(new CampingSpot
             {
                 SpotId = $"C{i}",
-                CampsiteId = AccommodationId,
-                CampsiteName = _accommodation?.Name ?? "",
-                Latitude = 0,
-                Longitude = 0,
+                CampsiteId = _campsiteId,
+                CampsiteName = _campsite?.Name ?? "",
+                Latitude = _baseLat + 0.0025,
+                Longitude = _baseLng + ((i - 1) * 0.0008),
                 Type = "Cabin",
                 Amenities = new List<string> { "Electric-Hookup", "Water-Access", "WiFi" },
                 Status = random.Next(100) < 50 ? "Available" : "Occupied",
@@ -431,16 +542,16 @@
             });
         }
 
-        // Section D - Premium spots (D1-D3)
+        // Section D - Premium spots (D1-D3) - arranged near the beach
         for (int i = 1; i <= 3; i++)
         {
             spots.Add(new CampingSpot
             {
                 SpotId = $"D{i}",
-                CampsiteId = AccommodationId,
-                CampsiteName = _accommodation?.Name ?? "",
-                Latitude = 0,
-                Longitude = 0,
+                CampsiteId = _campsiteId,
+                CampsiteName = _campsite?.Name ?? "",
+                Latitude = _baseLat - 0.0005,
+                Longitude = _baseLng + ((i - 1) * 0.0012),
                 Type = "Premium",
                 Amenities = new List<string> { "Electric-Hookup", "Water-Access", "WiFi", "Near-Beach" },
                 Status = random.Next(100) < 40 ? "Available" : "Occupied",
@@ -567,6 +678,16 @@
         public decimal Price { get; set; }
         public bool IsActive { get; set; } = true;
         public bool IsSelected { get; set; } = false;
+    }
+
+    public class CampsiteDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Region { get; set; } = string.Empty;
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+        public string Description { get; set; } = string.Empty;
     }
 }
 

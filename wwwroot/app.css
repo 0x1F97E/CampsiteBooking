@@ -2,18 +2,105 @@ html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+/* Video background */
+html {
+    background-color: #1a1a1a;
+}
+
+body {
+    position: relative;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Video background container */
+.video-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.video-background video {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    transform: translate(-50%, -50%);
+    object-fit: cover;
+}
+
+/* Very light overlay for content readability */
+.video-background::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);  /* Much lighter - only 20% */
+    pointer-events: none;
+}
+
+/* Make main content areas transparent to show video */
+.mud-main-content,
+.page,
+main,
+article,
+.mud-container,
+.mud-layout {
+    background: transparent !important;
+}
+
+/* Make MudBlazor containers semi-transparent */
+.mud-paper,
+.mud-card {
+    background-color: rgba(255, 255, 255, 0.75) !important;  /* Even more transparent */
+}
+
+/* Search bar and form elements */
+.mud-input,
+.mud-select {
+    background-color: rgba(255, 255, 255, 0.9) !important;  /* Slightly more transparent */
+}
+
+/* Make the entire app wrapper transparent */
+#app,
+.mud-layout,
+.mud-main-content {
+    background-color: transparent !important;
+}
+
+/* Make MudContainer with gutters transparent */
+.mud-container-maxwidth-xl,
+.mud-container--gutters {
+    background-color: transparent !important;
+}
+
 a, .btn-link {
-    color: #006bb7;
+    color: #1B5E20;
 }
 
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background-color: #1B5E20;
+    border-color: #145018;
+}
+
+.btn-primary:hover {
+    background-color: #2E7D32;
+    border-color: #1B5E20;
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #2E7D32;
 }
 
 .content {
@@ -25,7 +112,7 @@ h1:focus {
 }
 
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+    outline: 1px solid #2E7D32;
 }
 
 .invalid {
@@ -57,4 +144,52 @@ h1:focus {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
+}
+
+/* Leaflet Map Styles */
+.custom-campsite-marker {
+    background: none;
+    border: none;
+}
+
+.custom-campsite-marker svg {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    transition: transform 0.2s ease;
+}
+
+.custom-campsite-marker:hover svg {
+    transform: scale(1.1);
+}
+
+.campsite-popup .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.campsite-popup .leaflet-popup-content {
+    margin: 12px;
+}
+
+/* Booking Map Spot Markers */
+.custom-spot-marker {
+    background: none;
+    border: none;
+}
+
+.custom-spot-marker svg {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+    transition: transform 0.2s ease;
+}
+
+.custom-spot-marker:hover svg {
+    transform: scale(1.15);
+}
+
+.spot-popup .leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+.spot-popup .leaflet-popup-content {
+    margin: 14px;
 }

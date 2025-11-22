@@ -1,6 +1,63 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
+﻿@using MudBlazor
+
+<MudThemeProvider Theme="@_customTheme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
+
+@code {
+    private MudTheme _customTheme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#1B5E20",        // Dark Green
+            Secondary = "#2E7D32",      // Medium Green
+            AppbarBackground = "#1B5E20", // Dark Green
+            AppbarText = "#FFFFFF",
+            DrawerBackground = "#F5F5F5",
+            DrawerText = "#212121",
+            Success = "#2E7D32",
+            Info = "#1976D2",
+            Warning = "#F57C00",
+            Error = "#C62828",
+            Dark = "#1B5E20",
+            TextPrimary = "#212121",
+            TextSecondary = "#757575",
+            ActionDefault = "#1B5E20",
+            ActionDisabled = "#BDBDBD",
+            Background = "#FAFAFA",        // Very light grey (almost white)
+            Surface = "#FFFFFF",           // White
+            DrawerIcon = "#1B5E20",
+            LinesDefault = "#E0E0E0"
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#2E7D32",
+            Secondary = "#388E3C",
+            AppbarBackground = "#1B5E20",
+            AppbarText = "#FFFFFF",
+            DrawerBackground = "#212121",
+            DrawerText = "#FFFFFF",
+            Success = "#388E3C",
+            Info = "#1976D2",
+            Warning = "#F57C00",
+            Error = "#C62828",
+            Dark = "#1B5E20",
+            TextPrimary = "#FFFFFF",
+            TextSecondary = "#B0B0B0",
+            ActionDefault = "#2E7D32",
+            ActionDisabled = "#757575",
+            Background = "rgba(33, 33, 33, 0.95)",
+            Surface = "#424242",
+            DrawerIcon = "#2E7D32",
+            LinesDefault = "#616161"
+        }
+    };
+}

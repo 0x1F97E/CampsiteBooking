@@ -1,7 +1,8 @@
+@page "/"
 @page "/search"
 @rendermode InteractiveServer
 
-<PageTitle>Search - Campsite Booking</PageTitle>
+<PageTitle>Search Campsites - Campsite Booking</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <MudText Typo="Typo.h4" GutterBottom="true">Available Accommodations</MudText>
@@ -35,6 +36,22 @@
                                 AdornmentIcon="@Icons.Material.Filled.ChildCare" />
             </MudItem>
 
+            <MudItem xs="12" md="3">
+                <MudSelect T="string"
+                           Label="Campsites"
+                           Variant="Variant.Outlined"
+                           MultiSelection="true"
+                           @bind-SelectedValues="_selectedCampsiteIds"
+                           MultiSelectionTextFunc="@GetCampsiteSelectionText"
+                           Adornment="Adornment.Start"
+                           AdornmentIcon="@Icons.Material.Filled.Landscape">
+                    @foreach (var campsite in _availableCampsites)
+                    {
+                        <MudSelectItem T="string" Value="@campsite.Id.ToString()">@campsite.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
             <MudItem xs="12" md="2">
                 <MudSelect T="string" Label="Accommodation" @bind-Value="_accommodationType" Variant="Variant.Outlined">
                     <MudSelectItem Value="@("All")">All Types</MudSelectItem>
@@ -51,7 +68,9 @@
                            Variant="Variant.Outlined"
                            MultiSelection="true"
                            @bind-SelectedValues="_selectedAmenities"
-                           MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))">
+                           MultiSelectionTextFunc="@GetAmenitySelectionText"
+                           Adornment="Adornment.Start"
+                           AdornmentIcon="@Icons.Material.Filled.CheckCircle">
                     <MudSelectItem T="string" Value="@("Pool")">
                         <MudIcon Icon="@Icons.Material.Filled.Pool" Size="Size.Small" Class="mr-2" />
                         Pool
@@ -125,7 +144,10 @@
                         <MudCardMedia Image="@accommodation.ImageUrl" Height="200" />
                         <MudCardContent>
                             <MudText Typo="Typo.h6">@accommodation.Name</MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@accommodation.Type</MudChip>
+                            <MudStack Row="true" Spacing="1" Class="mb-2">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info">@accommodation.Type</MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.LocationOn">@accommodation.CampsiteName</MudChip>
+                            </MudStack>
                             <MudText Typo="Typo.body2" Class="mt-2">@accommodation.Description</MudText>
 
                             @if (accommodation.Amenities.Any())
@@ -157,10 +179,10 @@
                             </MudStack>
                         </MudCardContent>
                         <MudCardActions>
-                            <MudButton Variant="Variant.Filled" 
-                                      Color="Color.Primary" 
+                            <MudButton Variant="Variant.Filled"
+                                      Color="Color.Primary"
                                       FullWidth="true"
-                                      Href="@($"/booking/{accommodation.Id}")">
+                                      Href="@($"/booking?campsiteId={accommodation.Id}")">
                                 Book Now
                             </MudButton>
                         </MudCardActions>
@@ -183,8 +205,18 @@
     private int _children = 0;
     private string _accommodationType = "All";
     private IEnumerable<string> _selectedAmenities = new HashSet<string>();
+    private IEnumerable<string> _selectedCampsiteIds = new HashSet<string>();
     private bool _isLoading = false;
     private List<AccommodationDto> _accommodations = new();
+
+    private readonly List<CampsiteFilterDto> _availableCampsites = new()
+    {
+        new() { Id = 1, Name = "Copenhagen Beach Camp", Region = "Zealand" },
+        new() { Id = 2, Name = "Skagen North Point", Region = "North Jutland" },
+        new() { Id = 3, Name = "Aarhus Forest Retreat", Region = "East Jutland" },
+        new() { Id = 4, Name = "Odense Family Camp", Region = "Funen" },
+        new() { Id = 5, Name = "Bornholm Island Camp", Region = "Bornholm" }
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -202,6 +234,8 @@
             new AccommodationDto
             {
                 Id = 1,
+                CampsiteId = 1,
+                CampsiteName = "Copenhagen Beach Camp",
                 Name = "Lakeside Cabin",
                 Type = "Cabin",
                 Description = "Cozy cabin with lake view",
@@ -213,6 +247,8 @@
             new AccommodationDto
             {
                 Id = 2,
+                CampsiteId = 3,
+                CampsiteName = "Aarhus Forest Retreat",
                 Name = "Forest Tent Site",
                 Type = "Tent Site",
                 Description = "Peaceful spot among the trees",
@@ -224,6 +260,8 @@
             new AccommodationDto
             {
                 Id = 3,
+                CampsiteId = 1,
+                CampsiteName = "Copenhagen Beach Camp",
                 Name = "Luxury Glamping",
                 Type = "Glamping",
                 Description = "Glamorous camping experience",
@@ -235,6 +273,8 @@
             new AccommodationDto
             {
                 Id = 4,
+                CampsiteId = 2,
+                CampsiteName = "Skagen North Point",
                 Name = "Mountain View Cabin",
                 Type = "Cabin",
                 Description = "Stunning mountain views",
@@ -246,6 +286,8 @@
             new AccommodationDto
             {
                 Id = 5,
+                CampsiteId = 4,
+                CampsiteName = "Odense Family Camp",
                 Name = "RV Full Hookup",
                 Type = "RV Spot",
                 Description = "Full hookup with utilities",
@@ -257,6 +299,8 @@
             new AccommodationDto
             {
                 Id = 6,
+                CampsiteId = 5,
+                CampsiteName = "Bornholm Island Camp",
                 Name = "Riverside Tent Site",
                 Type = "Tent Site",
                 Description = "Right by the river",
@@ -268,6 +312,13 @@
         };
 
         _accommodations = allAccommodations;
+
+        // Filter by campsite
+        if (_selectedCampsiteIds.Any())
+        {
+            var selectedIds = _selectedCampsiteIds.Select(id => int.Parse(id)).ToList();
+            _accommodations = _accommodations.Where(a => selectedIds.Contains(a.CampsiteId)).ToList();
+        }
 
         // Filter by accommodation type
         if (_accommodationType != "All")
@@ -286,7 +337,25 @@
         _isLoading = false;
     }
 
-    private string GetMultiSelectionText(List<string> selectedValues)
+    private string GetCampsiteSelectionText(List<string> selectedValues)
+    {
+        if (!selectedValues.Any())
+            return "All Campsites";
+
+        if (selectedValues.Count == 1)
+        {
+            if (int.TryParse(selectedValues[0], out int campsiteId))
+            {
+                var campsite = _availableCampsites.FirstOrDefault(c => c.Id == campsiteId);
+                return campsite?.Name ?? "1 selected";
+            }
+            return "1 selected";
+        }
+
+        return $"{selectedValues.Count} selected";
+    }
+
+    private string GetAmenitySelectionText(List<string> selectedValues)
     {
         if (!selectedValues.Any())
             return "All Amenities";
@@ -316,6 +385,8 @@
     public class AccommodationDto
     {
         public int Id { get; set; }
+        public int CampsiteId { get; set; }
+        public string CampsiteName { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
@@ -323,6 +394,13 @@
         public decimal PricePerNight { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
         public List<string> Amenities { get; set; } = new();
+    }
+
+    public class CampsiteFilterDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Region { get; set; } = string.Empty;
     }
 }
 

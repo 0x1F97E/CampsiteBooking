@@ -1,26 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "/home/pc/Documents/CampsiteBooking/CampsiteBooking.csproj": {}
+    "/Users/pc/CampsiteBooking-1/CampsiteBooking.csproj": {}
   },
   "projects": {
-    "/home/pc/Documents/CampsiteBooking/CampsiteBooking.csproj": {
+    "/Users/pc/CampsiteBooking-1/CampsiteBooking.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/pc/Documents/CampsiteBooking/CampsiteBooking.csproj",
+        "projectUniqueName": "/Users/pc/CampsiteBooking-1/CampsiteBooking.csproj",
         "projectName": "CampsiteBooking",
-        "projectPath": "/home/pc/Documents/CampsiteBooking/CampsiteBooking.csproj",
-        "packagesPath": "/home/pc/.nuget/packages/",
-        "outputPath": "/home/pc/Documents/CampsiteBooking/obj/",
+        "projectPath": "/Users/pc/CampsiteBooking-1/CampsiteBooking.csproj",
+        "packagesPath": "/Users/pc/.nuget/packages/",
+        "outputPath": "/Users/pc/CampsiteBooking-1/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/pc/.nuget/NuGet/NuGet.Config"
+          "/Users/pc/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
-          "/usr/lib/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -39,12 +38,16 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.100"
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
           "dependencies": {
+            "BlazorGoogleMaps": {
+              "target": "Package",
+              "version": "[4.13.8, )"
+            },
             "Confluent.Kafka": {
               "target": "Package",
               "version": "[2.3.0, )"
@@ -91,7 +94,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/9.0.111/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.306/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

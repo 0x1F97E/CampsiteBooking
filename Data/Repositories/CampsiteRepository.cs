@@ -60,7 +60,6 @@ public class CampsiteRepository : ICampsiteRepository
     public async Task<IEnumerable<Campsite>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Campsites
-            .OrderBy(c => c.Name)
             .ToListAsync(cancellationToken);
     }
 

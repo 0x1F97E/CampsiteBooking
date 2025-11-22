@@ -4,17 +4,48 @@ using CampsiteBooking.Data;
 using CampsiteBooking.Data.Repositories;
 using CampsiteBooking.Infrastructure.Kafka;
 using CampsiteBooking.Models.Repositories;
+using CampsiteBooking.Services;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        options.DetailedErrors = builder.Environment.IsDevelopment();
+    });
 
 // Add MudBlazor services
 builder.Services.AddMudServices();
+
+// Add localization services
+builder.Services.AddLocalization();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<LocalizationService>();
+builder.Services.AddScoped<GeoLocationService>();
+
+// Configure supported cultures
+var supportedCultures = new[]
+{
+    new CultureInfo("en"),
+    new CultureInfo("en-GB"),
+    new CultureInfo("da-DK"),
+    new CultureInfo("de-DE"),
+    new CultureInfo("sv-SE"),
+    new CultureInfo("nb-NO"),
+    new CultureInfo("nl-NL")
+};
+
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    options.DefaultRequestCulture = new RequestCulture("en");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+});
 
 // Add HttpClient for Blazor components to call REST API
 builder.Services.AddHttpClient("BookMyHomeAPI", client =>
@@ -23,8 +54,11 @@ builder.Services.AddHttpClient("BookMyHomeAPI", client =>
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
+// Add HttpClient for geolocation service
+builder.Services.AddHttpClient();
+
 // Register ApiService for Blazor components
-builder.Services.AddScoped<CampsiteBooking.Services.ApiService>();
+builder.Services.AddScoped<ApiService>();
 
 // Add API Controllers (REST API)
 builder.Services.AddControllers();
@@ -57,7 +91,10 @@ builder.Services.AddAntiforgery(options =>
     options.HeaderName = "X-CSRF-TOKEN";
     options.Cookie.Name = "X-CSRF-TOKEN";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Require HTTPS
+    // Allow HTTP in development, require HTTPS in production
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Strict; // CSRF protection
 });
 
@@ -120,7 +157,8 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<IKafkaProducer, KafkaProducer>();
 
 // Register Kafka Consumer as Hosted Service (Background Processing)
-builder.Services.AddHostedService<KafkaConsumer>();
+// Temporarily disabled to allow app to start
+// builder.Services.AddHostedService<KafkaConsumer>();
 
 var app = builder.Build();
 
@@ -144,6 +182,9 @@ else
 
 app.UseHttpsRedirection();
 
+// Add localization middleware
+app.UseRequestLocalization();
+
 // Add Authentication & Authorization middleware (MUST be before MapControllers!)
 app.UseAuthentication();
 app.UseAuthorization();
@@ -159,5 +200,12 @@ app.MapRazorComponents<App>()
 
 // Map API Controllers
 app.MapControllers();
+
+// Apply database migrations automatically
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<CampsiteBookingDbContext>();
+    db.Database.Migrate();
+}
 
 app.Run();
