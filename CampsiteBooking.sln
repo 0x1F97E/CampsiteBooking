@@ -4,8 +4,6 @@ VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CampsiteBooking", "CampsiteBooking.csproj", "{61200E1A-F7E1-2FF6-46F1-CDBC99AE6B75}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BookMyHome", "..\BookMyHome\BookMyHome.csproj", "{49C66104-C4F3-4C3D-AAAF-E0D6EDB15818}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CampsiteBooking.Tests", "Tests\CampsiteBooking.Tests.csproj", "{FB7553EA-C9E1-4270-A11C-222CBC9D6F25}"
 EndProject
 Global
@@ -18,10 +16,6 @@ Global
 		{61200E1A-F7E1-2FF6-46F1-CDBC99AE6B75}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{61200E1A-F7E1-2FF6-46F1-CDBC99AE6B75}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{61200E1A-F7E1-2FF6-46F1-CDBC99AE6B75}.Release|Any CPU.Build.0 = Release|Any CPU
-		{49C66104-C4F3-4C3D-AAAF-E0D6EDB15818}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{49C66104-C4F3-4C3D-AAAF-E0D6EDB15818}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{49C66104-C4F3-4C3D-AAAF-E0D6EDB15818}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{49C66104-C4F3-4C3D-AAAF-E0D6EDB15818}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FB7553EA-C9E1-4270-A11C-222CBC9D6F25}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FB7553EA-C9E1-4270-A11C-222CBC9D6F25}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FB7553EA-C9E1-4270-A11C-222CBC9D6F25}.Release|Any CPU.ActiveCfg = Release|Any CPU

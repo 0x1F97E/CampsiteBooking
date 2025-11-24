@@ -6,46 +6,31 @@
 
 <MudPaper Elevation="4" Class="mt-8" Square="true">
     <MudContainer MaxWidth="MaxWidth.ExtraLarge">
-        <!-- Campsite Locations Map -->
-        <MudGrid Class="py-6">
-            <MudItem xs="12">
-                <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-2">
-                    Our Campsite Locations
-                </MudText>
-                <MudText Typo="Typo.body1" Align="Align.Center" Class="mb-4 mud-text-secondary">
-                    Explore our 8 beautiful campsites across Denmark
-                </MudText>
-                <div id="map" style="width: 100%; height: 400px; border-radius: 8px; overflow: hidden;"></div>
-            </MudItem>
-        </MudGrid>
-
-        <MudDivider Class="my-4" />
-
         <MudGrid Class="py-6">
             <!-- About Section -->
             <MudItem xs="12" sm="6" md="3">
-                <MudText Typo="Typo.h6" Class="mb-3">Campsite Booking</MudText>
-                <MudText Typo="Typo.body2" Class="mb-2">
+                <MudText Typo="Typo.h6" Class="mb-2">Campsite Booking</MudText>
+                <MudText Typo="Typo.body2" Class="mb-1" Style="font-size: 0.875rem;">
                     Denmark's premier camping network offering unforgettable outdoor experiences.
                 </MudText>
-                <MudText Typo="Typo.body2" Class="mb-2">
+                <MudText Typo="Typo.body2" Class="mb-1" Style="font-size: 0.875rem;">
                     <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
                     Copenhagen, Denmark
                 </MudText>
-                <MudStack Spacing="1">
-                    <MudLink Href="https://datacvr.virk.dk/enhed/virksomhed/11223344" Target="_blank" Typo="Typo.body2" Color="Color.Inherit">
+                <MudStack Spacing="0">
+                    <MudLink Href="https://datacvr.virk.dk/enhed/virksomhed/11223344" Target="_blank" Typo="Typo.body2" Color="Color.Inherit" Style="font-size: 0.875rem;">
                         CVR: 11 22 33 44
                     </MudLink>
-                    <MudText Typo="Typo.body2">
+                    <MudText Typo="Typo.body2" Class="mt-1" Style="font-size: 0.875rem;">
                         <strong>Work with us</strong>
                     </MudText>
-                    <MudLink Href="mailto:carrier@campsitebooking.dk" Typo="Typo.body2" Color="Color.Inherit">
+                    <MudLink Href="mailto:carrier@campsitebooking.dk" Typo="Typo.body2" Color="Color.Inherit" Style="font-size: 0.875rem;">
                         carrier@campsitebooking.dk
                     </MudLink>
-                    <MudText Typo="Typo.body2">
+                    <MudText Typo="Typo.body2" Class="mt-1" Style="font-size: 0.875rem;">
                         <strong>Inqueries</strong>
                     </MudText>
-                    <MudLink Href="mailto:contact@campsitebooking.dk" Typo="Typo.body2" Color="Color.Inherit">
+                    <MudLink Href="mailto:contact@campsitebooking.dk" Typo="Typo.body2" Color="Color.Inherit" Style="font-size: 0.875rem;">
                         Contact us at contact@campsitebooking.dk
                     </MudLink>
                 </MudStack>
@@ -53,36 +38,33 @@
 
             <!-- Quick Links -->
             <MudItem xs="12" sm="6" md="3">
-                <MudText Typo="Typo.h6" Class="mb-3">Quick Links</MudText>
-                <MudStack Spacing="2">
-                    <MudLink Href="/" Color="Color.Inherit">Search Campsites</MudLink>
-                    <MudLink Href="/information" Color="Color.Inherit">Information & Activities</MudLink>
-                    <MudLink Href="/bookings" Color="Color.Inherit">My Bookings</MudLink>
-                    <MudLink Href="/my-account" Color="Color.Inherit">My Account</MudLink>
+                <MudText Typo="Typo.h6" Class="mb-2">Quick Links</MudText>
+                <MudStack Spacing="1">
+                    <MudLink Href="/" Color="Color.Inherit" Style="font-size: 0.875rem;">Search Campsites</MudLink>
+                    <MudLink Href="/information" Color="Color.Inherit" Style="font-size: 0.875rem;">Information & Activities</MudLink>
+                    <MudLink Href="/bookings" Color="Color.Inherit" Style="font-size: 0.875rem;">My Bookings</MudLink>
+                    <MudLink Href="/my-account" Color="Color.Inherit" Style="font-size: 0.875rem;">My Account</MudLink>
                 </MudStack>
             </MudItem>
 
             <!-- Legal -->
             <MudItem xs="12" sm="6" md="3">
-                <MudText Typo="Typo.h6" Class="mb-3">Legal</MudText>
-                <MudStack Spacing="2">
-                    <MudLink Href="/privacy-policy" Color="Color.Inherit">Privacy Policy</MudLink>
-                    <MudLink Href="/cookie-policy" Color="Color.Inherit">Cookie Policy</MudLink>
-                    <MudLink Href="#" Color="Color.Inherit" OnClick="@(() => ShowCookieSettings())">Cookie Settings</MudLink>
-                    <MudLink Href="#" Color="Color.Inherit">Terms & Conditions</MudLink>
+                <MudText Typo="Typo.h6" Class="mb-2">Legal</MudText>
+                <MudStack Spacing="1">
+                    <MudLink Href="/privacy-policy" Color="Color.Inherit" Style="font-size: 0.875rem;">Privacy Policy</MudLink>
+                    <MudLink Href="/cookie-policy" Color="Color.Inherit" Style="font-size: 0.875rem;">Cookie Policy</MudLink>
+                    <MudLink Href="#" Color="Color.Inherit" OnClick="@(() => ShowCookieSettings())" Style="font-size: 0.875rem;">Cookie Settings</MudLink>
+                    <MudLink Href="#" Color="Color.Inherit" Style="font-size: 0.875rem;">Terms & Conditions</MudLink>
                 </MudStack>
             </MudItem>
 
-            <!-- Admin Portal -->
+            <!-- Campsite Locations Map -->
             <MudItem xs="12" sm="6" md="3">
-                <MudText Typo="Typo.h6" Class="mb-3">Admin</MudText>
-                <MudStack Spacing="2">
-                    <MudLink Href="/admin/dashboard" Color="Color.Inherit">Admin Portal</MudLink>
-                    <MudLink Href="/admin/campsites" Color="Color.Inherit">Manage Campsites</MudLink>
-                    <MudLink Href="/admin/bookings" Color="Color.Inherit">Manage Bookings</MudLink>
-                    <MudLink Href="/admin/users" Color="Color.Inherit">Manage Users</MudLink>
-                    <MudLink Href="/admin/information" Color="Color.Inherit">Information & Newsletter</MudLink>
-                </MudStack>
+                <MudText Typo="Typo.h6" Class="mb-2">Our Campsite Locations</MudText>
+                <MudText Typo="Typo.body2" Class="mb-2 mud-text-secondary" Style="font-size: 0.875rem;">
+                    Explore our 8 beautiful campsites across Denmark
+                </MudText>
+                <div id="map" style="width: 100%; height: 250px; border-radius: 8px; overflow: hidden;"></div>
             </MudItem>
         </MudGrid>
 
@@ -97,10 +79,36 @@
             </MudItem>
             <MudItem xs="12" md="6" Class="d-flex align-center justify-end">
                 <MudStack Row="true" Spacing="3">
-                    <MudIconButton Icon="@Icons.Custom.Brands.Facebook" Color="Color.Inherit" Size="Size.Small" />
-                    <MudIconButton Icon="@Icons.Custom.Brands.Instagram" Color="Color.Inherit" Size="Size.Small" />
-                    <MudIconButton Icon="@Icons.Custom.Brands.X" Color="Color.Inherit" Size="Size.Small" />
-                    <MudIconButton Icon="@Icons.Custom.Brands.LinkedIn" Color="Color.Inherit" Size="Size.Small" />
+                    <MudIconButton Icon="@Icons.Custom.Brands.Facebook"
+                                   Color="Color.Inherit"
+                                   Size="Size.Small"
+                                   Href="https://www.facebook.com/campsitebooking"
+                                   Target="_blank"
+                                   Title="Follow us on Facebook" />
+                    <MudIconButton Icon="@Icons.Custom.Brands.Instagram"
+                                   Color="Color.Inherit"
+                                   Size="Size.Small"
+                                   Href="https://www.instagram.com/campsitebooking"
+                                   Target="_blank"
+                                   Title="Follow us on Instagram" />
+                    <MudIconButton Icon="@Icons.Custom.Brands.X"
+                                   Color="Color.Inherit"
+                                   Size="Size.Small"
+                                   Href="https://twitter.com/campsitebooking"
+                                   Target="_blank"
+                                   Title="Follow us on X (Twitter)" />
+                    <MudIconButton Icon="@Icons.Custom.Brands.LinkedIn"
+                                   Color="Color.Inherit"
+                                   Size="Size.Small"
+                                   Href="https://www.linkedin.com/company/campsitebooking"
+                                   Target="_blank"
+                                   Title="Follow us on LinkedIn" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Star"
+                                   Color="Color.Inherit"
+                                   Size="Size.Small"
+                                   Href="https://www.trustpilot.com/review/campsitebooking.dk"
+                                   Target="_blank"
+                                   Title="Read our reviews on Trustpilot" />
                 </MudStack>
             </MudItem>
         </MudGrid>

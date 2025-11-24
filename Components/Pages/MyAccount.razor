@@ -1,9 +1,39 @@
 @page "/my-account"
 @rendermode InteractiveServer
 @inject IDialogService DialogService
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@using CampsiteBooking.Data
+@using CampsiteBooking.Models
+@using CampsiteBooking.Models.ValueObjects
+@using Microsoft.EntityFrameworkCore
 
 <PageTitle>My Account - Campsite Booking</PageTitle>
 
+@if (_isLoading)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8 text-center">
+        <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.h6" Class="mt-4">Loading your account...</MudText>
+    </MudContainer>
+}
+else if (!_isAuthenticated)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8 text-center">
+        <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" Color="Color.Error" />
+        <MudText Typo="Typo.h5" Class="mt-4">Please Log In</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+            You need to be logged in to view your account information.
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/login" StartIcon="@Icons.Material.Filled.Login">
+            Go to Login
+        </MudButton>
+    </MudContainer>
+}
+else
+{
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <MudText Typo="Typo.h4" GutterBottom="true">
         <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Class="mr-2" />
@@ -108,35 +138,244 @@
             <MudCard Elevation="3" Class="mt-4">
                 <MudCardHeader>
                     <CardHeaderContent>
-                        <MudText Typo="Typo.h6">Preferences</MudText>
+                        <MudText Typo="Typo.h6">Communication Preferences</MudText>
                     </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudSwitch @bind-Value="_emailNotifications" Color="Color.Primary" Label="Email Notifications" />
-                    <MudSwitch @bind-Value="_smsNotifications" Color="Color.Primary" Label="SMS Notifications" Class="mt-2" />
-                    <MudSwitch @bind-Value="_newsletter" Color="Color.Primary" Label="Newsletter Subscription" Class="mt-2" />
+                    <MudSwitch T="bool"
+                               Value="_emailNotifications"
+                               ValueChanged="@(async (bool value) => { _emailNotifications = value; await SavePreferences(); })"
+                               Color="Color.Primary"
+                               Label="Email Notifications" />
+                    <MudSwitch T="bool"
+                               Value="_smsNotifications"
+                               ValueChanged="@(async (bool value) => { _smsNotifications = value; await SavePreferences(); })"
+                               Color="Color.Primary"
+                               Label="SMS Notifications"
+                               Class="mt-2" />
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3">
+                        Current preference: @_preferredCommunication
+                    </MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Purchase History Section -->
+        <MudItem xs="12">
+            <MudCard Elevation="3" Class="mt-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" />
+                            Purchase History
+                        </MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (_purchaseHistory == null || !_purchaseHistory.Any())
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="text-center py-4">
+                            No purchase history available
+                        </MudText>
+                    }
+                    else
+                    {
+                        <MudTable Items="_purchaseHistory" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true">
+                            <HeaderContent>
+                                <MudTh>Booking ID</MudTh>
+                                <MudTh>Date</MudTh>
+                                <MudTh>Campsite</MudTh>
+                                <MudTh>Accommodation</MudTh>
+                                <MudTh>Check-in</MudTh>
+                                <MudTh>Check-out</MudTh>
+                                <MudTh>Status</MudTh>
+                                <MudTh>Total</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Booking ID">@context.BookingId</MudTd>
+                                <MudTd DataLabel="Date">@context.BookingDate.ToString("MMM dd, yyyy")</MudTd>
+                                <MudTd DataLabel="Campsite">@context.CampsiteName</MudTd>
+                                <MudTd DataLabel="Accommodation">@context.AccommodationType</MudTd>
+                                <MudTd DataLabel="Check-in">@context.CheckInDate.ToString("MMM dd, yyyy")</MudTd>
+                                <MudTd DataLabel="Check-out">@context.CheckOutDate.ToString("MMM dd, yyyy")</MudTd>
+                                <MudTd DataLabel="Status">
+                                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">
+                                        @context.Status
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd DataLabel="Total">
+                                    <strong>@context.TotalPrice.ToString("C")</strong>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
                 </MudCardContent>
             </MudCard>
         </MudItem>
     </MudGrid>
 </MudContainer>
+}
 
 @code {
-    private string _firstName = "John";
-    private string _lastName = "Anderson";
-    private string _email = "john.anderson@email.com";
-    private string _phone = "+45 12 34 56 78";
-    private string _country = "Denmark";
-    private DateTime _memberSince = new DateTime(2023, 3, 15);
-    private DateTime _lastPasswordChange = new DateTime(2024, 1, 10);
+    private bool _isLoading = true;
+    private bool _isAuthenticated = false;
+    private int _currentUserId = 0;
 
-    private int _totalBookings = 12;
-    private int _upcomingTrips = 2;
-    private string _favoriteCampsite = "Lakeside Haven";
+    // User profile data from database
+    private string _firstName = "";
+    private string _lastName = "";
+    private string _email = "";
+    private string _phone = "";
+    private string _country = "";
+    private DateTime _memberSince = DateTime.Today;
+    private DateTime _lastPasswordChange = DateTime.Today;
 
+    // Account statistics from database
+    private int _totalBookings = 0;
+    private int _upcomingTrips = 0;
+    private string _favoriteCampsite = "None";
+
+    // Preferences from database
     private bool _emailNotifications = true;
     private bool _smsNotifications = false;
-    private bool _newsletter = true;
+    private string _preferredCommunication = "Email";
+
+    // Purchase history
+    private List<PurchaseHistoryDto> _purchaseHistory = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuthentication();
+
+        if (_isAuthenticated)
+        {
+            await LoadUserData();
+            await LoadAccountStatistics();
+            await LoadPurchaseHistory();
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task CheckAuthentication()
+    {
+        try
+        {
+            // Check if user is logged in (using localStorage for demo)
+            var userIdString = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentUserId");
+
+            if (!string.IsNullOrEmpty(userIdString) && int.TryParse(userIdString, out int userId) && userId > 0)
+            {
+                _currentUserId = userId;
+                _isAuthenticated = true;
+                Console.WriteLine($"✅ User authenticated: UserId = {_currentUserId}");
+            }
+            else
+            {
+                _isAuthenticated = false;
+                Console.WriteLine("❌ User not authenticated");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error checking authentication: {ex.Message}");
+            _isAuthenticated = false;
+        }
+    }
+
+    private async Task LoadUserData()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load user from database
+            var userId = UserId.Create(_currentUserId);
+            var user = await context.Users
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user != null)
+            {
+                _firstName = user.FirstName ?? "";
+                _lastName = user.LastName ?? "";
+                _email = user.Email?.Value ?? "";
+                _phone = user.Phone ?? "";
+                _country = user.Country ?? "";
+                _memberSince = user.JoinedDate;
+                _lastPasswordChange = user.JoinedDate; // TODO: Add LastPasswordChange to User model
+
+                // Load preferences if user is a Guest
+                if (user is Guest guest)
+                {
+                    _preferredCommunication = guest.PreferredCommunication;
+                    _emailNotifications = guest.PreferredCommunication == "Email" || guest.PreferredCommunication == "Both";
+                    _smsNotifications = guest.PreferredCommunication == "SMS" || guest.PreferredCommunication == "Both";
+                }
+
+                Console.WriteLine($"✅ Loaded user data for {_firstName} {_lastName}");
+            }
+            else
+            {
+                Console.WriteLine($"❌ User with ID {_currentUserId} not found in database");
+                Snackbar.Add("User not found. Please log in again.", Severity.Error);
+                _isAuthenticated = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading user data: {ex.Message}");
+            Snackbar.Add($"Error loading user data: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadAccountStatistics()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load bookings for this user
+            var guestId = GuestId.Create(_currentUserId);
+            var bookings = await context.Bookings
+                .Where(b => b.GuestId == guestId)
+                .ToListAsync();
+
+            // Calculate statistics
+            _totalBookings = bookings.Count;
+            _upcomingTrips = bookings.Count(b =>
+                (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Pending) &&
+                b.CheckInDate >= DateTime.Today);
+
+            // Find favorite campsite (most booked) - load campsites separately
+            var campsiteIds = bookings.Select(b => b.CampsiteId).Distinct().ToList();
+            var campsites = await context.Campsites
+                .Where(c => campsiteIds.Contains(c.Id))
+                .ToListAsync();
+
+            var campsiteBookingCounts = bookings
+                .GroupBy(b => b.CampsiteId)
+                .Select(g => new { CampsiteId = g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count)
+                .FirstOrDefault();
+
+            if (campsiteBookingCounts != null)
+            {
+                var favoriteCampsite = campsites.FirstOrDefault(c => c.Id == campsiteBookingCounts.CampsiteId);
+                _favoriteCampsite = favoriteCampsite?.Name ?? "None";
+            }
+            else
+            {
+                _favoriteCampsite = "None";
+            }
+
+            Console.WriteLine($"✅ Statistics: {_totalBookings} total, {_upcomingTrips} upcoming, favorite: {_favoriteCampsite}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading statistics: {ex.Message}");
+            // Don't show error to user - statistics are not critical
+        }
+    }
 
     private async Task EditProfile()
     {
@@ -152,6 +391,133 @@
             "Change Password",
             "Password change functionality will be implemented here. You will need to enter your current password and a new password.",
             yesText: "OK");
+    }
+
+    private async Task LoadPurchaseHistory()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load all bookings for this user
+            var guestId = GuestId.Create(_currentUserId);
+            var bookings = await context.Bookings
+                .Where(b => b.GuestId == guestId)
+                .ToListAsync();
+
+            // Load related entities
+            var accommodationTypeIds = bookings.Select(b => b.AccommodationTypeId).Distinct().ToList();
+            var accommodationTypes = await context.AccommodationTypes
+                .Where(at => accommodationTypeIds.Contains(at.Id))
+                .ToListAsync();
+
+            var campsiteIds = accommodationTypes.Select(at => at.CampsiteId).Distinct().ToList();
+            var campsites = await context.Campsites
+                .Where(c => campsiteIds.Contains(c.Id))
+                .ToListAsync();
+
+            // Convert to DTOs
+            _purchaseHistory = bookings.Select(b =>
+            {
+                var accommodationType = accommodationTypes.FirstOrDefault(at => at.Id == b.AccommodationTypeId);
+                var campsite = accommodationType != null
+                    ? campsites.FirstOrDefault(c => c.Id == accommodationType.CampsiteId)
+                    : null;
+
+                return new PurchaseHistoryDto
+                {
+                    BookingId = b.Id?.Value.ToString() ?? "0",
+                    BookingDate = b.CreatedDate,
+                    CampsiteName = campsite?.Name ?? "Unknown",
+                    AccommodationType = accommodationType?.Type ?? "Unknown",
+                    CheckInDate = b.Period?.StartDate ?? DateTime.Today,
+                    CheckOutDate = b.Period?.EndDate ?? DateTime.Today,
+                    Status = b.Status.ToString(),
+                    TotalPrice = b.TotalPrice?.Amount ?? 0m
+                };
+            }).OrderByDescending(p => p.BookingDate).ToList();
+
+            Console.WriteLine($"✅ Loaded {_purchaseHistory.Count} purchase history records");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading purchase history: {ex.Message}");
+            _purchaseHistory = new List<PurchaseHistoryDto>();
+        }
+    }
+
+    private async Task SavePreferences()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load user from database
+            var userId = UserId.Create(_currentUserId);
+            var user = await context.Users.OfType<Guest>()
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user != null)
+            {
+                // Determine preferred communication based on toggles
+                string newPreference;
+                if (_emailNotifications && _smsNotifications)
+                {
+                    newPreference = "Both";
+                }
+                else if (_emailNotifications)
+                {
+                    newPreference = "Email";
+                }
+                else if (_smsNotifications)
+                {
+                    newPreference = "SMS";
+                }
+                else
+                {
+                    newPreference = "Email"; // Default to Email if both are off
+                    _emailNotifications = true; // Force at least one to be on
+                }
+
+                // Update preference
+                user.UpdatePreferredCommunication(newPreference);
+                await context.SaveChangesAsync();
+
+                _preferredCommunication = newPreference;
+                Snackbar.Add("Preferences saved successfully!", Severity.Success);
+                Console.WriteLine($"✅ Updated communication preference to: {newPreference}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error saving preferences: {ex.Message}");
+            Snackbar.Add($"Error saving preferences: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "Confirmed" => Color.Success,
+            "Pending" => Color.Warning,
+            "Cancelled" => Color.Error,
+            "Completed" => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    // DTO for purchase history
+    private class PurchaseHistoryDto
+    {
+        public string BookingId { get; set; } = "";
+        public DateTime BookingDate { get; set; }
+        public string CampsiteName { get; set; } = "";
+        public string AccommodationType { get; set; } = "";
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
+        public string Status { get; set; } = "";
+        public decimal TotalPrice { get; set; }
     }
 }
 

@@ -57,10 +57,66 @@ public class CampsiteBookingDbContext : DbContext
             .HasValue<Admin>("Admin")
             .HasValue<Staff>("Staff");
 
+        // Configure User - UserId is computed from Id
+        modelBuilder.Entity<User>()
+            .Ignore(u => u.UserId); // UserId is a computed property, not stored in DB
+
+        // Configure User entity to map private fields
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.Property("_email")
+                .HasColumnName("Email")
+                .HasConversion(new EmailConverter())
+                .HasMaxLength(255)
+                .IsRequired();
+
+            entity.Property("_firstName").HasColumnName("FirstName").HasMaxLength(100).IsRequired();
+            entity.Property("_lastName").HasColumnName("LastName").HasMaxLength(100).IsRequired();
+            entity.Property("_phone").HasColumnName("Phone").HasMaxLength(20);
+            entity.Property("_country").HasColumnName("Country").HasMaxLength(100);
+            entity.Property("_joinedDate").HasColumnName("JoinedDate");
+            entity.Property("_lastLogin").HasColumnName("LastLogin");
+            entity.Property("_isActive").HasColumnName("IsActive");
+        });
+
         // Add RowVersion for Optimistic Concurrency on Booking
         modelBuilder.Entity<Booking>()
             .Property<byte[]>("RowVersion")
             .IsRowVersion();
+
+        // Configure Campsite entity to map private fields
+        modelBuilder.Entity<Campsite>(entity =>
+        {
+            entity.Property("_name").HasColumnName("Name").IsRequired();
+            entity.Property("_region").HasColumnName("Region").IsRequired();
+            entity.Property("_description").HasColumnName("Description");
+            entity.Property("_latitude").HasColumnName("Latitude");
+            entity.Property("_longitude").HasColumnName("Longitude");
+            entity.Property("_attractiveness").HasColumnName("Attractiveness");
+            entity.Property("_phoneNumber").HasColumnName("PhoneNumber");
+            entity.Property("_email").HasColumnName("Email");
+            entity.Property("_websiteUrl").HasColumnName("WebsiteUrl");
+            entity.Property("_establishedYear").HasColumnName("EstablishedYear");
+            entity.Property("_isActive").HasColumnName("IsActive");
+            entity.Property("_totalArea").HasColumnName("TotalArea");
+            entity.Property("_createdDate").HasColumnName("CreatedDate");
+            entity.Property("_updatedDate").HasColumnName("UpdatedDate");
+        });
+
+        // Configure Photo entity to map private fields
+        modelBuilder.Entity<Photo>(entity =>
+        {
+            entity.Property("_campsiteId").HasColumnName("CampsiteId");
+            entity.Property("_accommodationTypeId").HasColumnName("AccommodationTypeId");
+            entity.Property("_url").HasColumnName("Url").IsRequired();
+            entity.Property("_caption").HasColumnName("Caption");
+            entity.Property("_altText").HasColumnName("AltText");
+            entity.Property("_displayOrder").HasColumnName("DisplayOrder");
+            entity.Property("_isPrimary").HasColumnName("IsPrimary");
+            entity.Property("_uploadedDate").HasColumnName("UploadedDate");
+            entity.Property("_updatedDate").HasColumnName("UpdatedDate");
+            entity.Property("_category").HasColumnName("Category").HasMaxLength(50).HasDefaultValue("General");
+        });
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

@@ -1,0 +1,120 @@
+@using MudBlazor
+@using static CampsiteBooking.Components.Pages.Admin.InformationManagement
+@rendermode InteractiveServer
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Style="max-height: 70vh; overflow-y: auto;">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_title"
+                                  Label="Title"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  Placeholder="e.g., Sunset Beach View" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudSelect @bind-Value="_campsiteId"
+                              Label="Campsite"
+                              Variant="Variant.Outlined"
+                              Required="true">
+                        <MudSelectItem Value="0">All Campsites</MudSelectItem>
+                        @foreach (var campsite in Campsites)
+                        {
+                            <MudSelectItem Value="@campsite.Id">@campsite.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_description"
+                                  Label="Description / Alt Text"
+                                  Variant="Variant.Outlined"
+                                  Lines="3"
+                                  Placeholder="Brief description of the photo" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_imageUrl"
+                                  Label="Image URL"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  Placeholder="https://example.com/image.jpg"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Image" />
+                </MudItem>
+
+                @if (!string.IsNullOrWhiteSpace(_imageUrl))
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Preview:</MudText>
+                        <MudImage Src="@_imageUrl"
+                                 Alt="Preview"
+                                 Width="300"
+                                 ObjectFit="ObjectFit.Cover"
+                                 Class="rounded" />
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Submit"
+                   Disabled="@(!IsValid())">
+            @(Photo == null ? "Add Photo" : "Update Photo")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public List<CampsiteSubscriberDto> Campsites { get; set; } = new();
+    [Parameter] public PhotoDto? Photo { get; set; }
+
+    private string _title = string.Empty;
+    private int _campsiteId = 0;
+    private string _description = string.Empty;
+    private string _imageUrl = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        if (Photo != null)
+        {
+            _title = Photo.Title;
+            _campsiteId = Photo.CampsiteId;
+            _description = Photo.Description;
+            _imageUrl = Photo.ImageUrl;
+        }
+    }
+
+    private bool IsValid()
+    {
+        return !string.IsNullOrWhiteSpace(_title) && !string.IsNullOrWhiteSpace(_imageUrl);
+    }
+
+    private void Submit()
+    {
+        var photo = new PhotoDto
+        {
+            Id = Photo?.Id ?? 0,
+            Title = _title,
+            CampsiteId = _campsiteId,
+            CampsiteName = _campsiteId == 0 ? "All Campsites" : Campsites.FirstOrDefault(c => c.Id == _campsiteId)?.Name ?? "Unknown",
+            Description = _description,
+            ImageUrl = _imageUrl
+        };
+
+        MudDialog.Close(DialogResult.Ok(photo));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}
+

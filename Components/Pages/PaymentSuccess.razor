@@ -1,0 +1,154 @@
+@page "/payment-success"
+@using CampsiteBooking.Services
+@using CampsiteBooking.Data
+@using CampsiteBooking.Models.ValueObjects
+@using Microsoft.EntityFrameworkCore
+@inject StripePaymentService StripeService
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@rendermode InteractiveServer
+
+<PageTitle>Payment Successful - CampsiteBooking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    @if (_isLoading)
+    {
+        <MudPaper Elevation="3" Class="pa-8 text-center">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Typo="Typo.h6" Class="mt-4">Processing your payment...</MudText>
+        </MudPaper>
+    }
+    else if (_success)
+    {
+        <MudPaper Elevation="3" Class="pa-8 text-center">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" Style="font-size: 80px;" />
+            <MudText Typo="Typo.h4" Color="Color.Success" Class="mt-4">Payment Successful!</MudText>
+            <MudText Typo="Typo.body1" Class="mt-4">
+                Thank you for your booking. Your payment has been processed successfully.
+            </MudText>
+            
+            @if (_bookingId.HasValue)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                    Booking ID: <strong>@_bookingId.Value</strong>
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Payment Intent: <strong>@_paymentIntentId</strong>
+                </MudText>
+            }
+
+            <MudDivider Class="my-6" />
+
+            <MudStack Row="true" Justify="Justify.Center" Spacing="4">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Receipt"
+                           Href="/bookings">
+                    View My Bookings
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Home"
+                           Href="/">
+                    Back to Home
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Elevation="3" Class="pa-8 text-center">
+            <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" Style="font-size: 80px;" />
+            <MudText Typo="Typo.h4" Color="Color.Error" Class="mt-4">Payment Verification Failed</MudText>
+            <MudText Typo="Typo.body1" Class="mt-4">
+                We couldn't verify your payment. Please contact support if you were charged.
+            </MudText>
+
+            <MudDivider Class="my-6" />
+
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       Href="/">
+                Back to Home
+            </MudButton>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private bool _isLoading = true;
+    private bool _success = false;
+    private int? _bookingId;
+    private string? _paymentIntentId;
+
+    [SupplyParameterFromQuery(Name = "session_id")]
+    public string? SessionId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(SessionId))
+        {
+            _isLoading = false;
+            _success = false;
+            return;
+        }
+
+        try
+        {
+            // Verify the payment with Stripe
+            var (success, paymentIntentId) = await StripeService.VerifyCheckoutSessionAsync(SessionId);
+            _success = success;
+            _paymentIntentId = paymentIntentId;
+
+            if (success)
+            {
+                // Get booking ID from session metadata
+                _bookingId = await StripeService.GetBookingIdFromSessionAsync(SessionId);
+
+                if (_bookingId.HasValue)
+                {
+                    // Update booking status to Confirmed and add payment record
+                    await UpdateBookingStatusAsync(_bookingId.Value, paymentIntentId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error processing payment success: {ex.Message}");
+            _success = false;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task UpdateBookingStatusAsync(int bookingId, string? paymentIntentId)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var booking = await context.Bookings
+                .FirstOrDefaultAsync(b => b.Id == BookingId.Create(bookingId));
+
+            if (booking != null)
+            {
+                // Confirm the booking
+                booking.Confirm();
+
+                // TODO: Add payment record to database
+                // This would require creating a Payment entity and adding it to the context
+
+                await context.SaveChangesAsync();
+                Console.WriteLine($"✅ Booking {bookingId} confirmed with payment {paymentIntentId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error updating booking status: {ex.Message}");
+        }
+    }
+}
+

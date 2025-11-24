@@ -1,0 +1,52 @@
+namespace CampsiteBooking.Components.Pages.Admin;
+
+public class CampsitePricingDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Region { get; set; } = string.Empty;
+    public string Attractiveness { get; set; } = string.Empty;
+    public List<BasePricingDto> Pricing { get; set; } = new();
+    public List<PeripheralPurchaseDto> PeripheralPurchases { get; set; } = new();
+}
+
+public class BasePricingDto
+{
+    public int Id { get; set; }
+    public string Type { get; set; } = string.Empty;
+    public decimal Price { get; set; }
+    public int AvailableUnits { get; set; }
+    public int MaxGuests { get; set; }
+    public bool IsActive { get; set; } = true;
+    public List<PeripheralPurchaseDto> AccommodationPeripheralPurchases { get; set; } = new();
+}
+
+public class SeasonalMultiplierDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string DateRange { get; set; } = string.Empty;
+    public decimal Multiplier { get; set; }
+}
+
+public class DiscountDto
+{
+    public string Code { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public decimal Value { get; set; }
+    public DateTime ValidFrom { get; set; }
+    public DateTime ValidUntil { get; set; }
+    public int UsedCount { get; set; }
+    public int MaxUses { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public class PeripheralPurchaseDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public decimal Price { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+

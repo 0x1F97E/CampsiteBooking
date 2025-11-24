@@ -1,5 +1,8 @@
 @page "/information"
 @rendermode InteractiveServer
+@using CampsiteBooking.Data
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
 
 <PageTitle>Information & Activities - Campsite Booking</PageTitle>
 
@@ -27,7 +30,8 @@
         <MudGrid>
             <MudItem xs="12" md="8">
                 <MudSelect T="int"
-                          @bind-Value="_selectedCampsiteId"
+                          Value="_selectedCampsiteId"
+                          ValueChanged="OnCampsiteChanged"
                           Label="Select Campsite"
                           Variant="Variant.Outlined"
                           Placeholder="All Campsites (Random Photos)"
@@ -134,7 +138,7 @@
 
     <!-- Photo Gallery Section -->
     <MudPaper Elevation="3" Class="pa-4 mb-6">
-        <MudText Typo="Typo.h5" GutterBottom="true">
+        <MudText Typo="Typo.h5" Class="mb-3">
             <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Class="mr-2" />
             @if (_selectedCampsiteId > 0)
             {
@@ -216,119 +220,6 @@
             </MudPaper>
         </MudItem>
     </MudGrid>
-
-    <!-- Activities Section -->
-    <MudText Typo="Typo.h4" Class="mb-3 mt-6">Activities & Recreation</MudText>
-    
-    <MudGrid>
-        <MudItem xs="12" sm="6" md="4">
-            <MudCard Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">
-                            <MudIcon Icon="@Icons.Material.Filled.DirectionsBike" Class="mr-2" />
-                            Cycling
-                        </MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudText Typo="Typo.body2">
-                        Explore Denmark's extensive cycling routes. Bike rentals available at most locations.
-                    </MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <MudItem xs="12" sm="6" md="4">
-            <MudCard Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">
-                            <MudIcon Icon="@Icons.Material.Filled.Hiking" Class="mr-2" />
-                            Hiking
-                        </MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudText Typo="Typo.body2">
-                        Discover scenic hiking trails ranging from easy walks to challenging treks.
-                    </MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <MudItem xs="12" sm="6" md="4">
-            <MudCard Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">
-                            <MudIcon Icon="@Icons.Material.Filled.Pool" Class="mr-2" />
-                            Swimming
-                        </MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudText Typo="Typo.body2">
-                        Enjoy swimming in the sea, lakes, or on-site swimming pools at select locations.
-                    </MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <MudItem xs="12" sm="6" md="4">
-            <MudCard Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">
-                            <MudIcon Icon="@Icons.Material.Filled.Sailing" Class="mr-2" />
-                            Water Sports
-                        </MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudText Typo="Typo.body2">
-                        Kayaking, sailing, and paddleboarding available at coastal and lakeside sites.
-                    </MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <MudItem xs="12" sm="6" md="4">
-            <MudCard Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">
-                            <MudIcon Icon="@Icons.Material.Filled.Phishing" Class="mr-2" />
-                            Fishing
-                        </MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudText Typo="Typo.body2">
-                        Fishing opportunities in nearby lakes, rivers, and coastal waters.
-                    </MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <MudItem xs="12" sm="6" md="4">
-            <MudCard Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">
-                            <MudIcon Icon="@Icons.Material.Filled.Celebration" Class="mr-2" />
-                            Family Activities
-                        </MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudText Typo="Typo.body2">
-                        Playgrounds, mini-golf, and organized family events during peak season.
-                    </MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
 </MudContainer>
 
 @code {
@@ -337,88 +228,85 @@
     private List<EventDto> _events = new();
     private List<PhotoDto> _photos = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        LoadData();
+        await LoadDataAsync();
     }
 
-    private void LoadData()
+    private async Task LoadDataAsync()
     {
-        // Load campsites
-        _campsites = new List<CampsiteDto>
+        // Load events and photos from database using DbContextFactory
+        await using var context = await DbContextFactory.CreateDbContextAsync();
+
+        // Load campsites from database
+        var dbCampsites = await context.Campsites.ToListAsync();
+        _campsites = dbCampsites.Select(c => new CampsiteDto
         {
-            new() { Id = 1, Name = "Copenhagen Beach Camp", Region = "Zealand" },
-            new() { Id = 2, Name = "Skagen North Point", Region = "North Jutland" },
-            new() { Id = 3, Name = "Aarhus Forest Retreat", Region = "East Jutland" },
-            new() { Id = 4, Name = "Odense Family Camp", Region = "Funen" },
-            new() { Id = 5, Name = "Bornholm Island Camp", Region = "Bornholm" },
-            new() { Id = 6, Name = "Ribe Viking Camp", Region = "South Jutland" },
-            new() { Id = 7, Name = "Roskilde Fjord View", Region = "Zealand" }
-        };
+            Id = c.Id?.Value ?? 0,
+            Name = c.Name ?? "",
+            Region = c.Region ?? ""
+        }).ToList();
 
-        // Load events
-        _events = new List<EventDto>
-        {
-            new() { Id = 1, CampsiteId = 1, Name = "Beach Volleyball Tournament", Description = "Friendly competition for all ages", CampsiteName = "Copenhagen Beach Camp", EventDate = DateTime.Today.AddDays(1), EventTime = "10:00 AM", Category = "Sports", MaxCapacity = 32, RegisteredCount = 28, Status = "Open" },
-            new() { Id = 2, CampsiteId = 1, Name = "Kids' Craft Workshop", Description = "Make your own camping souvenirs", CampsiteName = "Copenhagen Beach Camp", EventDate = DateTime.Today.AddDays(2), EventTime = "2:00 PM", Category = "Kids", MaxCapacity = 20, RegisteredCount = 15, Status = "Open" },
-            new() { Id = 3, CampsiteId = 1, Name = "Campfire Stories & S'mores", Description = "Evening storytelling by the fire", CampsiteName = "Copenhagen Beach Camp", EventDate = DateTime.Today.AddDays(3), EventTime = "7:00 PM", Category = "Entertainment", MaxCapacity = 0, RegisteredCount = 45, Status = "Open" },
-            new() { Id = 4, CampsiteId = 3, Name = "Guided Nature Walk", Description = "Explore local flora and fauna", CampsiteName = "Aarhus Forest Retreat", EventDate = DateTime.Today.AddDays(2), EventTime = "3:00 PM", Category = "Nature", MaxCapacity = 15, RegisteredCount = 15, Status = "Full" },
-            new() { Id = 5, CampsiteId = 5, Name = "Yoga at Sunrise", Description = "Start your day with mindfulness", CampsiteName = "Bornholm Island Camp", EventDate = DateTime.Today.AddDays(1), EventTime = "6:00 AM", Category = "Wellness", MaxCapacity = 25, RegisteredCount = 18, Status = "Open" },
-            new() { Id = 6, CampsiteId = 2, Name = "Lighthouse Tour", Description = "Visit the historic Skagen lighthouse", CampsiteName = "Skagen North Point", EventDate = DateTime.Today.AddDays(4), EventTime = "11:00 AM", Category = "Culture", MaxCapacity = 30, RegisteredCount = 22, Status = "Open" },
-            new() { Id = 7, CampsiteId = 3, Name = "Forest Meditation", Description = "Peaceful meditation in nature", CampsiteName = "Aarhus Forest Retreat", EventDate = DateTime.Today.AddDays(5), EventTime = "8:00 AM", Category = "Wellness", MaxCapacity = 20, RegisteredCount = 12, Status = "Open" },
-            new() { Id = 8, CampsiteId = 4, Name = "Family Movie Night", Description = "Outdoor cinema under the stars", CampsiteName = "Odense Family Camp", EventDate = DateTime.Today.AddDays(1), EventTime = "8:30 PM", Category = "Entertainment", MaxCapacity = 0, RegisteredCount = 67, Status = "Open" },
-            new() { Id = 9, CampsiteId = 1, Name = "Surfing Lessons", Description = "Beginner-friendly surfing course", CampsiteName = "Copenhagen Beach Camp", EventDate = DateTime.Today.AddDays(6), EventTime = "9:00 AM", Category = "Sports", MaxCapacity = 12, RegisteredCount = 10, Status = "Open" },
-            new() { Id = 10, CampsiteId = 6, Name = "Viking History Talk", Description = "Learn about local Viking heritage", CampsiteName = "Ribe Viking Camp", EventDate = DateTime.Today.AddDays(3), EventTime = "4:00 PM", Category = "Culture", MaxCapacity = 40, RegisteredCount = 35, Status = "Open" }
-        };
+        Console.WriteLine($"✅ Loaded {_campsites.Count} campsites for Information page");
 
-        // Load photos
-        _photos = new List<PhotoDto>
-        {
-            // Copenhagen Beach Camp
-            new() { Id = 1, CampsiteId = 1, CampsiteName = "Copenhagen Beach Camp", Title = "Sunset Beach View", Description = "Beautiful sunset over the beach", ImageUrl = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800" },
-            new() { Id = 2, CampsiteId = 1, CampsiteName = "Copenhagen Beach Camp", Title = "Beach Activities", Description = "Volleyball and water sports", ImageUrl = "https://images.unsplash.com/photo-1533873984035-25970ab07461?w=800" },
-            new() { Id = 3, CampsiteId = 1, CampsiteName = "Copenhagen Beach Camp", Title = "Cozy Cabins", Description = "Modern cabin accommodations", ImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800" },
-            new() { Id = 4, CampsiteId = 1, CampsiteName = "Copenhagen Beach Camp", Title = "Campfire Evening", Description = "Evening gatherings by the fire", ImageUrl = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800" },
+        var dbEvents = await context.Events.ToListAsync();
+        _events = dbEvents
+            .Where(e => e.CampsiteId != null)
+            .Select(e => new EventDto
+            {
+                Id = e.EventId,
+                CampsiteId = e.CampsiteId.Value,
+                Name = e.Title ?? string.Empty,
+                Description = e.Description ?? string.Empty,
+                CampsiteName = e.CampsiteId.Value == 0 ? "All Campsites" : $"Campsite {e.CampsiteId.Value}",
+                EventDate = e.EventDate,
+                EventTime = e.EventDate.ToString("h:mm tt"),
+                Category = "Event", // Default category since Event model doesn't have category
+                MaxCapacity = e.MaxParticipants,
+                RegisteredCount = e.CurrentParticipants,
+                Status = e.IsActive ? (e.IsFull() ? "Full" : "Open") : "Closed"
+            }).ToList();
 
-            // Skagen North Point
-            new() { Id = 5, CampsiteId = 2, CampsiteName = "Skagen North Point", Title = "Lighthouse View", Description = "Historic Skagen lighthouse", ImageUrl = "https://images.unsplash.com/photo-1499363536502-87642509e31b?w=800" },
-            new() { Id = 6, CampsiteId = 2, CampsiteName = "Skagen North Point", Title = "Coastal Dunes", Description = "Beautiful sand dunes", ImageUrl = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800" },
-            new() { Id = 7, CampsiteId = 2, CampsiteName = "Skagen North Point", Title = "Tent Camping", Description = "Spacious tent sites", ImageUrl = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800" },
+        // Load photos from database - Include both "Information" and "General" categories
+        var dbPhotos = await context.Photos.ToListAsync();
+        _photos = dbPhotos
+            .Where(p => p.CampsiteId != null && (p.Category == "Information" || p.Category == "General"))
+            .Select(p => new PhotoDto
+            {
+                Id = p.PhotoId,
+                CampsiteId = p.CampsiteId.Value,
+                CampsiteName = GetCampsiteNameById(p.CampsiteId.Value),
+                Title = p.Caption ?? string.Empty,
+                Description = p.AltText ?? string.Empty,
+                ImageUrl = p.Url ?? string.Empty
+            }).ToList();
+    }
 
-            // Aarhus Forest Retreat
-            new() { Id = 8, CampsiteId = 3, CampsiteName = "Aarhus Forest Retreat", Title = "Forest Trail", Description = "Peaceful hiking trails", ImageUrl = "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800" },
-            new() { Id = 9, CampsiteId = 3, CampsiteName = "Aarhus Forest Retreat", Title = "Morning Mist", Description = "Misty forest mornings", ImageUrl = "https://images.unsplash.com/photo-1511497584788-876760111969?w=800" },
-            new() { Id = 10, CampsiteId = 3, CampsiteName = "Aarhus Forest Retreat", Title = "Wildlife Spotting", Description = "Local deer in the forest", ImageUrl = "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?w=800" },
-
-            // Odense Family Camp
-            new() { Id = 11, CampsiteId = 4, CampsiteName = "Odense Family Camp", Title = "Playground Area", Description = "Kids' play facilities", ImageUrl = "https://images.unsplash.com/photo-1560421683-6856ea585c78?w=800" },
-            new() { Id = 12, CampsiteId = 4, CampsiteName = "Odense Family Camp", Title = "Swimming Pool", Description = "Family-friendly pool", ImageUrl = "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=800" },
-            new() { Id = 13, CampsiteId = 4, CampsiteName = "Odense Family Camp", Title = "Mini Golf", Description = "Fun mini golf course", ImageUrl = "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?w=800" },
-
-            // Bornholm Island Camp
-            new() { Id = 14, CampsiteId = 5, CampsiteName = "Bornholm Island Camp", Title = "Island Coastline", Description = "Rocky coastal views", ImageUrl = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800" },
-            new() { Id = 15, CampsiteId = 5, CampsiteName = "Bornholm Island Camp", Title = "Glamping Pods", Description = "Luxury glamping experience", ImageUrl = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800" },
-            new() { Id = 16, CampsiteId = 5, CampsiteName = "Bornholm Island Camp", Title = "Sunrise Yoga", Description = "Morning yoga sessions", ImageUrl = "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800" },
-
-            // Ribe Viking Camp
-            new() { Id = 17, CampsiteId = 6, CampsiteName = "Ribe Viking Camp", Title = "Viking Museum", Description = "Nearby Viking heritage site", ImageUrl = "https://images.unsplash.com/photo-1533873984035-25970ab07461?w=800" },
-            new() { Id = 18, CampsiteId = 6, CampsiteName = "Ribe Viking Camp", Title = "Historic Town", Description = "Medieval Ribe town center", ImageUrl = "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800" },
-
-            // Roskilde Fjord View
-            new() { Id = 19, CampsiteId = 7, CampsiteName = "Roskilde Fjord View", Title = "Fjord Sunset", Description = "Stunning fjord views", ImageUrl = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800" },
-            new() { Id = 20, CampsiteId = 7, CampsiteName = "Roskilde Fjord View", Title = "Kayaking", Description = "Kayak rentals available", ImageUrl = "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800" }
-        };
+    private void OnCampsiteChanged(int newValue)
+    {
+        _selectedCampsiteId = newValue;
+        StateHasChanged();
     }
 
     private void ClearCampsiteSelection()
     {
         _selectedCampsiteId = 0;
+        StateHasChanged();
     }
 
     private string GetSelectedCampsiteName()
     {
         var campsite = _campsites.FirstOrDefault(c => c.Id == _selectedCampsiteId);
         return campsite?.Name ?? "All Campsites";
+    }
+
+    private string GetCampsiteNameById(int campsiteId)
+    {
+        if (campsiteId == 0)
+            return "All Campsites";
+
+        var campsite = _campsites.FirstOrDefault(c => c.Id == campsiteId);
+        return campsite?.Name ?? $"Campsite {campsiteId}";
     }
 
     private List<EventDto> GetCampsiteEvents()
@@ -437,14 +325,13 @@
     {
         if (_selectedCampsiteId == 0)
         {
-            // Return random photos from all campsites
-            var random = new Random();
+            // Return all photos for "All Campsites" (CampsiteId = 0)
             return _photos
-                .OrderBy(x => random.Next())
-                .Take(12)
+                .Where(p => p.CampsiteId == 0)
                 .ToList();
         }
 
+        // Return photos for the selected campsite
         return _photos
             .Where(p => p.CampsiteId == _selectedCampsiteId)
             .ToList();

@@ -26,13 +26,13 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetByEmailAsync(Email email, CancellationToken cancellationToken = default)
     {
         return await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+            .FirstOrDefaultAsync(u => EF.Property<Email>(u, "_email") == email, cancellationToken);
     }
 
     public async Task<bool> EmailExistsAsync(Email email, CancellationToken cancellationToken = default)
     {
         return await _context.Users
-            .AnyAsync(u => u.Email == email, cancellationToken);
+            .AnyAsync(u => EF.Property<Email>(u, "_email") == email, cancellationToken);
     }
 
     public async Task<IEnumerable<User>> GetByRoleAsync(string role, CancellationToken cancellationToken = default)

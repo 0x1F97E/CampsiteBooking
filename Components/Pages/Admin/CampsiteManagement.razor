@@ -1,22 +1,28 @@
 @page "/admin/campsites"
 @rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin,Staff")]
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IDbContextFactory<CampsiteBooking.Data.CampsiteBookingDbContext> DbContextFactory
+@using CampsiteBooking.Data
+@using CampsiteBooking.Models
+@using CampsiteBooking.Models.ValueObjects
+@using CampsiteBooking.Models.DTOs
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
 
 <PageTitle>Campsite Management - Campsite Booking</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <!-- Header -->
-    <div class="d-flex justify-space-between align-center mb-6">
-        <div>
-            <MudText Typo="Typo.h3" GutterBottom="true">
-                <MudIcon Icon="@Icons.Material.Filled.Terrain" Class="mr-2" />
-                Campsite Management
-            </MudText>
-            <MudText Typo="Typo.body1" Color="Color.Secondary">
-                Search for a campsite and manage its accommodation types
-            </MudText>
-        </div>
+    <div class="mb-6">
+        <MudText Typo="Typo.h3" GutterBottom="true">
+            <MudIcon Icon="@Icons.Material.Filled.Terrain" Class="mr-2" />
+            Campsite Management
+        </MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary">
+            Search for a campsite and manage its accommodation types
+        </MudText>
     </div>
 
     <!-- Campsite Search/Selector -->
@@ -213,7 +219,7 @@
                                     <CardHeaderContent>
                                         <div class="d-flex align-center justify-space-between" style="width: 100%;">
                                             <div class="d-flex align-center">
-                                                <MudIcon Icon="@GetAccommodationIcon(accType.Type)" Class="mr-3" Color="Color.Primary" Size="Size.Large" />
+                                                <MudIcon Icon="@GetAccommodationIcon(accType)" Class="mr-3" Color="Color.Primary" Size="Size.Large" />
                                                 <div>
                                                     <MudText Typo="Typo.h5">@accType.Type</MudText>
                                                     <MudText Typo="Typo.body2" Color="Color.Secondary">
@@ -246,6 +252,101 @@
                                                               Variant="Variant.Outlined"
                                                               Lines="3"
                                                               FullWidth="true" />
+                                            </MudItem>
+
+                                            <!-- Icon Selection -->
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                                    <MudIcon Icon="@Icons.Material.Filled.EmojiSymbols" Size="Size.Small" Class="mr-1" />
+                                                    Icon
+                                                </MudText>
+                                                <MudGrid>
+                                                    <MudItem xs="12" sm="6">
+                                                        <MudSelect T="string" @bind-Value="accType.Icon"
+                                                                   Label="Select Icon"
+                                                                   Variant="Variant.Outlined"
+                                                                   Clearable="true"
+                                                                   HelperText="Choose an icon to represent this accommodation type">
+                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Cabin">
+                                                                <div class="d-flex align-center">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.Cabin" Class="mr-2" />
+                                                                    <span>Cabin</span>
+                                                                </div>
+                                                            </MudSelectItem>
+                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Landscape">
+                                                                <div class="d-flex align-center">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.Landscape" Class="mr-2" />
+                                                                    <span>Tent / Landscape</span>
+                                                                </div>
+                                                            </MudSelectItem>
+                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.RvHookup">
+                                                                <div class="d-flex align-center">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.RvHookup" Class="mr-2" />
+                                                                    <span>RV / Caravan</span>
+                                                                </div>
+                                                            </MudSelectItem>
+                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.NightShelter">
+                                                                <div class="d-flex align-center">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.NightShelter" Class="mr-2" />
+                                                                    <span>Glamping / Shelter</span>
+                                                                </div>
+                                                            </MudSelectItem>
+                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Home">
+                                                                <div class="d-flex align-center">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.Home" Class="mr-2" />
+                                                                    <span>Home / House</span>
+                                                                </div>
+                                                            </MudSelectItem>
+                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Cottage">
+                                                                <div class="d-flex align-center">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.Cottage" Class="mr-2" />
+                                                                    <span>Cottage</span>
+                                                                </div>
+                                                            </MudSelectItem>
+                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.House">
+                                                                <div class="d-flex align-center">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.House" Class="mr-2" />
+                                                                    <span>House</span>
+                                                                </div>
+                                                            </MudSelectItem>
+                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Villa">
+                                                                <div class="d-flex align-center">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.Villa" Class="mr-2" />
+                                                                    <span>Villa</span>
+                                                                </div>
+                                                            </MudSelectItem>
+                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Apartment">
+                                                                <div class="d-flex align-center">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.Apartment" Class="mr-2" />
+                                                                    <span>Apartment</span>
+                                                                </div>
+                                                            </MudSelectItem>
+                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Bungalow">
+                                                                <div class="d-flex align-center">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.Bungalow" Class="mr-2" />
+                                                                    <span>Bungalow</span>
+                                                                </div>
+                                                            </MudSelectItem>
+                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Houseboat">
+                                                                <div class="d-flex align-center">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.Houseboat" Class="mr-2" />
+                                                                    <span>Houseboat</span>
+                                                                </div>
+                                                            </MudSelectItem>
+                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Park">
+                                                                <div class="d-flex align-center">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.Park" Class="mr-2" />
+                                                                    <span>Park</span>
+                                                                </div>
+                                                            </MudSelectItem>
+                                                        </MudSelect>
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6" Class="d-flex align-center">
+                                                        <MudAlert Severity="Severity.Info" Dense="true" Class="flex-grow-1">
+                                                            Current icon: <MudIcon Icon="@GetAccommodationIcon(accType)" Class="ml-2" />
+                                                        </MudAlert>
+                                                    </MudItem>
+                                                </MudGrid>
                                             </MudItem>
 
                                             <!-- Spots Management -->
@@ -522,113 +623,59 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Console.WriteLine("🔵 OnInitializedAsync called");
         await LoadCampsites();
+        Console.WriteLine($"🔵 Loaded {_campsites.Count} campsites");
 
-        // Automatically select the first campsite for display
+        // Auto-select the first campsite to show data immediately
         if (_campsites.Any())
         {
             _selectedCampsite = _campsites.First();
+            Console.WriteLine($"🔵 Auto-selected campsite: {_selectedCampsite.Name} (ID: {_selectedCampsite.Id})");
             await LoadAccommodationTypes(_selectedCampsite.Id);
+        }
+        else
+        {
+            Console.WriteLine("🔴 No campsites found to auto-select");
         }
     }
 
     private async Task LoadCampsites()
     {
         _loading = true;
-        await Task.Delay(500); // Simulate API call
 
-        // Sample data - will be replaced with actual data from backend
-        _campsites = new List<CampsiteManagementDto>
+        try
         {
-            new() {
-                Id = 1,
-                Name = "Copenhagen Beach Camp",
-                Region = "Zealand",
-                Description = "Beautiful beachfront camping with stunning views of the Øresund strait. Our campsite offers direct beach access, modern facilities, and a variety of accommodation options for families and solo travelers alike.",
-                TotalSpots = 50,
-                AvailableSpots = 42,
-                Latitude = 55.6761,
-                Longitude = 12.5683,
-                AccommodationTypes = new List<string> { "Cabin", "Tent Site", "RV Spot", "Glamping" },
-                Amenities = new List<string> { "Near-Beach", "WiFi", "Electric-Hookup", "Water-Access" },
-                IsActive = true,
-                MapImageUrl = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800",
-                GalleryImages = new List<string>
-                {
-                    "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800",
-                    "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800",
-                    "https://images.unsplash.com/photo-1537225228614-56cc3556d7ed?w=800"
-                },
-                InactivePeriods = new List<InactivePeriodDto>
-                {
-                    new() { Id = 1, StartDate = new DateTime(2025, 12, 1), EndDate = new DateTime(2025, 12, 15), Reason = "Winter maintenance", Type = "EntireCampsite", AffectedSpotIds = new() }
-                }
-            },
-            new() {
-                Id = 2,
-                Name = "Skagen North Point",
-                Region = "North Jutland",
-                Description = "Denmark's northernmost campsite with breathtaking views where two seas meet. Experience unique natural phenomena and pristine beaches.",
-                TotalSpots = 40,
-                AvailableSpots = 32,
-                Latitude = 57.7209,
-                Longitude = 10.5882,
-                AccommodationTypes = new List<string> { "Cabin", "Tent Site", "Glamping" },
-                Amenities = new List<string> { "Near-Beach", "WiFi", "Fire-Pit", "Picnic-Table" },
-                IsActive = true,
-                MapImageUrl = "https://images.unsplash.com/photo-1445308394109-4ec2920981b1?w=800",
-                GalleryImages = new List<string>(),
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            var campsites = await context.Campsites.ToListAsync();
+
+            _campsites = campsites.Select(c => new CampsiteManagementDto
+            {
+                Id = c.Id.Value,
+                Name = c.Name ?? "Unknown",
+                Region = c.Region ?? "Denmark",
+                Description = c.Description ?? "",
+                TotalSpots = 0, // TODO: Calculate from accommodation spots
+                AvailableSpots = 0, // TODO: Calculate from bookings
+                Latitude = c.Latitude,
+                Longitude = c.Longitude,
+                AccommodationTypes = new List<string>(), // TODO: Load from accommodation types
+                Amenities = new List<string>(), // TODO: Parse from campsite amenities
+                IsActive = c.IsActive,
+                MapImageUrl = "", // TODO: Get from campsite photos
+                GalleryImages = new List<string>(), // TODO: Load from campsite photos
                 InactivePeriods = new List<InactivePeriodDto>()
-            },
-            new() {
-                Id = 3,
-                Name = "Aarhus Forest Retreat",
-                Region = "East Jutland",
-                Description = "Peaceful forest camping surrounded by ancient Danish woodlands. Perfect for nature lovers seeking tranquility and outdoor adventures.",
-                TotalSpots = 35,
-                AvailableSpots = 28,
-                Latitude = 56.1629,
-                Longitude = 10.2039,
-                AccommodationTypes = new List<string> { "Cabin", "Glamping", "Tent Site" },
-                Amenities = new List<string> { "WiFi", "Dog-Friendly", "Fire-Pit", "Water-Access" },
-                IsActive = true,
-                MapImageUrl = "https://images.unsplash.com/photo-1476041800959-2f6bb412c8ce?w=800",
-                GalleryImages = new List<string>(),
-                InactivePeriods = new List<InactivePeriodDto>()
-            },
-            new() {
-                Id = 4,
-                Name = "Odense Family Camp",
-                Region = "Funen",
-                Description = "Family-friendly campsite with playgrounds, activities, and spacious facilities. Close to Hans Christian Andersen's birthplace and other attractions.",
-                TotalSpots = 60,
-                AvailableSpots = 52,
-                Latitude = 55.4038,
-                Longitude = 10.4024,
-                AccommodationTypes = new List<string> { "Cabin", "RV Spot", "Tent Site" },
-                Amenities = new List<string> { "WiFi", "Electric-Hookup", "Water-Access", "Dog-Friendly" },
-                IsActive = true,
-                MapImageUrl = "https://images.unsplash.com/photo-1504851149312-7a075b496cc7?w=800",
-                GalleryImages = new List<string>(),
-                InactivePeriods = new List<InactivePeriodDto>()
-            },
-            new() {
-                Id = 5,
-                Name = "Bornholm Island Camp",
-                Region = "Bornholm",
-                Description = "Island paradise camping on the beautiful Baltic island of Bornholm. Enjoy rocky coastlines, sandy beaches, and charming fishing villages.",
-                TotalSpots = 30,
-                AvailableSpots = 18,
-                Latitude = 55.1367,
-                Longitude = 14.9155,
-                AccommodationTypes = new List<string> { "Cabin", "Tent Site" },
-                Amenities = new List<string> { "Near-Beach", "WiFi", "Fire-Pit" },
-                IsActive = true,
-                MapImageUrl = "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=800",
-                GalleryImages = new List<string>(),
-                InactivePeriods = new List<InactivePeriodDto>()
-            }
-        };
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading campsites: {ex.Message}");
+            _campsites = new List<CampsiteManagementDto>();
+        }
+        finally
+        {
+            _loading = false;
+        }
 
         _loading = false;
     }
@@ -649,69 +696,57 @@
     private async Task LoadAccommodationTypes(int campsiteId)
     {
         _loading = true;
-        await Task.Delay(300); // Simulate API call
-
-        // Sample data - will be replaced with actual data from backend
-        var baseLatitude = _selectedCampsite?.Latitude ?? 56.2639;
-        var baseLongitude = _selectedCampsite?.Longitude ?? 10.4515;
-
-        _accommodationTypes = new List<AccommodationTypeDto>
+        try
         {
-            new() {
-                Id = 1,
-                CampsiteId = campsiteId,
-                Type = "Cabin",
-                Description = "Cozy wooden cabins with modern amenities, perfect for families. Each cabin features comfortable beds, heating, and a private porch.",
-                MaxCapacity = 6,
-                PricePerNight = 150,
-                ImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800",
-                Amenities = new List<string> { "WiFi", "Electric-Hookup", "Water-Access", "Heating", "Kitchen", "Bathroom" },
-                Spots = GenerateSampleSpots(12, baseLatitude, baseLongitude, 0),
-                GalleryImages = new List<string>(),
-                IsActive = true
-            },
-            new() {
-                Id = 2,
-                CampsiteId = campsiteId,
-                Type = "Tent Site",
-                Description = "Spacious tent sites with fire pits and picnic tables. Perfect for traditional camping experience.",
-                MaxCapacity = 4,
-                PricePerNight = 50,
-                ImageUrl = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800",
-                Amenities = new List<string> { "Fire-Pit", "Picnic-Table", "Water-Access" },
-                Spots = GenerateSampleSpots(20, baseLatitude, baseLongitude, 0.001),
-                GalleryImages = new List<string>(),
-                IsActive = true
-            },
-            new() {
-                Id = 3,
-                CampsiteId = campsiteId,
-                Type = "RV Spot",
-                Description = "Full hookup RV spots with electric, water, and sewage connections.",
-                MaxCapacity = 6,
-                PricePerNight = 80,
-                ImageUrl = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=800",
-                Amenities = new List<string> { "Electric-Hookup", "Water-Access", "Sewage-Hookup", "WiFi" },
-                Spots = GenerateSampleSpots(15, baseLatitude, baseLongitude, 0.002),
-                GalleryImages = new List<string>(),
-                IsActive = true
-            },
-            new() {
-                Id = 4,
-                CampsiteId = campsiteId,
-                Type = "Glamping",
-                Description = "Luxury glamping tents with comfortable beds, electricity, and stylish furnishings.",
-                MaxCapacity = 4,
-                PricePerNight = 200,
-                ImageUrl = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800",
-                Amenities = new List<string> { "WiFi", "Electric-Hookup", "Heating", "Kitchen" },
-                Spots = GenerateSampleSpots(8, baseLatitude, baseLongitude, 0.003),
-                GalleryImages = new List<string>(),
-                IsActive = true
-            }
-        };
+            using var context = await DbContextFactory.CreateDbContextAsync();
 
-        _loading = false;
+            // Load ALL accommodation types from database first (client-side evaluation)
+            var allEntities = await context.AccommodationTypes.ToListAsync();
+
+            Console.WriteLine($"📊 Loaded {allEntities.Count} total accommodation types from database");
+
+            // Filter by campsite ID in memory (since CampsiteId is a private field)
+            var entities = allEntities.Where(a => a.CampsiteId?.Value == campsiteId).ToList();
+
+            Console.WriteLine($"📊 Found {entities.Count} accommodation types for campsite {campsiteId}");
+
+            // Convert entities to DTOs with null-safe access
+            _accommodationTypes = entities.Select(e => new AccommodationTypeDto
+            {
+                Id = e.Id?.Value ?? 0,
+                CampsiteId = e.CampsiteId?.Value ?? 0,
+                Type = e.Type ?? "",
+                Description = e.Description ?? "",
+                MaxCapacity = e.MaxCapacity,
+                PricePerNight = e.BasePrice?.Amount ?? 0m,
+                ImageUrl = e.ImageUrl ?? "",
+                Icon = "", // Default icon, can be customized later
+                Amenities = new List<string>(), // TODO: Load from database if stored
+                Spots = new List<AccommodationSpotDto>(), // TODO: Load spots from database
+                GalleryImages = new List<string>(),
+                IsActive = e.IsActive,
+                AvailableUnits = e.AvailableUnits,
+                UnitNamingPrefix = "",
+                UnitNamingPattern = "Numbers"
+            }).ToList();
+
+            Console.WriteLine($"✅ Loaded {_accommodationTypes.Count} accommodation types for campsite {campsiteId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading accommodation types: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"   Inner exception: {ex.InnerException.Message}");
+            }
+            Snackbar.Add($"Error loading accommodation types: {ex.Message}", Severity.Error);
+            _accommodationTypes = new List<AccommodationTypeDto>();
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private async void OnCampsiteSelected(CampsiteManagementDto? campsite)
@@ -764,21 +799,115 @@
 
     private async Task OpenAddAccommodationTypeDialog()
     {
-        var parameters = new DialogParameters
+        try
         {
-            ["CampsiteName"] = _selectedCampsite!.Name,
-            ["AccommodationType"] = new AccommodationTypeDto { CampsiteId = _selectedCampsite.Id },
-            ["IsEdit"] = false
-        };
+            var parameters = new DialogParameters
+            {
+                ["CampsiteName"] = _selectedCampsite!.Name,
+                ["AccommodationType"] = new AccommodationTypeDto { CampsiteId = _selectedCampsite.Id },
+                ["IsEdit"] = false
+            };
 
-        var dialog = await DialogService.ShowAsync<CampsiteAccommodationDialog>("Add Accommodation Type", parameters);
-        var result = await dialog.Result;
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true
+            };
 
-        if (!result.Canceled && result.Data is AccommodationTypeDto newAccType)
-        {
-            _accommodationTypes.Add(newAccType);
-            Snackbar.Add($"Accommodation type '{newAccType.Type}' added successfully!", Severity.Success);
+            var dialog = await DialogService.ShowAsync<CampsiteAccommodationDialog>("Add Accommodation Type", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled && result.Data is AccommodationTypeDto newAccType)
+            {
+                // Save to database
+                await SaveAccommodationTypeToDatabase(newAccType);
+
+                // Reload accommodation types from database to get the latest data
+                await LoadAccommodationTypes(_selectedCampsite!.Id);
+
+                Snackbar.Add($"Accommodation type '{newAccType.Type}' added successfully!", Severity.Success);
+                await InvokeAsync(StateHasChanged);
+            }
         }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding accommodation type: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveAccommodationTypeToDatabase(AccommodationTypeDto dto)
+    {
+        try
+        {
+            Console.WriteLine($"💾 Saving accommodation type to database:");
+            Console.WriteLine($"   - Type: {dto.Type}");
+            Console.WriteLine($"   - CampsiteId: {dto.CampsiteId}");
+            Console.WriteLine($"   - MaxCapacity: {dto.MaxCapacity}");
+            Console.WriteLine($"   - PricePerNight: {dto.PricePerNight}");
+            Console.WriteLine($"   - AvailableUnits: {dto.AvailableUnits}");
+
+            if (dto.CampsiteId <= 0)
+            {
+                throw new ArgumentException($"Invalid campsite ID: {dto.CampsiteId}");
+            }
+
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Create the entity using the factory method
+            var entity = AccommodationType.Create(
+                CampsiteId.Create(dto.CampsiteId),
+                dto.Type,
+                dto.MaxCapacity,
+                Money.Create(dto.PricePerNight, "DKK"),
+                dto.AvailableUnits,
+                dto.Description,
+                dto.ImageUrl
+            );
+
+            context.AccommodationTypes.Add(entity);
+            await context.SaveChangesAsync();
+
+            // Update the DTO with the generated ID
+            dto.Id = entity.Id.Value;
+
+            Console.WriteLine($"✅ Successfully saved accommodation type with ID: {dto.Id}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error saving to database: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+            throw;
+        }
+    }
+
+    private List<AccommodationSpotDto> GenerateSpots(AccommodationTypeDto accType)
+    {
+        var spots = new List<AccommodationSpotDto>();
+        var baseLatitude = _selectedCampsite?.Latitude ?? 55.6761;
+        var baseLongitude = _selectedCampsite?.Longitude ?? 12.5683;
+
+        for (int i = 0; i < accType.AvailableUnits; i++)
+        {
+            string spotName = accType.UnitNamingPattern switch
+            {
+                "Letters" => $"{(char)('A' + i)}",
+                "Numbers" => $"{i + 1}",
+                "PrefixNumbers" => $"{accType.UnitNamingPrefix}{i + 1}",
+                _ => $"{i + 1}"
+            };
+
+            spots.Add(new AccommodationSpotDto
+            {
+                Id = i + 1,
+                Name = spotName,
+                IsAvailable = true,
+                Latitude = baseLatitude + (i * 0.0001),
+                Longitude = baseLongitude + (i * 0.0001)
+            });
+        }
+
+        return spots;
     }
 
     private async Task SaveAccommodationType(AccommodationTypeDto accType)
@@ -896,9 +1025,13 @@
 
 
 
-    private string GetAccommodationIcon(string type)
+    private string GetAccommodationIcon(AccommodationTypeDto accType)
     {
-        return type.ToLower() switch
+        // Use custom icon if set, otherwise fall back to type-based icon
+        if (!string.IsNullOrEmpty(accType.Icon))
+            return accType.Icon;
+
+        return accType.Type.ToLower() switch
         {
             "cabin" => Icons.Material.Filled.Cabin,
             "tent site" or "tent" => Icons.Material.Filled.Landscape,
@@ -911,30 +1044,6 @@
 
 
     // DTOs
-    private class AccommodationTypeDto
-    {
-        public int Id { get; set; }
-        public int CampsiteId { get; set; }
-        public string Type { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public int MaxCapacity { get; set; }
-        public decimal PricePerNight { get; set; }
-        public string ImageUrl { get; set; } = string.Empty;
-        public List<string> Amenities { get; set; } = new();
-        public List<AccommodationSpotDto> Spots { get; set; } = new();
-        public List<string> GalleryImages { get; set; } = new();
-        public bool IsActive { get; set; } = true;
-    }
-
-    private class AccommodationSpotDto
-    {
-        public int Id { get; set; }
-        public string SpotNumber { get; set; } = string.Empty; // e.g., "1", "2", "3"
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
-        public string Status { get; set; } = "Available"; // Available, Occupied, Maintenance
-    }
-
     private class CampsiteManagementDto
     {
         public int Id { get; set; }

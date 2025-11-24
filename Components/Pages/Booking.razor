@@ -3,7 +3,14 @@
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject ISnackbar Snackbar
+@inject StripePaymentService StripeService
+@using CampsiteBooking.Data
 @using CampsiteBooking.Models
+@using CampsiteBooking.Models.ValueObjects
+@using CampsiteBooking.Services
+@using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.WebUtilities
 
 <PageTitle>Book Accommodation - Campsite Booking</PageTitle>
@@ -303,7 +310,7 @@
     private MudForm? _form;
     private bool _formValid;
     private AccommodationDto? _accommodation;
-    private DateRange? _dateRange = new DateRange(DateTime.Today.AddDays(1), DateTime.Today.AddDays(3));
+    private MudBlazor.DateRange? _dateRange = new MudBlazor.DateRange(DateTime.Today.AddDays(1), DateTime.Today.AddDays(3));
     private int _numberOfGuests = 2;
     private string _guestName = string.Empty;
     private string _guestEmail = string.Empty;
@@ -371,22 +378,11 @@
             }
         }
 
-        await Task.Delay(300); // Simulate API call
+        // Load campsite data from database
+        await LoadCampsiteData();
 
-        // Load campsite data based on ID
-        LoadCampsiteData();
-
-        // Mock accommodation data - will be replaced with actual API call
-        _accommodation = new AccommodationDto
-        {
-            Id = _campsiteId,
-            Name = _campsite?.Name ?? "Campsite Accommodation",
-            Type = "Mixed",
-            Description = _campsite?.Description ?? "Various accommodation types available",
-            Capacity = 6,
-            PricePerNight = 100,
-            ImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400"
-        };
+        // Load accommodation data from database
+        await LoadAccommodationData();
 
         // Load camping spots for this campsite
         LoadCampingSpots();
@@ -447,33 +443,111 @@
         }
     }
 
-    private void LoadCampsiteData()
+    private async Task LoadCampsiteData()
     {
-        // Load campsite data based on ID - matches the data from google-map.js
-        var campsites = new Dictionary<int, CampsiteDto>
+        try
         {
-            { 1, new CampsiteDto { Id = 1, Name = "Copenhagen Beach Camp", Region = "Zealand", Latitude = 55.6761, Longitude = 12.5683, Description = "Beachfront camping near Copenhagen" } },
-            { 2, new CampsiteDto { Id = 2, Name = "Skagen North Point", Region = "North Jutland", Latitude = 57.7209, Longitude = 10.5882, Description = "Northern tip camping with stunning views" } },
-            { 3, new CampsiteDto { Id = 3, Name = "Aarhus Forest Retreat", Region = "East Jutland", Latitude = 56.1629, Longitude = 10.2039, Description = "Peaceful forest camping near Aarhus" } },
-            { 4, new CampsiteDto { Id = 4, Name = "Odense Family Camp", Region = "Funen", Latitude = 55.4038, Longitude = 10.4024, Description = "Family-friendly camping in central Denmark" } },
-            { 5, new CampsiteDto { Id = 5, Name = "Bornholm Island Camp", Region = "Bornholm", Latitude = 55.1367, Longitude = 14.9155, Description = "Scenic island camping with rocky coastline" } },
-            { 6, new CampsiteDto { Id = 6, Name = "Ribe Viking Camp", Region = "Southwest Jutland", Latitude = 55.3282, Longitude = 8.7619, Description = "Historic campsite near Denmark's oldest town" } },
-            { 7, new CampsiteDto { Id = 7, Name = "Roskilde Fjord Camp", Region = "Zealand", Latitude = 55.6415, Longitude = 12.0803, Description = "Waterfront camping by the beautiful Roskilde Fjord" } },
-            { 8, new CampsiteDto { Id = 8, Name = "Aalborg Limfjord", Region = "North Jutland", Latitude = 57.0488, Longitude = 9.9217, Description = "Camping by the Limfjord with water activities" } }
-        };
+            using var context = await DbContextFactory.CreateDbContextAsync();
 
-        if (campsites.TryGetValue(_campsiteId, out var campsite))
-        {
-            _campsite = campsite;
-            _baseLat = campsite.Latitude;
-            _baseLng = campsite.Longitude;
+            // Load campsite from database
+            var campsiteId = CampsiteId.Create(_campsiteId);
+            var campsite = await context.Campsites
+                .FirstOrDefaultAsync(c => c.Id == campsiteId);
+
+            if (campsite != null)
+            {
+                _campsite = new CampsiteDto
+                {
+                    Id = campsite.Id?.Value ?? 0,
+                    Name = campsite.Name ?? "",
+                    Region = campsite.Region ?? "",
+                    Latitude = campsite.Latitude,
+                    Longitude = campsite.Longitude,
+                    Description = campsite.Description ?? ""
+                };
+
+                _baseLat = campsite.Latitude;
+                _baseLng = campsite.Longitude;
+
+                Console.WriteLine($"✅ Loaded campsite: {_campsite.Name}");
+            }
+            else
+            {
+                Console.WriteLine($"❌ Campsite not found: {_campsiteId}");
+                // Load first campsite as default
+                var firstCampsite = await context.Campsites.FirstOrDefaultAsync();
+                if (firstCampsite != null)
+                {
+                    _campsite = new CampsiteDto
+                    {
+                        Id = firstCampsite.Id?.Value ?? 0,
+                        Name = firstCampsite.Name ?? "",
+                        Region = firstCampsite.Region ?? "",
+                        Latitude = firstCampsite.Latitude,
+                        Longitude = firstCampsite.Longitude,
+                        Description = firstCampsite.Description ?? ""
+                    };
+                    _baseLat = firstCampsite.Latitude;
+                    _baseLng = firstCampsite.Longitude;
+                }
+            }
         }
-        else
+        catch (Exception ex)
         {
-            // Default to Copenhagen Beach Camp
-            _campsite = campsites[1];
-            _baseLat = 55.6761;
-            _baseLng = 12.5683;
+            Console.WriteLine($"❌ Error loading campsite data: {ex.Message}");
+        }
+    }
+
+    private async Task LoadAccommodationData()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load first accommodation type for this campsite
+            var campsiteId = CampsiteId.Create(_campsiteId);
+            var accommodationType = await context.AccommodationTypes
+                .Where(at => at.CampsiteId == campsiteId)
+                .FirstOrDefaultAsync();
+
+            if (accommodationType != null)
+            {
+                _accommodation = new AccommodationDto
+                {
+                    Id = accommodationType.Id?.Value ?? 0,
+                    Name = $"{accommodationType.Type} at {_campsite?.Name ?? "Campsite"}",
+                    Type = accommodationType.Type ?? "Mixed",
+                    Description = accommodationType.Description ?? "Various accommodation types available",
+                    Capacity = accommodationType.MaxCapacity,
+                    PricePerNight = accommodationType.BasePrice?.Amount ?? 100m,
+                    ImageUrl = accommodationType.ImageUrl ?? "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400",
+                    CampsiteId = _campsiteId,
+                    CampsiteName = _campsite?.Name ?? "Campsite"
+                };
+
+                Console.WriteLine($"✅ Loaded accommodation: {_accommodation.Name}");
+            }
+            else
+            {
+                // Fallback to generic accommodation
+                _accommodation = new AccommodationDto
+                {
+                    Id = _campsiteId,
+                    Name = _campsite?.Name ?? "Campsite Accommodation",
+                    Type = "Mixed",
+                    Description = _campsite?.Description ?? "Various accommodation types available",
+                    Capacity = 6,
+                    PricePerNight = 100,
+                    ImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400",
+                    CampsiteId = _campsiteId,
+                    CampsiteName = _campsite?.Name ?? "Campsite"
+                };
+                Console.WriteLine($"⚠️ No accommodation types found for campsite {_campsiteId}, using fallback");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading accommodation data: {ex.Message}");
         }
     }
 
@@ -564,57 +638,12 @@
 
     private void LoadPeripheralPurchases()
     {
-        // In a real app, this would come from the database based on accommodation type and campsite
-        // For now, using sample data that matches the accommodation type
+        // TODO: Load from database when PeripheralPurchases table is created
+        // For now, return empty lists (no hardcoded data)
+        _accommodationPeripheralPurchases = new List<PeripheralPurchaseDto>();
+        _campsitePeripheralPurchases = new List<PeripheralPurchaseDto>();
 
-        // Accommodation-specific peripheral purchases (based on accommodation type)
-        if (_accommodation?.Type == "Cabin")
-        {
-            _accommodationPeripheralPurchases = new List<PeripheralPurchaseDto>
-            {
-                new() { Id = 101, Name = "Cabin Cleaning", Description = "Professional cleaning service", Price = 50.00m, IsActive = true },
-                new() { Id = 102, Name = "Linen Package", Description = "Fresh bed linens and towels", Price = 25.00m, IsActive = true },
-                new() { Id = 103, Name = "Firewood Bundle", Description = "Bundle of firewood for fireplace", Price = 15.00m, IsActive = true }
-            };
-        }
-        else if (_accommodation?.Type == "Tent Site")
-        {
-            _accommodationPeripheralPurchases = new List<PeripheralPurchaseDto>
-            {
-                new() { Id = 104, Name = "Tent Rental", Description = "4-person tent rental", Price = 30.00m, IsActive = true },
-                new() { Id = 105, Name = "Sleeping Bag Rental", Description = "Warm sleeping bag rental", Price = 15.00m, IsActive = true },
-                new() { Id = 106, Name = "Camping Chair Set", Description = "Set of 4 camping chairs", Price = 10.00m, IsActive = true }
-            };
-        }
-        else if (_accommodation?.Type == "Glamping")
-        {
-            _accommodationPeripheralPurchases = new List<PeripheralPurchaseDto>
-            {
-                new() { Id = 107, Name = "Premium Cleaning", Description = "Luxury cleaning service", Price = 75.00m, IsActive = true },
-                new() { Id = 108, Name = "Welcome Package", Description = "Champagne and snacks", Price = 40.00m, IsActive = true },
-                new() { Id = 109, Name = "Private Chef", Description = "Personal chef for one meal", Price = 150.00m, IsActive = true }
-            };
-        }
-        else if (_accommodation?.Type == "RV Spot")
-        {
-            _accommodationPeripheralPurchases = new List<PeripheralPurchaseDto>
-            {
-                new() { Id = 110, Name = "Electricity Hookup", Description = "30-amp electrical connection", Price = 20.00m, IsActive = true },
-                new() { Id = 111, Name = "Water Hookup", Description = "Fresh water connection", Price = 15.00m, IsActive = true },
-                new() { Id = 112, Name = "Sewage Disposal", Description = "Sewage disposal service", Price = 25.00m, IsActive = true }
-            };
-        }
-
-        // Campsite-wide peripheral purchases (available to all accommodation types)
-        _campsitePeripheralPurchases = new List<PeripheralPurchaseDto>
-        {
-            new() { Id = 1, Name = "Beach Volleyball Access", Description = "Access to beach volleyball courts", Price = 15.00m, IsActive = true },
-            new() { Id = 2, Name = "Kayak Rental", Description = "Full-day kayak rental", Price = 35.00m, IsActive = true },
-            new() { Id = 3, Name = "Lighthouse Tour", Description = "Guided tour of nearby lighthouse", Price = 25.00m, IsActive = true },
-            new() { Id = 4, Name = "Bike Rental", Description = "Full-day bike rental", Price = 20.00m, IsActive = true },
-            new() { Id = 5, Name = "Morning Yoga", Description = "Beachside yoga session", Price = 18.00m, IsActive = true },
-            new() { Id = 6, Name = "Restaurant Brunch (Daily)", Description = "Daily brunch at campsite restaurant", Price = 30.00m, IsActive = true }
-        };
+        Console.WriteLine("⚠️ Peripheral purchases not loaded - database table not yet created");
     }
 
     private void ApplyDiscount()
@@ -649,9 +678,70 @@
 
     private async Task SubmitBooking()
     {
-        // TODO: Submit booking to API
-        await Task.Delay(500);
-        Navigation.NavigateTo("/bookings");
+        try
+        {
+            // Check if user is logged in
+            var currentUserIdStr = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentUserId");
+            if (string.IsNullOrEmpty(currentUserIdStr) || !int.TryParse(currentUserIdStr, out var currentUserId))
+            {
+                Snackbar.Add("Please log in to complete your booking", Severity.Error);
+                Navigation.NavigateTo("/login");
+                return;
+            }
+
+            // Validate form
+            if (_accommodation == null || _selectedSpot == null || _dateRange == null || _dateRange.Start == null || _dateRange.End == null)
+            {
+                Snackbar.Add("Please fill in all required fields", Severity.Error);
+                return;
+            }
+
+            // Create booking in database
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var guestId = GuestId.Create(currentUserId);
+            var campsiteId = CampsiteId.Create(_accommodation.CampsiteId);
+            var accommodationTypeId = AccommodationTypeId.Create(_accommodation.Id);
+            var period = CampsiteBooking.Models.ValueObjects.DateRange.Create(_dateRange.Start.Value, _dateRange.End.Value);
+            var basePrice = Money.Create(_accommodation.PricePerNight, "DKK");
+
+            var booking = CampsiteBooking.Models.Booking.Create(
+                guestId,
+                campsiteId,
+                accommodationTypeId,
+                period,
+                basePrice,
+                _numberOfGuests, // numberOfAdults
+                0, // numberOfChildren
+                _specialRequests ?? string.Empty
+            );
+
+            // Save booking to database
+            await context.Bookings.AddAsync(booking);
+            await context.SaveChangesAsync();
+
+            var bookingId = booking.Id?.Value ?? 0;
+            Console.WriteLine($"✅ Created booking {bookingId} for user {currentUserId}");
+
+            // Create Stripe Checkout Session
+            var checkoutUrl = await StripeService.CreateCheckoutSessionAsync(
+                bookingId,
+                _accommodation.CampsiteName,
+                _accommodation.Type,
+                _totalPrice,
+                "DKK"
+            );
+
+            Console.WriteLine($"✅ Created Stripe Checkout Session for booking {bookingId}");
+
+            // Redirect to Stripe Checkout
+            Navigation.NavigateTo(checkoutUrl, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error creating booking: {ex.Message}");
+            Snackbar.Add($"Error creating booking: {ex.Message}", Severity.Error);
+        }
     }
 
     private void Cancel()
@@ -668,6 +758,8 @@
         public int Capacity { get; set; }
         public decimal PricePerNight { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
+        public int CampsiteId { get; set; }
+        public string CampsiteName { get; set; } = string.Empty;
     }
 
     public class PeripheralPurchaseDto

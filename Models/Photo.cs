@@ -14,7 +14,8 @@ public class Photo : Entity<PhotoId>
     private bool _isPrimary;
     private DateTime _uploadedDate;
     private DateTime _updatedDate;
-    
+    private string _category = "General"; // "Information" or "Gallery"
+
     public CampsiteId CampsiteId => _campsiteId;
     public AccommodationTypeId? AccommodationTypeId => _accommodationTypeId;
     public string Url => _url;
@@ -24,6 +25,7 @@ public class Photo : Entity<PhotoId>
     public bool IsPrimary => _isPrimary;
     public DateTime UploadedDate => _uploadedDate;
     public DateTime UpdatedDate => _updatedDate;
+    public string Category => _category;
     
     public int PhotoId
     {
@@ -31,14 +33,14 @@ public class Photo : Entity<PhotoId>
         private set => Id = value > 0 ? ValueObjects.PhotoId.Create(value) : ValueObjects.PhotoId.CreateNew();
     }
     
-    public static Photo Create(CampsiteId campsiteId, string url, string caption, string altText, int displayOrder, AccommodationTypeId? accommodationTypeId = null)
+    public static Photo Create(CampsiteId campsiteId, string url, string caption, string altText, int displayOrder, AccommodationTypeId? accommodationTypeId = null, string category = "General")
     {
         if (string.IsNullOrWhiteSpace(url))
             throw new DomainException("URL cannot be empty");
-        
+
         if (displayOrder < 0)
             throw new DomainException("Display order cannot be negative");
-        
+
         return new Photo
         {
             Id = ValueObjects.PhotoId.CreateNew(),
@@ -50,7 +52,8 @@ public class Photo : Entity<PhotoId>
             _displayOrder = displayOrder,
             _isPrimary = false,
             _uploadedDate = DateTime.UtcNow,
-            _updatedDate = DateTime.UtcNow
+            _updatedDate = DateTime.UtcNow,
+            _category = category
         };
     }
     

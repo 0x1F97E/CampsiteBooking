@@ -35,6 +35,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9MYXlvdXQvTGFuZ3VhZ2VTZWxlY3Rvci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/pc/CampsiteBooking-1/Components/Pages/AccessDenied.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BY2Nlc3NEZW5pZWQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/pc/CampsiteBooking-1/Components/Pages/Admin/AccommodationSpotDialog.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9BY2NvbW1vZGF0aW9uU3BvdERpYWxvZy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
@@ -45,6 +49,14 @@ build_metadata.AdditionalFiles.CssScope =
 
 [/Users/pc/CampsiteBooking-1/Components/Pages/Admin/AddOnDialog.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9BZGRPbkRpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/pc/CampsiteBooking-1/Components/Pages/Admin/AddPhotoDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9BZGRQaG90b0RpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/pc/CampsiteBooking-1/Components/Pages/Admin/AddUserDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9BZGRVc2VyRGlhbG9nLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/pc/CampsiteBooking-1/Components/Pages/Admin/BookingManagement.razor]
@@ -61,6 +73,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [/Users/pc/CampsiteBooking-1/Components/Pages/Admin/CampsiteManagement.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9DYW1wc2l0ZU1hbmFnZW1lbnQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/pc/CampsiteBooking-1/Components/Pages/Admin/ChangeRoleDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9DaGFuZ2VSb2xlRGlhbG9nLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/pc/CampsiteBooking-1/Components/Pages/Admin/Dashboard.razor]
@@ -93,6 +109,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [/Users/pc/CampsiteBooking-1/Components/Pages/Admin/UserManagement.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9Vc2VyTWFuYWdlbWVudC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/pc/CampsiteBooking-1/Components/Pages/AdminHome.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbkhvbWUucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/pc/CampsiteBooking-1/Components/Pages/Booking.razor]
@@ -133,6 +153,14 @@ build_metadata.AdditionalFiles.CssScope =
 
 [/Users/pc/CampsiteBooking-1/Components/Pages/MyBookings.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9NeUJvb2tpbmdzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/pc/CampsiteBooking-1/Components/Pages/PaymentCancel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9QYXltZW50Q2FuY2VsLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/pc/CampsiteBooking-1/Components/Pages/PaymentSuccess.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9QYXltZW50U3VjY2Vzcy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/pc/CampsiteBooking-1/Components/Pages/PrivacyPolicy.razor]

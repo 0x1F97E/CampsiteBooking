@@ -1,5 +1,13 @@
 @page "/admin/dashboard"
 @rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin,Staff")]
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject ISnackbar Snackbar
+@using CampsiteBooking.Data
+@using CampsiteBooking.Models
+@using CampsiteBooking.Models.ValueObjects
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
 
 <PageTitle>Admin Dashboard - Campsite Booking</PageTitle>
 
@@ -23,7 +31,7 @@
                             <MudText Typo="Typo.h4">@_totalBookings</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Success">
                                 <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" />
-                                +12% from last month
+                                +12% vs last year
                             </MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.BookOnline" Color="Color.Primary" Size="Size.Large" />
@@ -41,7 +49,7 @@
                             <MudText Typo="Typo.h4">$@_revenue.ToString("N0")</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Success">
                                 <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" />
-                                +8% from last month
+                                +8% vs last year
                             </MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Success" Size="Size.Large" />
@@ -59,7 +67,7 @@
                             <MudText Typo="Typo.h4">@_occupancyRate%</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Info">
                                 <MudIcon Icon="@Icons.Material.Filled.TrendingFlat" Size="Size.Small" />
-                                Same as last month
+                                Same as last year
                             </MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.Hotel" Color="Color.Info" Size="Size.Large" />
@@ -140,93 +148,100 @@
         </MudItem>
     </MudGrid>
 
-    <!-- Recent Activity -->
-    <MudGrid Class="mt-6">
-        <MudItem xs="12">
-            <MudCard Elevation="3">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">Recent Bookings</MudText>
-                    </CardHeaderContent>
-                    <CardHeaderActions>
-                        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/admin/bookings">View All</MudButton>
-                    </CardHeaderActions>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudTable Items="@_recentBookings" Hover="true" Dense="true" Elevation="0">
-                        <HeaderContent>
-                            <MudTh>Booking ID</MudTh>
-                            <MudTh>Guest</MudTh>
-                            <MudTh>Campsite</MudTh>
-                            <MudTh>Check-in</MudTh>
-                            <MudTh>Check-out</MudTh>
-                            <MudTh>Status</MudTh>
-                            <MudTh>Amount</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="Booking ID">#@context.Id</MudTd>
-                            <MudTd DataLabel="Guest">@context.GuestName</MudTd>
-                            <MudTd DataLabel="Campsite">@context.CampsiteName</MudTd>
-                            <MudTd DataLabel="Check-in">@context.CheckIn.ToString("MMM dd, yyyy")</MudTd>
-                            <MudTd DataLabel="Check-out">@context.CheckOut.ToString("MMM dd, yyyy")</MudTd>
-                            <MudTd DataLabel="Status">
-                                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">
-                                    @context.Status
-                                </MudChip>
-                            </MudTd>
-                            <MudTd DataLabel="Amount">$@context.Amount.ToString("N2")</MudTd>
-                        </RowTemplate>
-                    </MudTable>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
+
 
 </MudContainer>
 
 @code {
-    private int _totalBookings = 1247;
-    private decimal _revenue = 45680;
-    private int _occupancyRate = 78;
-    private int _activeCampsites = 8;
-    private int _confirmedBookings = 892;
-    private int _pendingBookings = 45;
-    private int _cancelledBookings = 310;
-    private int _totalUsers = 3456;
-    private int _newUsers = 234;
+    private bool _isLoading = true;
 
-    private List<RecentBookingDto> _recentBookings = new();
+    // Metrics loaded from database
+    private int _totalBookings = 0;
+    private decimal _revenue = 0;
+    private int _occupancyRate = 0;
+    private int _activeCampsites = 0;
+    private int _confirmedBookings = 0;
+    private int _pendingBookings = 0;
+    private int _cancelledBookings = 0;
+    private int _totalUsers = 0;
+    private int _newUsers = 0;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Sample data - will be replaced with actual data from backend
-        _recentBookings = new List<RecentBookingDto>
-        {
-            new() { Id = 1247, GuestName = "John Doe", CampsiteName = "Copenhagen Beach Camp", CheckIn = DateTime.Now.AddDays(5), CheckOut = DateTime.Now.AddDays(8), Status = "Confirmed", Amount = 450 },
-            new() { Id = 1246, GuestName = "Jane Smith", CampsiteName = "Skagen North Point", CheckIn = DateTime.Now.AddDays(3), CheckOut = DateTime.Now.AddDays(7), Status = "Confirmed", Amount = 680 },
-            new() { Id = 1245, GuestName = "Mike Johnson", CampsiteName = "Aarhus Forest Retreat", CheckIn = DateTime.Now.AddDays(10), CheckOut = DateTime.Now.AddDays(12), Status = "Pending", Amount = 320 },
-            new() { Id = 1244, GuestName = "Sarah Williams", CampsiteName = "Odense Family Camp", CheckIn = DateTime.Now.AddDays(1), CheckOut = DateTime.Now.AddDays(4), Status = "Confirmed", Amount = 540 },
-            new() { Id = 1243, GuestName = "David Brown", CampsiteName = "Bornholm Island Camp", CheckIn = DateTime.Now.AddDays(15), CheckOut = DateTime.Now.AddDays(20), Status = "Confirmed", Amount = 890 }
-        };
+        await LoadDashboardMetrics();
+        _isLoading = false;
     }
 
-    private Color GetStatusColor(string status) => status switch
+    private async Task LoadDashboardMetrics()
     {
-        "Confirmed" => Color.Success,
-        "Pending" => Color.Warning,
-        "Cancelled" => Color.Error,
-        _ => Color.Default
-    };
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
 
-    private class RecentBookingDto
-    {
-        public int Id { get; set; }
-        public string GuestName { get; set; } = string.Empty;
-        public string CampsiteName { get; set; } = string.Empty;
-        public DateTime CheckIn { get; set; }
-        public DateTime CheckOut { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public decimal Amount { get; set; }
+            // Load all bookings
+            var allBookings = await context.Bookings.ToListAsync();
+            _totalBookings = allBookings.Count;
+
+            // Calculate revenue (sum of all booking amounts)
+            _revenue = allBookings.Sum(b => b.TotalPrice?.Amount ?? 0m);
+
+            // Count bookings by status
+            _confirmedBookings = allBookings.Count(b => b.Status == BookingStatus.Confirmed);
+            _pendingBookings = allBookings.Count(b => b.Status == BookingStatus.Pending);
+            _cancelledBookings = allBookings.Count(b => b.Status == BookingStatus.Cancelled);
+
+            // Count active campsites (load all first for client-side evaluation)
+            var allCampsites = await context.Campsites.ToListAsync();
+            _activeCampsites = allCampsites.Count(c => c.IsActive);
+
+            // Count total users
+            _totalUsers = await context.Users.CountAsync();
+
+            // Count new users this month (load all users first for client-side evaluation)
+            var startOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var allUsers = await context.Users.ToListAsync();
+            _newUsers = allUsers.Count(u => u.JoinedDate >= startOfMonth);
+
+            // Calculate occupancy rate
+            // Total accommodation types * 30 days = total available spot-days
+            var totalAccommodationTypes = await context.AccommodationTypes.CountAsync();
+            var totalAvailableSpotDays = totalAccommodationTypes * 30;
+
+            // Total booked days this month
+            var startOfThisMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var endOfThisMonth = startOfThisMonth.AddMonths(1);
+
+            var bookingsThisMonth = allBookings
+                .Where(b => b.Period != null &&
+                           b.Period.StartDate < endOfThisMonth &&
+                           b.Period.EndDate > startOfThisMonth &&
+                           (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Pending))
+                .ToList();
+
+            var totalBookedDays = bookingsThisMonth.Sum(b =>
+            {
+                var start = b.Period!.StartDate < startOfThisMonth ? startOfThisMonth : b.Period.StartDate;
+                var end = b.Period.EndDate > endOfThisMonth ? endOfThisMonth : b.Period.EndDate;
+                return (end - start).Days;
+            });
+
+            _occupancyRate = totalAvailableSpotDays > 0
+                ? (int)((totalBookedDays / (double)totalAvailableSpotDays) * 100)
+                : 0;
+
+            Console.WriteLine($"✅ Dashboard metrics loaded:");
+            Console.WriteLine($"   Total Bookings: {_totalBookings}");
+            Console.WriteLine($"   Revenue: ${_revenue:N2}");
+            Console.WriteLine($"   Occupancy Rate: {_occupancyRate}%");
+            Console.WriteLine($"   Active Campsites: {_activeCampsites}");
+            Console.WriteLine($"   Confirmed: {_confirmedBookings}, Pending: {_pendingBookings}, Cancelled: {_cancelledBookings}");
+            Console.WriteLine($"   Total Users: {_totalUsers}, New This Month: {_newUsers}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading dashboard metrics: {ex.Message}");
+            Snackbar.Add($"Error loading dashboard metrics: {ex.Message}", Severity.Error);
+        }
     }
 }
 

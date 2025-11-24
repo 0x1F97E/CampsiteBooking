@@ -9,6 +9,9 @@ using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +30,12 @@ builder.Services.AddLocalization();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<LocalizationService>();
 builder.Services.AddScoped<GeoLocationService>();
+
+// Add HttpClient for Blazor components
+builder.Services.AddScoped(sp => new HttpClient
+{
+    BaseAddress = new Uri(sp.GetRequiredService<NavigationManager>().BaseUri)
+});
 
 // Configure supported cultures
 var supportedCultures = new[]
@@ -60,12 +69,30 @@ builder.Services.AddHttpClient();
 // Register ApiService for Blazor components
 builder.Services.AddScoped<ApiService>();
 
+// Register Stripe Payment Service
+builder.Services.AddScoped<StripePaymentService>();
+
 // Add API Controllers (REST API)
 builder.Services.AddControllers();
 
-// Add JWT Authentication
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer(options =>
+// Add Cookie Authentication for Blazor Server
+builder.Services.AddAuthentication("CookieAuth")
+    .AddCookie("CookieAuth", options =>
+    {
+        options.Cookie.Name = "CampsiteBooking.Auth";
+        options.LoginPath = "/login";
+        options.LogoutPath = "/logout";
+        options.AccessDeniedPath = "/access-denied";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.ExpireTimeSpan = TimeSpan.FromHours(8); // Default session timeout
+        options.SlidingExpiration = true; // Extend session on activity
+    })
+    // Add JWT Authentication for REST API
+    .AddJwtBearer("Bearer", options =>
     {
         var jwtSettings = builder.Configuration.GetSection("JwtSettings");
         var secretKey = jwtSettings["SecretKey"] ?? "BookMyHome-SuperSecret-Key-For-3Semester-Exam-Project-2025";
@@ -84,6 +111,12 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddAuthorization();
+
+// Add Blazor Server authentication state provider
+builder.Services.AddCascadingAuthenticationState();
+
+// Register Authentication Service
+builder.Services.AddScoped<CampsiteBooking.Services.AuthenticationService>();
 
 // Add Anti-forgery for CSRF protection (Blazor Server already has this, but explicit for API)
 builder.Services.AddAntiforgery(options =>
@@ -145,6 +178,14 @@ builder.Services.AddDbContext<CampsiteBookingDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection"),
         new MySqlServerVersion(new Version(8, 0, 21))));
 
+// Add DbContextFactory for Blazor components (thread-safe)
+// Create a simple factory implementation
+builder.Services.AddSingleton<IDbContextFactory<CampsiteBookingDbContext>>(sp =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    return new SimpleDbContextFactory(connectionString!);
+});
+
 // Register Repositories (Infrastructure Layer)
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -201,11 +242,112 @@ app.MapRazorComponents<App>()
 // Map API Controllers
 app.MapControllers();
 
-// Apply database migrations automatically
+// Add login endpoint for cookie-based authentication
+app.MapPost("/api/auth/login", async (LoginRequest request, IDbContextFactory<CampsiteBookingDbContext> dbContextFactory, HttpContext httpContext) =>
+{
+    try
+    {
+        using var context = await dbContextFactory.CreateDbContextAsync();
+
+        // Find user by email (load all users first for client-side evaluation)
+        var allUsers = await context.Users.ToListAsync();
+        var user = allUsers.FirstOrDefault(u => u.Email.Value.Equals(request.Email, StringComparison.OrdinalIgnoreCase));
+
+        if (user == null)
+        {
+            return Results.Json(new { success = false, error = "Invalid email or password." });
+        }
+
+        // TODO: Verify password hash (currently accepting any password for demo)
+        Console.WriteLine($"⚠️ WARNING: Password verification skipped for demo purposes!");
+
+        // Update last login time
+        user.UpdateLastLogin();
+        await context.SaveChangesAsync();
+
+        // Create claims for the user
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id.Value.ToString()),
+            new Claim(ClaimTypes.Email, user.Email.Value),
+            new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
+            new Claim("FirstName", user.FirstName),
+            new Claim("LastName", user.LastName)
+        };
+
+        // Add role claim based on user type
+        var userType = user.GetType().Name;
+        claims.Add(new Claim(ClaimTypes.Role, userType));
+
+        var identity = new ClaimsIdentity(claims, "CookieAuth");
+        var principal = new ClaimsPrincipal(identity);
+
+        // Sign in the user with cookie authentication
+        var authProperties = new Microsoft.AspNetCore.Authentication.AuthenticationProperties
+        {
+            IsPersistent = request.RememberMe, // Remember Me functionality
+            ExpiresUtc = request.RememberMe
+                ? DateTimeOffset.UtcNow.AddDays(30) // 30 days if "Remember Me" is checked
+                : DateTimeOffset.UtcNow.AddHours(8)  // 8 hours session if not checked
+        };
+
+        await httpContext.SignInAsync("CookieAuth", principal, authProperties);
+
+        Console.WriteLine($"✅ User {user.Email.Value} logged in successfully (UserId: {user.Id.Value}, RememberMe: {request.RememberMe})");
+
+        return Results.Json(new
+        {
+            success = true,
+            userId = user.Id.Value,
+            email = user.Email.Value,
+            fullName = $"{user.FirstName} {user.LastName}",
+            userType = userType
+        });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Login error: {ex.Message}");
+        return Results.Json(new { success = false, error = "An error occurred during login. Please try again." });
+    }
+});
+
+// Add logout endpoint
+app.MapPost("/api/auth/logout", async (HttpContext httpContext) =>
+{
+    await httpContext.SignOutAsync("CookieAuth");
+    Console.WriteLine("✅ User logged out successfully");
+    return Results.Json(new { success = true });
+});
+
+// Apply database migrations automatically and seed data
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CampsiteBookingDbContext>();
     db.Database.Migrate();
+
+    // Seed initial data
+    await DatabaseSeeder.SeedAsync(db);
 }
 
 app.Run();
+
+// Login request model
+public record LoginRequest(string Email, string Password, bool RememberMe);
+
+// Simple DbContext Factory implementation for Blazor components
+class SimpleDbContextFactory : IDbContextFactory<CampsiteBookingDbContext>
+{
+    private readonly string _connectionString;
+
+    public SimpleDbContextFactory(string connectionString)
+    {
+        _connectionString = connectionString;
+    }
+
+    public CampsiteBookingDbContext CreateDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<CampsiteBookingDbContext>();
+        optionsBuilder.UseMySql(_connectionString, new MySqlServerVersion(new Version(8, 0, 21)));
+        return new CampsiteBookingDbContext(optionsBuilder.Options);
+    }
+}

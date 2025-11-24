@@ -1,6 +1,12 @@
 @page "/bookings"
 @rendermode InteractiveServer
 @inject IDialogService DialogService
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject ISnackbar Snackbar
+@using CampsiteBooking.Data
+@using CampsiteBooking.Models
+@using CampsiteBooking.Models.ValueObjects
+@using Microsoft.EntityFrameworkCore
 
 <PageTitle>My Bookings - Campsite Booking</PageTitle>
 
@@ -243,89 +249,90 @@
 
     private async Task LoadBookings()
     {
-        await Task.Delay(300); // Simulate API call
-
-        // Mock data - will be replaced with actual API call
-        var allBookings = new List<BookingDto>
+        try
         {
-            new BookingDto
-            {
-                Id = "BK001",
-                AccommodationName = "Lakeside Cabin",
-                AccommodationType = "Cabin",
-                AccommodationImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400",
-                CheckInDate = DateTime.Today.AddDays(7),
-                CheckOutDate = DateTime.Today.AddDays(10),
-                NumberOfGuests = 4,
-                BasePrice = 300,
-                PeripheralPurchases = new List<PeripheralPurchaseDto>
-                {
-                    new() { Name = "Cleaning Service", Price = 50 },
-                    new() { Name = "Kayak Rental", Price = 35 },
-                    new() { Name = "Bike Rental", Price = 20 }
-                },
-                TotalPrice = 405,
-                Status = "Confirmed"
-            },
-            new BookingDto
-            {
-                Id = "BK002",
-                AccommodationName = "Mountain View Cabin",
-                AccommodationType = "Cabin",
-                AccommodationImageUrl = "https://images.unsplash.com/photo-1542718610-a1d656d1884c?w=400",
-                CheckInDate = DateTime.Today.AddDays(21),
-                CheckOutDate = DateTime.Today.AddDays(23),
-                NumberOfGuests = 2,
-                BasePrice = 240,
-                PeripheralPurchases = new List<PeripheralPurchaseDto>
-                {
-                    new() { Name = "Cleaning Service", Price = 50 },
-                    new() { Name = "Morning Yoga", Price = 18 }
-                },
-                TotalPrice = 308,
-                Status = "Confirmed"
-            },
-            new BookingDto
-            {
-                Id = "BK003",
-                AccommodationName = "Forest Tent Site",
-                AccommodationType = "Tent Site",
-                AccommodationImageUrl = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400",
-                CheckInDate = DateTime.Today.AddDays(-10),
-                CheckOutDate = DateTime.Today.AddDays(-8),
-                NumberOfGuests = 2,
-                BasePrice = 60,
-                PeripheralPurchases = new List<PeripheralPurchaseDto>
-                {
-                    new() { Name = "Tent Rental", Price = 30 }
-                },
-                TotalPrice = 90,
-                Status = "Completed"
-            },
-            new BookingDto
-            {
-                Id = "BK004",
-                AccommodationName = "Luxury Glamping",
-                AccommodationType = "Glamping",
-                AccommodationImageUrl = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=400",
-                CheckInDate = DateTime.Today.AddDays(-30),
-                CheckOutDate = DateTime.Today.AddDays(-28),
-                NumberOfGuests = 2,
-                BasePrice = 340,
-                PeripheralPurchases = new List<PeripheralPurchaseDto>
-                {
-                    new() { Name = "Premium Cleaning", Price = 75 },
-                    new() { Name = "Welcome Package", Price = 40 },
-                    new() { Name = "Restaurant Brunch (Daily)", Price = 60 }
-                },
-                TotalPrice = 515,
-                Status = "Completed"
-            },
-        };
+            using var context = await DbContextFactory.CreateDbContextAsync();
 
-        _upcomingBookings = allBookings.Where(b => b.Status == "Confirmed" && b.CheckInDate >= DateTime.Today).ToList();
-        _pastBookings = allBookings.Where(b => b.Status == "Completed").ToList();
-        _cancelledBookings = allBookings.Where(b => b.Status == "Cancelled").ToList();
+            // Load all bookings from database
+            var dbBookings = await context.Bookings.ToListAsync();
+
+            // Load all related entities
+            // Convert GuestId to UserId for querying (Guest inherits from User)
+            var userIds = dbBookings.Select(b => UserId.Create(b.GuestId.Value)).Distinct().ToList();
+            var guests = await context.Users.OfType<Guest>()
+                .Where(g => userIds.Contains(g.Id))
+                .ToListAsync();
+
+            var accommodationTypeIds = dbBookings.Select(b => b.AccommodationTypeId).Distinct().ToList();
+            var accommodationTypes = await context.AccommodationTypes
+                .Where(at => accommodationTypeIds.Contains(at.Id))
+                .ToListAsync();
+
+            var campsiteIds = accommodationTypes.Select(at => at.CampsiteId).Distinct().ToList();
+            var campsites = await context.Campsites
+                .Where(c => campsiteIds.Contains(c.Id))
+                .ToListAsync();
+
+            Console.WriteLine($"📊 Loaded {dbBookings.Count} bookings from database for My Bookings page");
+
+            // Convert to DTOs
+            var allBookings = new List<BookingDto>();
+
+            foreach (var booking in dbBookings)
+            {
+                // Get related entities
+                var guest = guests.FirstOrDefault(g => g.Id == booking.GuestId);
+                var accommodationType = accommodationTypes.FirstOrDefault(at => at.Id == booking.AccommodationTypeId);
+                var campsite = accommodationType != null
+                    ? campsites.FirstOrDefault(c => c.Id == accommodationType.CampsiteId)
+                    : null;
+
+                // Calculate total price (base price + peripheral purchases)
+                var basePrice = booking.TotalPrice?.Amount ?? 0m;
+                var peripheralTotal = 0m; // TODO: Load peripheral purchases from database if stored
+
+                allBookings.Add(new BookingDto
+                {
+                    Id = booking.Id?.Value.ToString() ?? "0",
+                    AccommodationName = $"{accommodationType?.Type ?? "Unknown"} at {campsite?.Name ?? "Unknown Campsite"}",
+                    AccommodationType = accommodationType?.Type ?? "Unknown",
+                    AccommodationImageUrl = accommodationType?.ImageUrl ?? "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400",
+                    CheckInDate = booking.Period?.StartDate ?? DateTime.Today,
+                    CheckOutDate = booking.Period?.EndDate ?? DateTime.Today,
+                    NumberOfGuests = booking.NumberOfAdults + booking.NumberOfChildren,
+                    BasePrice = basePrice,
+                    PeripheralPurchases = new List<PeripheralPurchaseDto>(), // TODO: Load from database
+                    TotalPrice = basePrice + peripheralTotal,
+                    Status = booking.Status.ToString()
+                });
+            }
+
+            // Filter bookings by status and date
+            _upcomingBookings = allBookings
+                .Where(b => (b.Status == "Confirmed" || b.Status == "Pending") && b.CheckInDate >= DateTime.Today)
+                .OrderBy(b => b.CheckInDate)
+                .ToList();
+
+            _pastBookings = allBookings
+                .Where(b => b.Status == "Completed" || (b.CheckOutDate < DateTime.Today && b.Status != "Cancelled"))
+                .OrderByDescending(b => b.CheckOutDate)
+                .ToList();
+
+            _cancelledBookings = allBookings
+                .Where(b => b.Status == "Cancelled")
+                .OrderByDescending(b => b.CheckInDate)
+                .ToList();
+
+            Console.WriteLine($"✅ Upcoming: {_upcomingBookings.Count}, Past: {_pastBookings.Count}, Cancelled: {_cancelledBookings.Count}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading bookings: {ex.Message}");
+            Snackbar.Add($"Error loading bookings: {ex.Message}", Severity.Error);
+            _upcomingBookings = new List<BookingDto>();
+            _pastBookings = new List<BookingDto>();
+            _cancelledBookings = new List<BookingDto>();
+        }
     }
 
     private async Task CancelBooking(string bookingId)
@@ -337,15 +344,42 @@
 
         if (result == true)
         {
-            // TODO: Call API to cancel booking
-            await Task.Delay(300);
-
-            var booking = _upcomingBookings.FirstOrDefault(b => b.Id == bookingId);
-            if (booking != null)
+            try
             {
-                booking.Status = "Cancelled";
-                _upcomingBookings.Remove(booking);
-                _cancelledBookings.Add(booking);
+                using var context = await DbContextFactory.CreateDbContextAsync();
+
+                // Parse booking ID
+                if (!int.TryParse(bookingId, out int id))
+                {
+                    Snackbar.Add("Invalid booking ID", Severity.Error);
+                    return;
+                }
+
+                // Find the booking in the database
+                var bookingIdValue = BookingId.Create(id);
+                var booking = await context.Bookings
+                    .FirstOrDefaultAsync(b => b.Id == bookingIdValue);
+
+                if (booking != null)
+                {
+                    // Update booking status to Cancelled
+                    booking.Cancel();
+                    await context.SaveChangesAsync();
+
+                    Snackbar.Add("Booking cancelled successfully", Severity.Success);
+
+                    // Reload bookings to reflect the change
+                    await LoadBookings();
+                }
+                else
+                {
+                    Snackbar.Add("Booking not found", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error cancelling booking: {ex.Message}");
+                Snackbar.Add($"Error cancelling booking: {ex.Message}", Severity.Error);
             }
         }
     }

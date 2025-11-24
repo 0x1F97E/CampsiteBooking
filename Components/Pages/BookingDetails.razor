@@ -1,6 +1,12 @@
 @page "/booking-details/{bookingId}"
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject ISnackbar Snackbar
+@using CampsiteBooking.Data
+@using CampsiteBooking.Models
+@using CampsiteBooking.Models.ValueObjects
+@using Microsoft.EntityFrameworkCore
 
 <PageTitle>Booking Details - Campsite Booking</PageTitle>
 
@@ -156,27 +162,76 @@
 
     private async Task LoadBookingDetails()
     {
-        await Task.Delay(300); // Simulate API call
-        
-        // Mock data - will be replaced with actual API call
-        _booking = new BookingDetailsDto
+        try
         {
-            Id = BookingId,
-            AccommodationName = "Lakeside Cabin",
-            AccommodationType = "Cabin",
-            AccommodationImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=600",
-            CheckInDate = DateTime.Today.AddDays(7),
-            CheckOutDate = DateTime.Today.AddDays(10),
-            NumberOfGuests = 4,
-            PricePerNight = 120,
-            TotalPrice = 360,
-            Status = "Confirmed",
-            GuestName = "John Doe",
-            GuestEmail = "john.doe@example.com",
-            GuestPhone = "+1 (555) 123-4567",
-            SpecialRequests = "Late check-in requested",
-            BookedDate = DateTime.Today.AddDays(-5)
-        };
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Parse booking ID
+            if (!int.TryParse(BookingId, out int bookingIdInt))
+            {
+                Console.WriteLine($"❌ Invalid booking ID: {BookingId}");
+                Snackbar.Add("Invalid booking ID", Severity.Error);
+                return;
+            }
+
+            // Load booking from database
+            var bookingId = CampsiteBooking.Models.ValueObjects.BookingId.Create(bookingIdInt);
+            var booking = await context.Bookings
+                .FirstOrDefaultAsync(b => b.Id == bookingId);
+
+            if (booking == null)
+            {
+                Console.WriteLine($"❌ Booking not found: {BookingId}");
+                Snackbar.Add("Booking not found", Severity.Error);
+                return;
+            }
+
+            // Load related entities separately
+            var guest = await context.Users
+                .OfType<Guest>()
+                .FirstOrDefaultAsync(g => g.Id == booking.GuestId);
+
+            var accommodationType = await context.AccommodationTypes
+                .FirstOrDefaultAsync(at => at.Id == booking.AccommodationTypeId);
+
+            var campsite = accommodationType != null
+                ? await context.Campsites.FirstOrDefaultAsync(c => c.Id == accommodationType.CampsiteId)
+                : null;
+
+            var nights = booking.Period != null
+                ? (booking.Period.EndDate - booking.Period.StartDate).Days
+                : 0;
+
+            var pricePerNight = nights > 0 && booking.TotalPrice != null
+                ? booking.TotalPrice.Amount / nights
+                : 0m;
+
+            _booking = new BookingDetailsDto
+            {
+                Id = BookingId,
+                AccommodationName = $"{accommodationType?.Type ?? "Unknown"} at {campsite?.Name ?? "Unknown Campsite"}",
+                AccommodationType = accommodationType?.Type ?? "Unknown",
+                AccommodationImageUrl = accommodationType?.ImageUrl ?? "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=600",
+                CheckInDate = booking.Period?.StartDate ?? DateTime.Today,
+                CheckOutDate = booking.Period?.EndDate ?? DateTime.Today,
+                NumberOfGuests = booking.NumberOfAdults + booking.NumberOfChildren,
+                PricePerNight = pricePerNight,
+                TotalPrice = booking.TotalPrice?.Amount ?? 0m,
+                Status = booking.Status.ToString(),
+                GuestName = $"{guest?.FirstName ?? ""} {guest?.LastName ?? ""}".Trim(),
+                GuestEmail = guest?.Email?.Value ?? "",
+                GuestPhone = guest?.Phone ?? "",
+                SpecialRequests = booking.SpecialRequests ?? "",
+                BookedDate = booking.CreatedDate
+            };
+
+            Console.WriteLine($"✅ Loaded booking details for ID: {BookingId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading booking details: {ex.Message}");
+            Snackbar.Add($"Error loading booking details: {ex.Message}", Severity.Error);
+        }
     }
     
     private Color GetStatusColor(string status) => status switch

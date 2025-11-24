@@ -1,6 +1,14 @@
 @page "/admin/bookings"
 @rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin,Staff")]
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IDbContextFactory<CampsiteBooking.Data.CampsiteBookingDbContext> DbContextFactory
+@using CampsiteBooking.Data
+@using CampsiteBooking.Models
+@using CampsiteBooking.Models.ValueObjects
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
 
 <PageTitle>Booking Management - Campsite Booking</PageTitle>
 
@@ -127,29 +135,70 @@
     private string _searchText = "";
     private string _filterStatus = "All";
     private string _filterCampsite = "All";
-    private DateRange? _dateRange = null;
+    private MudBlazor.DateRange? _dateRange = null;
     private BookingManagementDto? _selectedBooking = null;
     private List<BookingManagementDto> _bookings = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        LoadBookings();
+        await LoadBookings();
     }
 
-    private void LoadBookings()
+    private async Task LoadBookings()
     {
-        // Sample data - will be replaced with actual data from backend
-        _bookings = new List<BookingManagementDto>
+        try
         {
-            new() { Id = 1247, GuestName = "John Doe", GuestEmail = "john@example.com", CampsiteName = "Copenhagen Beach Camp", AccommodationType = "Cabin", CheckIn = DateTime.Now.AddDays(5), CheckOut = DateTime.Now.AddDays(8), NumberOfGuests = 4, TotalAmount = 450, Status = "Confirmed" },
-            new() { Id = 1246, GuestName = "Jane Smith", GuestEmail = "jane@example.com", CampsiteName = "Skagen North Point", AccommodationType = "Glamping", CheckIn = DateTime.Now.AddDays(3), CheckOut = DateTime.Now.AddDays(7), NumberOfGuests = 2, TotalAmount = 680, Status = "Confirmed" },
-            new() { Id = 1245, GuestName = "Mike Johnson", GuestEmail = "mike@example.com", CampsiteName = "Aarhus Forest Retreat", AccommodationType = "Tent Site", CheckIn = DateTime.Now.AddDays(10), CheckOut = DateTime.Now.AddDays(12), NumberOfGuests = 3, TotalAmount = 320, Status = "Pending" },
-            new() { Id = 1244, GuestName = "Sarah Williams", GuestEmail = "sarah@example.com", CampsiteName = "Odense Family Camp", AccommodationType = "RV Spot", CheckIn = DateTime.Now.AddDays(1), CheckOut = DateTime.Now.AddDays(4), NumberOfGuests = 5, TotalAmount = 540, Status = "Confirmed" },
-            new() { Id = 1243, GuestName = "David Brown", GuestEmail = "david@example.com", CampsiteName = "Bornholm Island Camp", AccommodationType = "Cabin", CheckIn = DateTime.Now.AddDays(15), CheckOut = DateTime.Now.AddDays(20), NumberOfGuests = 2, TotalAmount = 890, Status = "Confirmed" },
-            new() { Id = 1242, GuestName = "Emily Davis", GuestEmail = "emily@example.com", CampsiteName = "Copenhagen Beach Camp", AccommodationType = "Tent Site", CheckIn = DateTime.Now.AddDays(-5), CheckOut = DateTime.Now.AddDays(-2), NumberOfGuests = 2, TotalAmount = 280, Status = "Completed" },
-            new() { Id = 1241, GuestName = "Robert Wilson", GuestEmail = "robert@example.com", CampsiteName = "Skagen North Point", AccommodationType = "Cabin", CheckIn = DateTime.Now.AddDays(7), CheckOut = DateTime.Now.AddDays(10), NumberOfGuests = 4, TotalAmount = 620, Status = "Cancelled" },
-            new() { Id = 1240, GuestName = "Lisa Anderson", GuestEmail = "lisa@example.com", CampsiteName = "Aarhus Forest Retreat", AccommodationType = "Glamping", CheckIn = DateTime.Now.AddDays(20), CheckOut = DateTime.Now.AddDays(25), NumberOfGuests = 2, TotalAmount = 750, Status = "Pending" }
-        };
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load all bookings from database
+            var bookingEntities = await context.Bookings.ToListAsync();
+
+            // Load all guests to get guest information
+            var allGuests = await context.Guests.ToListAsync();
+
+            // Load all campsites to get campsite names
+            var allCampsites = await context.Campsites.ToListAsync();
+
+            // Load all accommodation types to get type names
+            var allAccommodationTypes = await context.AccommodationTypes.ToListAsync();
+
+            Console.WriteLine($"📊 Loaded {bookingEntities.Count} bookings from database");
+
+            // Convert entities to DTOs with null-safe access
+            _bookings = bookingEntities.Select(b =>
+            {
+                var guest = allGuests.FirstOrDefault(g => g.Id?.Value == b.GuestId?.Value);
+                var campsite = allCampsites.FirstOrDefault(c => c.Id?.Value == b.CampsiteId?.Value);
+                var accommodationType = allAccommodationTypes.FirstOrDefault(a => a.Id?.Value == b.AccommodationTypeId?.Value);
+
+                return new BookingManagementDto
+                {
+                    Id = b.Id?.Value ?? 0,
+                    GuestName = guest != null ? $"{guest.FirstName} {guest.LastName}" : "Unknown Guest",
+                    GuestEmail = guest?.Email?.Value ?? "unknown@example.com",
+                    CampsiteName = campsite?.Name ?? "Unknown Campsite",
+                    AccommodationType = accommodationType?.Type ?? "Unknown Type",
+                    CheckIn = b.Period?.StartDate ?? DateTime.Now,
+                    CheckOut = b.Period?.EndDate ?? DateTime.Now,
+                    NumberOfGuests = b.NumberOfAdults + b.NumberOfChildren,
+                    TotalAmount = b.TotalPrice?.Amount ?? 0,
+                    Status = b.Status.ToString()
+                };
+            }).ToList();
+
+            Console.WriteLine($"✅ Loaded {_bookings.Count} bookings successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading bookings: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"   Inner exception: {ex.InnerException.Message}");
+            }
+            Snackbar.Add($"Error loading bookings: {ex.Message}", Severity.Error);
+            _bookings = new List<BookingManagementDto>();
+        }
     }
 
     private IEnumerable<BookingManagementDto> GetFilteredBookings()

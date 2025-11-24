@@ -1,6 +1,13 @@
 @page "/register"
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+@using CampsiteBooking.Data
+@using CampsiteBooking.Models
+@using CampsiteBooking.Models.ValueObjects
+@using Microsoft.EntityFrameworkCore
 
 <PageTitle>Register - Campsite Booking</PageTitle>
 
@@ -235,20 +242,59 @@
         _successMessage = "";
         StateHasChanged();
 
-        await Task.Delay(1500); // Simulate API call
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
 
-        // Demo registration logic
-        if (_email == "admin@campsite.dk" || _email == "guest@campsite.dk")
-        {
-            _errorMessage = "This email is already registered. Please use a different email or sign in.";
-            _isLoading = false;
-        }
-        else
-        {
-            _successMessage = "Account created successfully! Redirecting to login...";
+            // Check if email already exists (load all users first for client-side evaluation)
+            var emailValue = Email.Create(_email);
+            var allUsers = await context.Users.ToListAsync();
+            var existingUser = allUsers.FirstOrDefault(u => u.Email.Value.Equals(_email, StringComparison.OrdinalIgnoreCase));
+
+            if (existingUser != null)
+            {
+                _errorMessage = "This email is already registered. Please use a different email or sign in.";
+                _isLoading = false;
+                return;
+            }
+
+            // Create new guest user
+            var newGuest = Guest.Create(
+                email: emailValue,
+                firstName: _firstName,
+                lastName: _lastName,
+                phone: _phone,
+                country: _country,
+                preferredCommunication: "Email"
+            );
+
+            // TODO: Hash password with BCrypt before storing
+            // For now, we're not storing passwords (demo only)
+            Console.WriteLine($"⚠️ WARNING: Password not hashed or stored (demo only)");
+
+            // Save to database
+            context.Users.Add(newGuest);
+            await context.SaveChangesAsync();
+
+            Console.WriteLine($"✅ New guest registered: {_firstName} {_lastName} ({_email})");
+
+            // Auto-login the new user
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "currentUserId", newGuest.Id.Value.ToString());
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "currentUserEmail", newGuest.Email.Value);
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "currentUserName", $"{newGuest.FirstName} {newGuest.LastName}");
+
+            _successMessage = "Account created successfully! Redirecting to home...";
+            Snackbar.Add($"Welcome, {_firstName}!", Severity.Success);
             StateHasChanged();
-            await Task.Delay(2000);
-            Navigation.NavigateTo("/login");
+
+            await Task.Delay(1500);
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Registration error: {ex.Message}");
+            _errorMessage = $"An error occurred during registration: {ex.Message}";
+            _isLoading = false;
         }
     }
 }

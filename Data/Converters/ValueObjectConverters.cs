@@ -107,7 +107,9 @@ public class StaffIdConverter : ValueConverter<StaffId, int>
 
 public class CampsiteIdConverter : ValueConverter<CampsiteId, int>
 {
-    public CampsiteIdConverter() : base(v => v.Value, v => CampsiteId.Create(v)) { }
+    public CampsiteIdConverter() : base(
+        v => v.Value,
+        v => v == 0 ? CampsiteId.CreateNew() : CampsiteId.Create(v)) { }
 }
 
 public class AccommodationTypeIdConverter : ValueConverter<AccommodationTypeId, int>
@@ -147,7 +149,9 @@ public class AmenityIdConverter : ValueConverter<AmenityId, int>
 
 public class PhotoIdConverter : ValueConverter<PhotoId, int>
 {
-    public PhotoIdConverter() : base(v => v.Value, v => PhotoId.Create(v)) { }
+    public PhotoIdConverter() : base(
+        v => v.Value,
+        v => v == 0 ? PhotoId.CreateNew() : PhotoId.Create(v)) { }
 }
 
 public class ReviewIdConverter : ValueConverter<ReviewId, int>

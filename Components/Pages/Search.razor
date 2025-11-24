@@ -1,6 +1,12 @@
 @page "/"
 @page "/search"
 @rendermode InteractiveServer
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject ISnackbar Snackbar
+@using CampsiteBooking.Data
+@using CampsiteBooking.Models
+@using CampsiteBooking.Models.ValueObjects
+@using Microsoft.EntityFrameworkCore
 
 <PageTitle>Search Campsites - Campsite Booking</PageTitle>
 
@@ -153,16 +159,10 @@
                             @if (accommodation.Amenities.Any())
                             {
                                 <MudStack Row="true" Spacing="1" Class="mt-2" Wrap="Wrap.Wrap">
-                                    @foreach (var amenity in accommodation.Amenities.Take(4))
+                                    @foreach (var amenity in accommodation.Amenities)
                                     {
                                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Icon="@GetAmenityIcon(amenity)">
                                             @amenity
-                                        </MudChip>
-                                    }
-                                    @if (accommodation.Amenities.Count > 4)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                                            +@(accommodation.Amenities.Count - 4) more
                                         </MudChip>
                                     }
                                 </MudStack>
@@ -200,7 +200,7 @@
 </MudContainer>
 
 @code {
-    private DateRange? _dateRange = new DateRange(DateTime.Today.AddDays(1), DateTime.Today.AddDays(3));
+    private MudBlazor.DateRange? _dateRange = new MudBlazor.DateRange(DateTime.Today.AddDays(1), DateTime.Today.AddDays(3));
     private int _adults = 2;
     private int _children = 0;
     private string _accommodationType = "All";
@@ -208,133 +208,114 @@
     private IEnumerable<string> _selectedCampsiteIds = new HashSet<string>();
     private bool _isLoading = false;
     private List<AccommodationDto> _accommodations = new();
-
-    private readonly List<CampsiteFilterDto> _availableCampsites = new()
-    {
-        new() { Id = 1, Name = "Copenhagen Beach Camp", Region = "Zealand" },
-        new() { Id = 2, Name = "Skagen North Point", Region = "North Jutland" },
-        new() { Id = 3, Name = "Aarhus Forest Retreat", Region = "East Jutland" },
-        new() { Id = 4, Name = "Odense Family Camp", Region = "Funen" },
-        new() { Id = 5, Name = "Bornholm Island Camp", Region = "Bornholm" }
-    };
+    private List<CampsiteFilterDto> _availableCampsites = new();
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadCampsites();
         await SearchAvailability();
+    }
+
+    private async Task LoadCampsites()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var campsites = await context.Campsites.ToListAsync();
+
+            _availableCampsites = campsites.Select(c => new CampsiteFilterDto
+            {
+                Id = c.Id?.Value ?? 0,
+                Name = c.Name ?? "",
+                Region = c.Region ?? ""
+            }).ToList();
+
+            Console.WriteLine($"✅ Loaded {_availableCampsites.Count} campsites for search filter");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading campsites: {ex.Message}");
+            Snackbar.Add($"Error loading campsites: {ex.Message}", Severity.Error);
+            _availableCampsites = new List<CampsiteFilterDto>();
+        }
     }
 
     private async Task SearchAvailability()
     {
         _isLoading = true;
-        await Task.Delay(500); // Simulate API call
 
-        // Mock data - will be replaced with actual API call
-        var allAccommodations = new List<AccommodationDto>
+        try
         {
-            new AccommodationDto
-            {
-                Id = 1,
-                CampsiteId = 1,
-                CampsiteName = "Copenhagen Beach Camp",
-                Name = "Lakeside Cabin",
-                Type = "Cabin",
-                Description = "Cozy cabin with lake view",
-                Capacity = 4,
-                PricePerNight = 120,
-                ImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400",
-                Amenities = new List<string> { "Pool", "WiFi", "Electric-Hookup", "Water-Access", "Fire-Pit", "Picnic-Table", "Restaurant" }
-            },
-            new AccommodationDto
-            {
-                Id = 2,
-                CampsiteId = 3,
-                CampsiteName = "Aarhus Forest Retreat",
-                Name = "Forest Tent Site",
-                Type = "Tent Site",
-                Description = "Peaceful spot among the trees",
-                Capacity = 2,
-                PricePerNight = 35,
-                ImageUrl = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400",
-                Amenities = new List<string> { "Dog-Friendly", "Fire-Pit", "Picnic-Table" }
-            },
-            new AccommodationDto
-            {
-                Id = 3,
-                CampsiteId = 1,
-                CampsiteName = "Copenhagen Beach Camp",
-                Name = "Luxury Glamping",
-                Type = "Glamping",
-                Description = "Glamorous camping experience",
-                Capacity = 2,
-                PricePerNight = 85,
-                ImageUrl = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=400",
-                Amenities = new List<string> { "Pool", "WiFi", "Electric-Hookup", "Water-Access", "Dog-Friendly", "Near-Beach", "Restaurant" }
-            },
-            new AccommodationDto
-            {
-                Id = 4,
-                CampsiteId = 2,
-                CampsiteName = "Skagen North Point",
-                Name = "Mountain View Cabin",
-                Type = "Cabin",
-                Description = "Stunning mountain views",
-                Capacity = 6,
-                PricePerNight = 150,
-                ImageUrl = "https://images.unsplash.com/photo-1542718610-a1d656d1884c?w=400",
-                Amenities = new List<string> { "WiFi", "Electric-Hookup", "Water-Access", "Fire-Pit", "Picnic-Table", "Dog-Friendly", "Playground" }
-            },
-            new AccommodationDto
-            {
-                Id = 5,
-                CampsiteId = 4,
-                CampsiteName = "Odense Family Camp",
-                Name = "RV Full Hookup",
-                Type = "RV Spot",
-                Description = "Full hookup with utilities",
-                Capacity = 4,
-                PricePerNight = 55,
-                ImageUrl = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=400",
-                Amenities = new List<string> { "Campingvan-Friendly", "Electric-Hookup", "Water-Access", "WiFi", "Dog-Friendly" }
-            },
-            new AccommodationDto
-            {
-                Id = 6,
-                CampsiteId = 5,
-                CampsiteName = "Bornholm Island Camp",
-                Name = "Riverside Tent Site",
-                Type = "Tent Site",
-                Description = "Right by the river",
-                Capacity = 3,
-                PricePerNight = 40,
-                ImageUrl = "https://images.unsplash.com/photo-1445308394109-4ec2920981b1?w=400",
-                Amenities = new List<string> { "Dog-Friendly", "Water-Access", "Fire-Pit", "Picnic-Table", "Near-Beach", "Playground" }
-            },
-        };
+            using var context = await DbContextFactory.CreateDbContextAsync();
 
-        _accommodations = allAccommodations;
+            // Load all accommodation types from database
+            var allAccommodationTypes = await context.AccommodationTypes.ToListAsync();
 
-        // Filter by campsite
-        if (_selectedCampsiteIds.Any())
-        {
-            var selectedIds = _selectedCampsiteIds.Select(id => int.Parse(id)).ToList();
-            _accommodations = _accommodations.Where(a => selectedIds.Contains(a.CampsiteId)).ToList();
+            Console.WriteLine($"📊 Loaded {allAccommodationTypes.Count} accommodation types from database");
+
+            // Convert to DTOs with campsite information
+            var allAccommodations = new List<AccommodationDto>();
+
+            foreach (var accType in allAccommodationTypes)
+            {
+                // Get campsite name
+                var campsite = await context.Campsites
+                    .FirstOrDefaultAsync(c => c.Id == accType.CampsiteId);
+
+                if (campsite != null)
+                {
+                    allAccommodations.Add(new AccommodationDto
+                    {
+                        Id = accType.Id?.Value ?? 0,
+                        CampsiteId = accType.CampsiteId?.Value ?? 0,
+                        CampsiteName = campsite.Name ?? "",
+                        Name = accType.Type ?? "",
+                        Type = accType.Type ?? "",
+                        Description = accType.Description ?? "",
+                        Capacity = accType.MaxCapacity,
+                        PricePerNight = accType.BasePrice?.Amount ?? 0m,
+                        ImageUrl = accType.ImageUrl ?? "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400",
+                        Amenities = new List<string>() // TODO: Load amenities from database if stored
+                    });
+                }
+            }
+
+            _accommodations = allAccommodations;
+
+            // Filter by campsite
+            if (_selectedCampsiteIds.Any())
+            {
+                var selectedIds = _selectedCampsiteIds.Select(id => int.Parse(id)).ToList();
+                _accommodations = _accommodations.Where(a => selectedIds.Contains(a.CampsiteId)).ToList();
+            }
+
+            // Filter by accommodation type
+            if (_accommodationType != "All")
+            {
+                _accommodations = _accommodations.Where(a => a.Type == _accommodationType).ToList();
+            }
+
+            // Filter by amenities (accommodation must have ALL selected amenities)
+            if (_selectedAmenities.Any())
+            {
+                _accommodations = _accommodations
+                    .Where(a => _selectedAmenities.All(amenity => a.Amenities.Contains(amenity)))
+                    .ToList();
+            }
+
+            Console.WriteLine($"✅ Displaying {_accommodations.Count} accommodations after filtering");
         }
-
-        // Filter by accommodation type
-        if (_accommodationType != "All")
+        catch (Exception ex)
         {
-            _accommodations = _accommodations.Where(a => a.Type == _accommodationType).ToList();
+            Console.WriteLine($"❌ Error loading accommodations: {ex.Message}");
+            Snackbar.Add($"Error loading accommodations: {ex.Message}", Severity.Error);
+            _accommodations = new List<AccommodationDto>();
         }
-
-        // Filter by amenities (accommodation must have ALL selected amenities)
-        if (_selectedAmenities.Any())
+        finally
         {
-            _accommodations = _accommodations
-                .Where(a => _selectedAmenities.All(amenity => a.Amenities.Contains(amenity)))
-                .ToList();
+            _isLoading = false;
         }
-
-        _isLoading = false;
     }
 
     private string GetCampsiteSelectionText(List<string> selectedValues)

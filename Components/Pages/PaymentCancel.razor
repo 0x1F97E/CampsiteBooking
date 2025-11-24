@@ -1,0 +1,69 @@
+@page "/payment-cancel"
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Payment Cancelled - CampsiteBooking</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudPaper Elevation="3" Class="pa-8 text-center">
+        <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Warning" Size="Size.Large" Style="font-size: 80px;" />
+        <MudText Typo="Typo.h4" Color="Color.Warning" Class="mt-4">Payment Cancelled</MudText>
+        <MudText Typo="Typo.body1" Class="mt-4">
+            Your payment was cancelled. No charges were made to your account.
+        </MudText>
+
+        @if (_bookingId.HasValue)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-4">
+                Booking ID: <strong>@_bookingId.Value</strong>
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Your booking is still pending. You can complete the payment later.
+            </MudText>
+        }
+
+        <MudDivider Class="my-6" />
+
+        <MudStack Row="true" Justify="Justify.Center" Spacing="4">
+            @if (_bookingId.HasValue)
+            {
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Payment"
+                           OnClick="RetryPayment">
+                    Try Again
+                </MudButton>
+            }
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Home"
+                       Href="/">
+                Back to Home
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private int? _bookingId;
+
+    [SupplyParameterFromQuery(Name = "booking_id")]
+    public string? BookingIdParam { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(BookingIdParam) && int.TryParse(BookingIdParam, out var bookingId))
+        {
+            _bookingId = bookingId;
+        }
+    }
+
+    private void RetryPayment()
+    {
+        if (_bookingId.HasValue)
+        {
+            NavigationManager.NavigateTo($"/booking-details/{_bookingId.Value}");
+        }
+    }
+}
+

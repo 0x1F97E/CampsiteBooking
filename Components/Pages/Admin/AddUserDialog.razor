@@ -1,0 +1,158 @@
+@rendermode InteractiveServer
+@using CampsiteBooking.Models.ValueObjects
+@using System.ComponentModel.DataAnnotations
+@using static CampsiteBooking.Components.Pages.Admin.UserManagement
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_isValid">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_userDto.FirstName" 
+                                  Label="First Name" 
+                                  Variant="Variant.Outlined" 
+                                  Required="true"
+                                  RequiredError="First name is required"
+                                  MaxLength="100" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_userDto.LastName" 
+                                  Label="Last Name" 
+                                  Variant="Variant.Outlined" 
+                                  Required="true"
+                                  RequiredError="Last name is required"
+                                  MaxLength="100" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_userDto.Email" 
+                                  Label="Email" 
+                                  Variant="Variant.Outlined" 
+                                  Required="true"
+                                  RequiredError="Email is required"
+                                  Validation="@(new EmailAddressAttribute())"
+                                  InputType="InputType.Email" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_userDto.Phone" 
+                                  Label="Phone" 
+                                  Variant="Variant.Outlined"
+                                  Placeholder="+45 12 34 56 78" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_userDto.Country" 
+                                  Label="Country" 
+                                  Variant="Variant.Outlined"
+                                  Placeholder="Denmark" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect @bind-Value="_userDto.Role" 
+                               Label="Role" 
+                               Variant="Variant.Outlined"
+                               Required="true"
+                               RequiredError="Role is required">
+                        <MudSelectItem Value="@("Guest")">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-2" />
+                                Guest
+                            </div>
+                        </MudSelectItem>
+                        <MudSelectItem Value="@("Staff")">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Badge" Size="Size.Small" Class="mr-2" />
+                                Staff
+                            </div>
+                        </MudSelectItem>
+                        <MudSelectItem Value="@("Administrator")">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" Class="mr-2" />
+                                Administrator
+                            </div>
+                        </MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                
+                @if (_userDto.Role == "Staff")
+                {
+                    <MudItem xs="12">
+                        <MudSelect @bind-Value="_userDto.CampsiteId" 
+                                   Label="Assigned Campsite" 
+                                   Variant="Variant.Outlined"
+                                   T="int?">
+                            <MudSelectItem T="int?" Value="@((int?)null)">None</MudSelectItem>
+                            @foreach (var campsite in Campsites)
+                            {
+                                <MudSelectItem T="int?" Value="@campsite.Id">@campsite.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!_isValid)">
+            @(User == null ? "Add User" : "Save Changes")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter] public UserManagementDto? User { get; set; }
+    [Parameter] public List<CampsiteDto> Campsites { get; set; } = new();
+
+    private MudForm _form = null!;
+    private bool _isValid;
+    private UserManagementDto _userDto = new();
+
+    protected override void OnInitialized()
+    {
+        if (User != null)
+        {
+            // Edit mode - copy values
+            _userDto = new UserManagementDto
+            {
+                Id = User.Id,
+                Name = User.Name,
+                Email = User.Email,
+                Phone = User.Phone,
+                Role = User.Role,
+                JoinedDate = User.JoinedDate,
+                LastLogin = User.LastLogin,
+                TotalBookings = User.TotalBookings,
+                IsActive = User.IsActive,
+                FirstName = User.FirstName,
+                LastName = User.LastName,
+                Country = User.Country,
+                CampsiteId = User.CampsiteId
+            };
+        }
+        else
+        {
+            // Add mode - defaults
+            _userDto.Role = "Guest";
+            _userDto.IsActive = true;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        if (_isValid)
+        {
+            // Update the name from first and last name
+            _userDto.Name = $"{_userDto.FirstName} {_userDto.LastName}";
+            MudDialog.Close(DialogResult.Ok(_userDto));
+        }
+    }
+
+    public class CampsiteDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+}
+

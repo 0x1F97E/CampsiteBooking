@@ -1,7 +1,14 @@
 @page "/admin/information"
 @rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin,Staff")]
+@using CampsiteBooking.Data
+@using CampsiteBooking.Models
+@using CampsiteBooking.Models.ValueObjects
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
 
 <PageTitle>Information & Newsletter Management - Campsite Booking</PageTitle>
 
@@ -256,6 +263,69 @@
             </MudPaper>
         </MudItem>
 
+        <!-- Photo Gallery Management -->
+        <MudItem xs="12">
+            <MudPaper Elevation="3" Class="pa-4">
+                <div class="d-flex justify-space-between align-center mb-4">
+                    <MudText Typo="Typo.h5">
+                        <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Class="mr-2" />
+                        Photo Gallery Management
+                    </MudText>
+                    <MudButton Variant="Variant.Filled"
+                              Color="Color.Primary"
+                              StartIcon="@Icons.Material.Filled.Add"
+                              OnClick="OpenAddPhotoDialog">
+                        Add Photo
+                    </MudButton>
+                </div>
+
+                <MudTable Items="@_photos" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Preview</MudTh>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Campsite</MudTh>
+                        <MudTh>Description</MudTh>
+                        <MudTh>Image URL</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Preview">
+                            <MudImage Src="@context.ImageUrl"
+                                     Alt="@context.Title"
+                                     Width="100"
+                                     Height="60"
+                                     ObjectFit="ObjectFit.Cover"
+                                     Class="rounded" />
+                        </MudTd>
+                        <MudTd DataLabel="Title">
+                            <MudText Typo="Typo.body2"><strong>@context.Title</strong></MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Campsite">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@context.CampsiteName</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Description">
+                            <MudText Typo="Typo.body2">@context.Description</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Image URL">
+                            <MudText Typo="Typo.caption" Style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                @context.ImageUrl
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                          Color="Color.Primary"
+                                          Size="Size.Small"
+                                          OnClick="@(() => EditPhoto(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                          Color="Color.Error"
+                                          Size="Size.Small"
+                                          OnClick="@(() => DeletePhoto(context))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        </MudItem>
+
         <!-- Newsletter History -->
         <MudItem xs="12">
             <MudPaper Elevation="3" Class="pa-4">
@@ -334,31 +404,38 @@
     private List<NewsletterDto> _recentNewsletters = new();
     private List<EventDto> _events = new();
     private List<NewsletterHistoryDto> _newsletterHistory = new();
+    private List<PhotoDto> _photos = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        LoadData();
+        await LoadData();
+        await LoadPhotosAsync();
     }
 
-    private void LoadData()
+    private async Task LoadData()
     {
-        // Load campsites with subscriber counts
-        _campsites = new List<CampsiteSubscriberDto>
+        try
         {
-            new() { Id = 1, Name = "Copenhagen Beach Camp", SubscriberCount = 892 },
-            new() { Id = 2, Name = "Skagen North Point", SubscriberCount = 645 },
-            new() { Id = 3, Name = "Aarhus Forest Retreat", SubscriberCount = 523 },
-            new() { Id = 4, Name = "Odense Family Camp", SubscriberCount = 412 },
-            new() { Id = 5, Name = "Bornholm Island Camp", SubscriberCount = 375 }
-        };
+            using var context = await DbContextFactory.CreateDbContextAsync();
 
-        // Load recent newsletters
-        _recentNewsletters = new List<NewsletterDto>
+            // Load campsites from database
+            var campsites = await context.Campsites.ToListAsync();
+            _campsites = campsites.Select(c => new CampsiteSubscriberDto
+            {
+                Id = c.Id?.Value ?? 0,
+                Name = c.Name ?? "",
+                SubscriberCount = 0 // TODO: Load from NewsletterSubscriptions table when created
+            }).ToList();
+
+            // TODO: Load newsletters from database when Newsletters table is created
+            _recentNewsletters = new List<NewsletterDto>();
+
+            Console.WriteLine($"✅ Loaded {_campsites.Count} campsites for information management");
+        }
+        catch (Exception ex)
         {
-            new() { Subject = "Weekend Beach Volleyball Tournament", SentDate = DateTime.Now.AddDays(-1), RecipientCount = 892 },
-            new() { Subject = "Kids' Summer Camp Activities", SentDate = DateTime.Now.AddDays(-2), RecipientCount = 645 },
-            new() { Subject = "Evening Campfire & Live Music", SentDate = DateTime.Now.AddDays(-3), RecipientCount = 523 }
-        };
+            Console.WriteLine($"❌ Error loading data: {ex.Message}");
+        }
 
         // Load events
         _events = new List<EventDto>
@@ -378,6 +455,21 @@
             new() { Id = 3, Subject = "Evening Campfire & Live Music", CampsiteName = "Aarhus Forest Retreat", SentDate = DateTime.Now.AddDays(-3), RecipientCount = 523, OpenedCount = 398, ClickedCount = 145, OpenRate = 76, ClickRate = 28, Status = "Sent" },
             new() { Id = 4, Subject = "Weekly Activities Schedule", CampsiteName = "All Campsites", SentDate = DateTime.Now.AddDays(-7), RecipientCount = 2847, OpenedCount = 2105, ClickedCount = 856, OpenRate = 74, ClickRate = 30, Status = "Sent" }
         };
+    }
+
+    private async Task LoadPhotosAsync()
+    {
+        await using var context = await DbContextFactory.CreateDbContextAsync();
+        var dbPhotos = await context.Photos.ToListAsync();
+        _photos = dbPhotos.Select(p => new PhotoDto
+        {
+            Id = p.PhotoId,
+            Title = p.Caption,
+            CampsiteName = p.CampsiteId.Value == 0 ? "All Campsites" : GetCampsiteName(p.CampsiteId.Value),
+            Description = p.AltText,
+            ImageUrl = p.Url,
+            CampsiteId = p.CampsiteId.Value
+        }).ToList();
     }
 
     private bool IsNewsletterValid()
@@ -495,6 +587,133 @@
         }
     }
 
+    // Photo Gallery Management Methods
+    private async Task OpenAddPhotoDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            ["Campsites"] = _campsites
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddPhotoDialog>("Add Photo", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is PhotoDto newPhoto)
+        {
+            await using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var campsiteId = newPhoto.CampsiteId == 0
+                ? CampsiteId.CreateNew()
+                : CampsiteId.Create(newPhoto.CampsiteId);
+
+            var photo = Photo.Create(
+                campsiteId,
+                newPhoto.ImageUrl,
+                newPhoto.Title,
+                newPhoto.Description,
+                0, // displayOrder
+                null, // accommodationTypeId
+                "Information" // category
+            );
+
+            context.Photos.Add(photo);
+            await context.SaveChangesAsync();
+
+            newPhoto.Id = photo.PhotoId;
+            _photos.Add(newPhoto);
+
+            Snackbar.Add("Photo added successfully!", Severity.Success);
+            await LoadPhotosAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task EditPhoto(PhotoDto photo)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Photo"] = photo,
+            ["Campsites"] = _campsites
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddPhotoDialog>("Edit Photo", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is PhotoDto updatedPhoto)
+        {
+            await using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var dbPhoto = await context.Photos.FindAsync(photo.Id);
+            if (dbPhoto != null)
+            {
+                // Remove old photo and create new one (since Photo is immutable)
+                context.Photos.Remove(dbPhoto);
+
+                var campsiteId = updatedPhoto.CampsiteId == 0
+                    ? CampsiteId.CreateNew()
+                    : CampsiteId.Create(updatedPhoto.CampsiteId);
+
+                var newPhoto = Photo.Create(
+                    campsiteId,
+                    updatedPhoto.ImageUrl,
+                    updatedPhoto.Title,
+                    updatedPhoto.Description,
+                    dbPhoto.DisplayOrder,
+                    dbPhoto.AccommodationTypeId,
+                    dbPhoto.Category
+                );
+
+                // Preserve the ID
+                typeof(Photo).GetProperty("PhotoId")!.SetValue(newPhoto, photo.Id);
+                context.Photos.Add(newPhoto);
+
+                await context.SaveChangesAsync();
+
+                Snackbar.Add("Photo updated successfully!", Severity.Success);
+                await LoadPhotosAsync();
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task DeletePhoto(PhotoDto photo)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete '{photo.Title}'?",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            await using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var dbPhoto = await context.Photos.FindAsync(photo.Id);
+            if (dbPhoto != null)
+            {
+                context.Photos.Remove(dbPhoto);
+                await context.SaveChangesAsync();
+
+                _photos.Remove(photo);
+                Snackbar.Add($"Photo '{photo.Title}' deleted successfully!", Severity.Success);
+                StateHasChanged();
+            }
+        }
+    }
+
     private void ViewNewsletter(NewsletterHistoryDto newsletter)
     {
         // TODO: Show newsletter details/preview
@@ -527,7 +746,7 @@
     };
 
     // DTOs
-    private class CampsiteSubscriberDto
+    public class CampsiteSubscriberDto
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
@@ -567,6 +786,16 @@
         public int OpenRate { get; set; }
         public int ClickRate { get; set; }
         public string Status { get; set; } = string.Empty;
+    }
+
+    public class PhotoDto
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string CampsiteName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string ImageUrl { get; set; } = string.Empty;
+        public int CampsiteId { get; set; }
     }
 }
 

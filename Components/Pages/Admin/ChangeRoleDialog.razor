@@ -1,0 +1,101 @@
+@rendermode InteractiveServer
+@using static CampsiteBooking.Components.Pages.Admin.UserManagement
+@using static CampsiteBooking.Components.Pages.Admin.AddUserDialog
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            Change role for <strong>@User.Name</strong>
+        </MudText>
+        
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            Current role: <strong>@User.Role</strong>
+        </MudAlert>
+
+        <MudSelect @bind-Value="_selectedRole" 
+                   Label="New Role" 
+                   Variant="Variant.Outlined"
+                   Required="true">
+            <MudSelectItem Value="@("Guest")">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-2" />
+                    Guest
+                </div>
+            </MudSelectItem>
+            <MudSelectItem Value="@("Staff")">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Badge" Size="Size.Small" Class="mr-2" />
+                    Staff
+                </div>
+            </MudSelectItem>
+            <MudSelectItem Value="@("Administrator")">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" Class="mr-2" />
+                    Administrator
+                </div>
+            </MudSelectItem>
+        </MudSelect>
+
+        @if (_selectedRole == "Staff")
+        {
+            <MudSelect @bind-Value="_selectedCampsiteId" 
+                       Label="Assigned Campsite" 
+                       Variant="Variant.Outlined"
+                       T="int?"
+                       Class="mt-4">
+                <MudSelectItem T="int?" Value="@((int?)null)">None</MudSelectItem>
+                @foreach (var campsite in Campsites)
+                {
+                    <MudSelectItem T="int?" Value="@campsite.Id">@campsite.Name</MudSelectItem>
+                }
+            </MudSelect>
+        }
+
+        @if (_selectedRole != User.Role)
+        {
+            <MudAlert Severity="Severity.Warning" Class="mt-4">
+                Changing the user's role will affect their permissions and access to the system.
+            </MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(_selectedRole == User.Role)">
+            Change Role
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter] public UserManagementDto User { get; set; } = null!;
+    [Parameter] public List<CampsiteDto> Campsites { get; set; } = new();
+
+    private string _selectedRole = string.Empty;
+    private int? _selectedCampsiteId;
+
+    protected override void OnInitialized()
+    {
+        _selectedRole = User.Role;
+        _selectedCampsiteId = User.CampsiteId;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(new RoleChangeResult
+        {
+            NewRole = _selectedRole,
+            CampsiteId = _selectedCampsiteId
+        }));
+    }
+
+    public class RoleChangeResult
+    {
+        public string NewRole { get; set; } = string.Empty;
+        public int? CampsiteId { get; set; }
+    }
+}
+

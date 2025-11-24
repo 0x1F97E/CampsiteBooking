@@ -1,6 +1,14 @@
 @page "/admin/users"
 @rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")]
+@using CampsiteBooking.Data
+@using CampsiteBooking.Models
+@using CampsiteBooking.Models.ValueObjects
+@using Microsoft.EntityFrameworkCore
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
 @inject IDialogService DialogService
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
 
 <PageTitle>User Management - Campsite Booking</PageTitle>
 
@@ -15,7 +23,7 @@
                 Manage users and their roles
             </MudText>
         </div>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenAddUserDialog">
             Add User
         </MudButton>
     </div>
@@ -181,25 +189,72 @@
     private string _filterRole = "All";
     private string _filterStatus = "All";
     private List<UserManagementDto> _users = new();
+    private List<AddUserDialog.CampsiteDto> _campsites = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        LoadUsers();
+        await LoadUsersAsync();
+        await LoadCampsitesAsync();
     }
 
-    private void LoadUsers()
+    private async Task LoadUsersAsync()
     {
-        // Sample data - will be replaced with actual data from backend
-        _users = new List<UserManagementDto>
+        _loading = true;
+        try
         {
-            new() { Id = 1, Name = "John Doe", Email = "john@example.com", Phone = "+45 12 34 56 78", Role = "Guest", JoinedDate = DateTime.Now.AddMonths(-6), LastLogin = DateTime.Now.AddDays(-2), TotalBookings = 5, IsActive = true },
-            new() { Id = 2, Name = "Jane Smith", Email = "jane@example.com", Phone = "+45 23 45 67 89", Role = "Guest", JoinedDate = DateTime.Now.AddMonths(-8), LastLogin = DateTime.Now.AddDays(-1), TotalBookings = 8, IsActive = true },
-            new() { Id = 3, Name = "Mike Johnson", Email = "mike@example.com", Phone = "+45 34 56 78 90", Role = "Staff", JoinedDate = DateTime.Now.AddMonths(-12), LastLogin = DateTime.Now, TotalBookings = 0, IsActive = true },
-            new() { Id = 4, Name = "Sarah Williams", Email = "sarah@example.com", Phone = "+45 45 67 89 01", Role = "Administrator", JoinedDate = DateTime.Now.AddMonths(-24), LastLogin = DateTime.Now, TotalBookings = 0, IsActive = true },
-            new() { Id = 5, Name = "David Brown", Email = "david@example.com", Phone = "+45 56 78 90 12", Role = "Guest", JoinedDate = DateTime.Now.AddMonths(-3), LastLogin = DateTime.Now.AddDays(-5), TotalBookings = 3, IsActive = true },
-            new() { Id = 6, Name = "Emily Davis", Email = "emily@example.com", Phone = "+45 67 89 01 23", Role = "Guest", JoinedDate = DateTime.Now.AddMonths(-10), LastLogin = DateTime.Now.AddDays(-30), TotalBookings = 12, IsActive = true },
-            new() { Id = 7, Name = "Robert Wilson", Email = "robert@example.com", Phone = "+45 78 90 12 34", Role = "Staff", JoinedDate = DateTime.Now.AddMonths(-18), LastLogin = DateTime.Now.AddHours(-3), TotalBookings = 0, IsActive = true },
-            new() { Id = 8, Name = "Lisa Anderson", Email = "lisa@example.com", Phone = "+45 89 01 23 45", Role = "Guest", JoinedDate = DateTime.Now.AddMonths(-4), LastLogin = null, TotalBookings = 1, IsActive = false }
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load all users from database
+            var users = await context.Users.ToListAsync();
+
+            // Get booking counts for each user - load into memory first to avoid LINQ translation issues
+            var allBookings = await context.Bookings.ToListAsync();
+            var bookingCounts = allBookings
+                .GroupBy(b => b.GuestId.Value)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            _users = users.Select(u => new UserManagementDto
+            {
+                Id = u.UserId,
+                Name = $"{u.FirstName} {u.LastName}",
+                FirstName = u.FirstName,
+                LastName = u.LastName,
+                Email = u.Email.Value,
+                Phone = u.Phone,
+                Country = u.Country,
+                Role = GetUserRole(u),
+                JoinedDate = u.JoinedDate,
+                LastLogin = u.LastLogin,
+                TotalBookings = bookingCounts.GetValueOrDefault(u.UserId, 0),
+                IsActive = u.IsActive,
+                CampsiteId = u is Staff staff ? staff.CampsiteId?.Value : null
+            }).ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadCampsitesAsync()
+    {
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        var campsites = await context.Campsites.ToListAsync();
+        _campsites = campsites.Select(c => new AddUserDialog.CampsiteDto
+        {
+            Id = c.CampsiteId,
+            Name = c.Name
+        }).ToList();
+    }
+
+    private string GetUserRole(User user)
+    {
+        return user switch
+        {
+            Admin => "Administrator",
+            Staff => "Staff",
+            Guest => "Guest",
+            _ => "Guest"
         };
     }
 
@@ -245,53 +300,325 @@
         _ => Icons.Material.Filled.Person
     };
 
-    private void EditUser(UserManagementDto user)
+    private async Task OpenAddUserDialog()
     {
-        // Open edit dialog
-    }
-
-    private void ChangeRole(UserManagementDto user)
-    {
-        // Open role change dialog
-    }
-
-    private void ActivateUser(UserManagementDto user)
-    {
-        user.IsActive = true;
-        StateHasChanged();
-    }
-
-    private void DeactivateUser(UserManagementDto user)
-    {
-        user.IsActive = false;
-        StateHasChanged();
-    }
-
-    private async Task DeleteUser(UserManagementDto user)
-    {
-        bool? result = await DialogService.ShowMessageBox(
-            "Delete User",
-            $"Are you sure you want to delete user '{user.Name}'? This action cannot be undone.",
-            yesText: "Delete", cancelText: "Cancel");
-
-        if (result == true)
+        var parameters = new DialogParameters
         {
-            _users.Remove(user);
-            StateHasChanged();
+            { "Campsites", _campsites }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AddUserDialog>("Add New User", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is UserManagementDto newUser)
+        {
+            await AddUserAsync(newUser);
         }
     }
 
-    private class UserManagementDto
+    private async Task AddUserAsync(UserManagementDto userDto)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var email = Email.Create(userDto.Email);
+
+            // Check if email already exists
+            var emailExists = await context.Users.AnyAsync(u => u.Email == email);
+            if (emailExists)
+            {
+                await DialogService.ShowMessageBox("Error", "A user with this email already exists.", "OK");
+                return;
+            }
+
+            User user;
+
+            // Create user based on role
+            if (userDto.Role == "Administrator")
+            {
+                user = Admin.Create(email, userDto.FirstName, userDto.LastName, userDto.Phone, userDto.Country);
+            }
+            else if (userDto.Role == "Staff")
+            {
+                // For staff, we need a campsite ID and employee ID
+                if (!userDto.CampsiteId.HasValue)
+                {
+                    await DialogService.ShowMessageBox("Error", "Staff members must be assigned to a campsite.", "OK");
+                    return;
+                }
+
+                var campsiteId = CampsiteId.Create(userDto.CampsiteId.Value);
+                var employeeId = $"EMP{DateTime.UtcNow:yyyyMMddHHmmss}"; // Generate employee ID
+                var hireDate = DateTime.UtcNow;
+
+                user = Staff.Create(email, userDto.FirstName, userDto.LastName, employeeId, campsiteId, hireDate, "", userDto.Phone, userDto.Country);
+            }
+            else
+            {
+                user = Guest.Create(email, userDto.FirstName, userDto.LastName, userDto.Phone, userDto.Country);
+            }
+
+            await context.Users.AddAsync(user);
+            await context.SaveChangesAsync();
+
+            await LoadUsersAsync();
+            await DialogService.ShowMessageBox("Success", $"User '{userDto.Name}' has been added successfully.", "OK");
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowMessageBox("Error", $"Failed to add user: {ex.Message}", "OK");
+        }
+    }
+
+    private async Task EditUser(UserManagementDto user)
+    {
+        var parameters = new DialogParameters
+        {
+            { "User", user },
+            { "Campsites", _campsites }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AddUserDialog>("Edit User", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is UserManagementDto updatedUser)
+        {
+            await UpdateUserAsync(updatedUser);
+        }
+    }
+
+    private async Task UpdateUserAsync(UserManagementDto userDto)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var userId = UserId.Create(userDto.Id);
+            var user = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                await DialogService.ShowMessageBox("Error", "User not found.", "OK");
+                return;
+            }
+
+            // Update contact info
+            user.UpdateContactInfo(userDto.Phone, userDto.Country);
+
+            await context.SaveChangesAsync();
+            await LoadUsersAsync();
+            await DialogService.ShowMessageBox("Success", $"User '{userDto.Name}' has been updated successfully.", "OK");
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowMessageBox("Error", $"Failed to update user: {ex.Message}", "OK");
+        }
+    }
+
+    private async Task ChangeRole(UserManagementDto user)
+    {
+        var parameters = new DialogParameters
+        {
+            { "User", user },
+            { "Campsites", _campsites }
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<ChangeRoleDialog>("Change User Role", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is ChangeRoleDialog.RoleChangeResult roleChange)
+        {
+            await ChangeUserRoleAsync(user, roleChange.NewRole, roleChange.CampsiteId);
+        }
+    }
+
+    private async Task ChangeUserRoleAsync(UserManagementDto userDto, string newRole, int? campsiteId)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var userId = UserId.Create(userDto.Id);
+            var oldUser = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (oldUser == null)
+            {
+                await DialogService.ShowMessageBox("Error", "User not found.", "OK");
+                return;
+            }
+
+            // Remove old user
+            context.Users.Remove(oldUser);
+
+            // Create new user with same data but different role
+            var email = oldUser.Email;
+            User newUser;
+
+            if (newRole == "Administrator")
+            {
+                newUser = Admin.Create(email, oldUser.FirstName, oldUser.LastName, oldUser.Phone, oldUser.Country);
+            }
+            else if (newRole == "Staff")
+            {
+                if (!campsiteId.HasValue)
+                {
+                    await DialogService.ShowMessageBox("Error", "Staff members must be assigned to a campsite.", "OK");
+                    return;
+                }
+
+                var staffCampsiteId = CampsiteId.Create(campsiteId.Value);
+                var employeeId = $"EMP{DateTime.UtcNow:yyyyMMddHHmmss}";
+                var hireDate = DateTime.UtcNow;
+
+                newUser = Staff.Create(email, oldUser.FirstName, oldUser.LastName, employeeId, staffCampsiteId, hireDate, "", oldUser.Phone, oldUser.Country);
+            }
+            else
+            {
+                newUser = Guest.Create(email, oldUser.FirstName, oldUser.LastName, oldUser.Phone, oldUser.Country);
+            }
+
+            // Preserve the same ID
+            typeof(User).GetProperty("UserId")!.SetValue(newUser, oldUser.UserId);
+
+            await context.Users.AddAsync(newUser);
+            await context.SaveChangesAsync();
+
+            await LoadUsersAsync();
+            await DialogService.ShowMessageBox("Success", $"User role changed to '{newRole}' successfully.", "OK");
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowMessageBox("Error", $"Failed to change user role: {ex.Message}", "OK");
+        }
+    }
+
+    private async Task ActivateUser(UserManagementDto userDto)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var userId = UserId.Create(userDto.Id);
+            var user = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                await DialogService.ShowMessageBox("Error", "User not found.", "OK");
+                return;
+            }
+
+            user.Activate();
+            await context.SaveChangesAsync();
+
+            userDto.IsActive = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowMessageBox("Error", $"Failed to activate user: {ex.Message}", "OK");
+        }
+    }
+
+    private async Task DeactivateUser(UserManagementDto userDto)
+    {
+        bool? confirm = await DialogService.ShowMessageBox(
+            "Deactivate User",
+            $"Are you sure you want to deactivate user '{userDto.Name}'?",
+            yesText: "Deactivate", cancelText: "Cancel");
+
+        if (confirm != true) return;
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var userId = UserId.Create(userDto.Id);
+            var user = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                await DialogService.ShowMessageBox("Error", "User not found.", "OK");
+                return;
+            }
+
+            user.Deactivate();
+            await context.SaveChangesAsync();
+
+            userDto.IsActive = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowMessageBox("Error", $"Failed to deactivate user: {ex.Message}", "OK");
+        }
+    }
+
+    private async Task DeleteUser(UserManagementDto userDto)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Delete User",
+            $"Are you sure you want to delete user '{userDto.Name}'? This action cannot be undone.",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result != true) return;
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var userId = UserId.Create(userDto.Id);
+            var user = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                await DialogService.ShowMessageBox("Error", "User not found.", "OK");
+                return;
+            }
+
+            // Check if user has bookings
+            var hasBookings = await context.Bookings.AnyAsync(b => b.GuestId.Value == userDto.Id);
+            if (hasBookings)
+            {
+                await DialogService.ShowMessageBox(
+                    "Cannot Delete User",
+                    "This user has existing bookings and cannot be deleted. Consider deactivating the user instead.",
+                    "OK");
+                return;
+            }
+
+            context.Users.Remove(user);
+            await context.SaveChangesAsync();
+
+            _users.Remove(userDto);
+            StateHasChanged();
+
+            await DialogService.ShowMessageBox("Success", $"User '{userDto.Name}' has been deleted successfully.", "OK");
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowMessageBox("Error", $"Failed to delete user: {ex.Message}", "OK");
+        }
+    }
+
+    public class UserManagementDto
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
         public DateTime JoinedDate { get; set; }
         public DateTime? LastLogin { get; set; }
         public int TotalBookings { get; set; }
         public bool IsActive { get; set; }
+        public int? CampsiteId { get; set; }
     }
 }
 

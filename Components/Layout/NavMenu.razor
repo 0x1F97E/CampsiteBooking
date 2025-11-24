@@ -1,4 +1,10 @@
 ﻿@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IHttpContextAccessor HttpContextAccessor
+@inject HttpClient HttpClient
+@using System.Security.Claims
+@implements IDisposable
 
 <MudNavMenu>
     <MudText Typo="Typo.h6" Class="px-4 py-4">Campsite Booking</MudText>
@@ -6,22 +12,123 @@
 
     <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Search">Search Campsites</MudNavLink>
     <MudNavLink Href="/information" Icon="@Icons.Material.Filled.Info">Information & Activities</MudNavLink>
-    <MudNavLink Href="/bookings" Icon="@Icons.Material.Filled.CalendarMonth">My Bookings</MudNavLink>
-    <MudNavLink Href="/my-account" Icon="@Icons.Material.Filled.AccountCircle">My Account</MudNavLink>
+
+    @if (_isAuthenticated)
+    {
+        <MudNavLink Href="/bookings" Icon="@Icons.Material.Filled.CalendarMonth">My Bookings</MudNavLink>
+        <MudNavLink Href="/my-account" Icon="@Icons.Material.Filled.AccountCircle">My Account</MudNavLink>
+    }
+    else
+    {
+        <MudNavLink Href="/login" Icon="@Icons.Material.Filled.Login">Login</MudNavLink>
+    }
+
+    @* Only show admin section for Admin and Staff users *@
+    @if (_isAdmin || _isStaff)
+    {
+        <MudDivider Class="my-2" />
+
+        <MudNavGroup Title="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings" @bind-Expanded="@_adminExpanded">
+            <MudNavLink Href="/admin/dashboard" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+            <MudNavLink Href="/admin/campsites" Icon="@Icons.Material.Filled.Cabin">Campsites</MudNavLink>
+            <MudNavLink Href="/admin/bookings" Icon="@Icons.Material.Filled.BookOnline">Bookings</MudNavLink>
+            <MudNavLink Href="/admin/pricing" Icon="@Icons.Material.Filled.AttachMoney">Pricing</MudNavLink>
+            @* Only show Users management for Admin *@
+            @if (_isAdmin)
+            {
+                <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">Users</MudNavLink>
+            }
+            <MudNavLink Href="/admin/information" Icon="@Icons.Material.Filled.Newspaper">Information & Newsletter</MudNavLink>
+        </MudNavGroup>
+    }
 
     <MudDivider Class="my-2" />
 
-    <MudNavGroup Title="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings" @bind-Expanded="@_adminExpanded">
-        <MudNavLink Href="/admin/dashboard" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
-        <MudNavLink Href="/admin/campsites" Icon="@Icons.Material.Filled.Cabin">Campsites</MudNavLink>
-        <MudNavLink Href="/admin/bookings" Icon="@Icons.Material.Filled.BookOnline">Bookings</MudNavLink>
-        <MudNavLink Href="/admin/pricing" Icon="@Icons.Material.Filled.AttachMoney">Pricing</MudNavLink>
-        <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">Users</MudNavLink>
-        <MudNavLink Href="/admin/information" Icon="@Icons.Material.Filled.Newspaper">Information & Newsletter</MudNavLink>
-    </MudNavGroup>
+    @if (_isAuthenticated)
+    {
+        <MudNavLink OnClick="HandleLogout" Icon="@Icons.Material.Filled.Logout">Logout (@_userName)</MudNavLink>
+    }
 </MudNavMenu>
 
 @code {
     private bool _adminExpanded = true;
+    private bool _isAuthenticated = false;
+    private bool _isAdmin = false;
+    private bool _isStaff = false;
+    private string _userName = "";
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to navigation events to refresh menu on page changes
+        Navigation.LocationChanged += OnLocationChanged;
+        CheckAuthentication();
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        // Re-check authentication whenever navigation occurs
+        CheckAuthentication();
+        StateHasChanged();
+    }
+
+    private void CheckAuthentication()
+    {
+        try
+        {
+            var httpContext = HttpContextAccessor.HttpContext;
+            if (httpContext?.User?.Identity?.IsAuthenticated == true)
+            {
+                _isAuthenticated = true;
+                _userName = httpContext.User.FindFirst(ClaimTypes.Name)?.Value ?? "User";
+
+                // Check user role
+                var role = httpContext.User.FindFirst(ClaimTypes.Role)?.Value;
+                _isAdmin = role == "Admin";
+                _isStaff = role == "Staff";
+            }
+            else
+            {
+                _isAuthenticated = false;
+                _isAdmin = false;
+                _isStaff = false;
+                _userName = "";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error checking authentication: {ex.Message}");
+            _isAuthenticated = false;
+            _isAdmin = false;
+            _isStaff = false;
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        try
+        {
+            // Call the logout API endpoint
+            await HttpClient.PostAsync("/api/auth/logout", null);
+
+            _isAuthenticated = false;
+            _isAdmin = false;
+            _isStaff = false;
+            _userName = "";
+
+            Snackbar.Add("You have been logged out successfully.", Severity.Success);
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error during logout: {ex.Message}");
+            Snackbar.Add("Error during logout. Please try again.", Severity.Error);
+        }
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe from navigation events
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
 }
 
