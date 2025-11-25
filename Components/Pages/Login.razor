@@ -2,8 +2,7 @@
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
-@inject HttpClient HttpClient
-@using System.Net.Http.Json
+@inject IJSRuntime JSRuntime
 @using System.Text.Json
 
 <PageTitle>Login - Campsite Booking</PageTitle>
@@ -129,18 +128,9 @@
 
         try
         {
-            // Call the login API endpoint
-            var loginRequest = new { Email = _email, Password = _password, RememberMe = _rememberMe };
-            var response = await HttpClient.PostAsJsonAsync("/api/auth/login", loginRequest);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _errorMessage = "An error occurred during login. Please try again.";
-                _isLoading = false;
-                return;
-            }
-
-            var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+            // Use JavaScript to make the request from the browser (not from server)
+            // This ensures the browser receives and stores the authentication cookie
+            var result = await JSRuntime.InvokeAsync<LoginResponse>("authHelper.login", _email, _password, _rememberMe);
 
             if (result == null || !result.Success)
             {
@@ -153,8 +143,8 @@
             var rememberMeMessage = _rememberMe ? " (You will stay logged in)" : "";
             Snackbar.Add($"Welcome back, {result.FullName.Split(' ')[0]}!{rememberMeMessage}", Severity.Success);
 
-            // Redirect based on user type
-            if (result.UserType == "Admin")
+            // Redirect based on user type - forceLoad ensures new circuit with authentication cookie
+            if (result.UserType == "Admin" || result.UserType == "Staff")
             {
                 Navigation.NavigateTo("/admin/dashboard", forceLoad: true);
             }

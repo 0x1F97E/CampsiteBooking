@@ -5,6 +5,7 @@
 @inject ISnackbar Snackbar
 @using CampsiteBooking.Data
 @using CampsiteBooking.Models
+@using CampsiteBooking.Models.DTOs
 @using CampsiteBooking.Models.ValueObjects
 @using Microsoft.EntityFrameworkCore
 
@@ -77,50 +78,32 @@
                            MultiSelectionTextFunc="@GetAmenitySelectionText"
                            Adornment="Adornment.Start"
                            AdornmentIcon="@Icons.Material.Filled.CheckCircle">
-                    <MudSelectItem T="string" Value="@("Pool")">
-                        <MudIcon Icon="@Icons.Material.Filled.Pool" Size="Size.Small" Class="mr-2" />
-                        Pool
-                    </MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Dog-Friendly")">
-                        <MudIcon Icon="@Icons.Material.Filled.Pets" Size="Size.Small" Class="mr-2" />
-                        Dog-Friendly
-                    </MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Campingvan-Friendly")">
-                        <MudIcon Icon="@Icons.Material.Filled.RvHookup" Size="Size.Small" Class="mr-2" />
-                        Campingvan-Friendly
-                    </MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Near-Beach")">
-                        <MudIcon Icon="@Icons.Material.Filled.BeachAccess" Size="Size.Small" Class="mr-2" />
-                        Near Beach
-                    </MudSelectItem>
-                    <MudSelectItem T="string" Value="@("WiFi")">
-                        <MudIcon Icon="@Icons.Material.Filled.Wifi" Size="Size.Small" Class="mr-2" />
-                        WiFi
-                    </MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Electric-Hookup")">
-                        <MudIcon Icon="@Icons.Material.Filled.ElectricBolt" Size="Size.Small" Class="mr-2" />
-                        Electric Hookup
-                    </MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Water-Access")">
-                        <MudIcon Icon="@Icons.Material.Filled.Water" Size="Size.Small" Class="mr-2" />
-                        Water Access
-                    </MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Playground")">
-                        <MudIcon Icon="@Icons.Material.Filled.ChildFriendly" Size="Size.Small" Class="mr-2" />
-                        Playground
-                    </MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Restaurant")">
-                        <MudIcon Icon="@Icons.Material.Filled.Restaurant" Size="Size.Small" Class="mr-2" />
-                        Restaurant
-                    </MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Fire-Pit")">
-                        <MudIcon Icon="@Icons.Material.Filled.LocalFireDepartment" Size="Size.Small" Class="mr-2" />
-                        Fire Pit
-                    </MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Picnic-Table")">
-                        <MudIcon Icon="@Icons.Material.Filled.TableRestaurant" Size="Size.Small" Class="mr-2" />
-                        Picnic Table
-                    </MudSelectItem>
+                    @foreach (var amenity in _availableAmenities)
+                    {
+                        <MudSelectItem T="string" Value="@amenity.Name">
+                            <MudIcon Icon="@GetAmenityIcon(amenity.Name)" Size="Size.Small" Class="mr-2" />
+                            @amenity.Name
+                        </MudSelectItem>
+                    }
+                    @if (!_availableAmenities.Any())
+                    {
+                        <MudSelectItem T="string" Value="@("Pool")">
+                            <MudIcon Icon="@Icons.Material.Filled.Pool" Size="Size.Small" Class="mr-2" />
+                            Pool
+                        </MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Dog-Friendly")">
+                            <MudIcon Icon="@Icons.Material.Filled.Pets" Size="Size.Small" Class="mr-2" />
+                            Dog-Friendly
+                        </MudSelectItem>
+                        <MudSelectItem T="string" Value="@("WiFi")">
+                            <MudIcon Icon="@Icons.Material.Filled.Wifi" Size="Size.Small" Class="mr-2" />
+                            WiFi
+                        </MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Playground")">
+                            <MudIcon Icon="@Icons.Material.Filled.ChildFriendly" Size="Size.Small" Class="mr-2" />
+                            Playground
+                        </MudSelectItem>
+                    }
                 </MudSelect>
             </MudItem>
 
@@ -209,10 +192,12 @@
     private bool _isLoading = false;
     private List<AccommodationDto> _accommodations = new();
     private List<CampsiteFilterDto> _availableCampsites = new();
+    private List<AmenityFilterDto> _availableAmenities = new();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadCampsites();
+        await LoadAmenities();
         await SearchAvailability();
     }
 
@@ -239,6 +224,56 @@
             Snackbar.Add($"Error loading campsites: {ex.Message}", Severity.Error);
             _availableCampsites = new List<CampsiteFilterDto>();
         }
+    }
+
+    private async Task LoadAmenities()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var amenities = await context.Amenities.ToListAsync();
+
+            // Get distinct amenity names
+            _availableAmenities = amenities
+                .Where(a => !string.IsNullOrEmpty(a.Name) && a.IsAvailable)
+                .Select(a => new AmenityFilterDto
+                {
+                    Name = a.Name,
+                    Category = a.Category
+                })
+                .GroupBy(a => a.Name)
+                .Select(g => g.First())
+                .OrderBy(a => a.Name)
+                .ToList();
+
+            Console.WriteLine($"✅ Loaded {_availableAmenities.Count} amenities for search filter");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading amenities: {ex.Message}");
+            Snackbar.Add($"Error loading amenities: {ex.Message}", Severity.Error);
+            _availableAmenities = new List<AmenityFilterDto>();
+        }
+    }
+
+    private string GetAmenityIcon(string amenityName)
+    {
+        return amenityName.ToLower() switch
+        {
+            var name when name.Contains("pool") => Icons.Material.Filled.Pool,
+            var name when name.Contains("dog") || name.Contains("pet") => Icons.Material.Filled.Pets,
+            var name when name.Contains("wifi") => Icons.Material.Filled.Wifi,
+            var name when name.Contains("beach") => Icons.Material.Filled.BeachAccess,
+            var name when name.Contains("electric") => Icons.Material.Filled.ElectricBolt,
+            var name when name.Contains("water") => Icons.Material.Filled.Water,
+            var name when name.Contains("playground") || name.Contains("child") => Icons.Material.Filled.ChildFriendly,
+            var name when name.Contains("restaurant") || name.Contains("food") => Icons.Material.Filled.Restaurant,
+            var name when name.Contains("fire") => Icons.Material.Filled.LocalFireDepartment,
+            var name when name.Contains("picnic") || name.Contains("table") => Icons.Material.Filled.TableRestaurant,
+            var name when name.Contains("rv") || name.Contains("campingvan") => Icons.Material.Filled.RvHookup,
+            _ => Icons.Material.Filled.CheckCircle
+        };
     }
 
     private async Task SearchAvailability()
@@ -346,22 +381,6 @@
 
         return $"{selectedValues.Count} selected";
     }
-
-    private string GetAmenityIcon(string amenity) => amenity switch
-    {
-        "Pool" => Icons.Material.Filled.Pool,
-        "Dog-Friendly" => Icons.Material.Filled.Pets,
-        "Campingvan-Friendly" => Icons.Material.Filled.RvHookup,
-        "Near-Beach" => Icons.Material.Filled.BeachAccess,
-        "WiFi" => Icons.Material.Filled.Wifi,
-        "Electric-Hookup" => Icons.Material.Filled.ElectricBolt,
-        "Water-Access" => Icons.Material.Filled.Water,
-        "Playground" => Icons.Material.Filled.ChildFriendly,
-        "Restaurant" => Icons.Material.Filled.Restaurant,
-        "Fire-Pit" => Icons.Material.Filled.LocalFireDepartment,
-        "Picnic-Table" => Icons.Material.Filled.TableRestaurant,
-        _ => Icons.Material.Filled.Check
-    };
 
     public class AccommodationDto
     {

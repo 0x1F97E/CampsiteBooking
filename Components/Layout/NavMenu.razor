@@ -1,9 +1,10 @@
 ﻿@rendermode InteractiveServer
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
-@inject IHttpContextAccessor HttpContextAccessor
 @inject HttpClient HttpClient
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @implements IDisposable
 
 <MudNavMenu>
@@ -57,34 +58,49 @@
     private bool _isStaff = false;
     private string _userName = "";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         // Subscribe to navigation events to refresh menu on page changes
         Navigation.LocationChanged += OnLocationChanged;
-        CheckAuthentication();
+
+        // Subscribe to authentication state changes
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+
+        await CheckAuthentication();
     }
 
-    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         // Re-check authentication whenever navigation occurs
-        CheckAuthentication();
+        await CheckAuthentication();
         StateHasChanged();
     }
 
-    private void CheckAuthentication()
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        // Re-check authentication when auth state changes
+        await CheckAuthentication();
+        StateHasChanged();
+    }
+
+    private async Task CheckAuthentication()
     {
         try
         {
-            var httpContext = HttpContextAccessor.HttpContext;
-            if (httpContext?.User?.Identity?.IsAuthenticated == true)
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated == true)
             {
                 _isAuthenticated = true;
-                _userName = httpContext.User.FindFirst(ClaimTypes.Name)?.Value ?? "User";
+                _userName = user.FindFirst(ClaimTypes.Name)?.Value ?? "User";
 
                 // Check user role
-                var role = httpContext.User.FindFirst(ClaimTypes.Role)?.Value;
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
                 _isAdmin = role == "Admin";
                 _isStaff = role == "Staff";
+
+                Console.WriteLine($"✅ NavMenu: User authenticated - {_userName}, Role: {role}");
             }
             else
             {
@@ -92,6 +108,8 @@
                 _isAdmin = false;
                 _isStaff = false;
                 _userName = "";
+
+                Console.WriteLine($"⚠️ NavMenu: User not authenticated");
             }
         }
         catch (Exception ex)
@@ -129,6 +147,7 @@
     {
         // Unsubscribe from navigation events
         Navigation.LocationChanged -= OnLocationChanged;
+        AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
     }
 }
 

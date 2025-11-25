@@ -48,9 +48,10 @@
             <MudItem xs="12" md="3">
                 <MudSelect T="string" @bind-Value="_filterCampsite" Label="Campsite" Variant="Variant.Outlined">
                     <MudSelectItem T="string" Value="@("All")">All Campsites</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Copenhagen Beach Camp")">Copenhagen Beach Camp</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Skagen North Point")">Skagen North Point</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Aarhus Forest Retreat")">Aarhus Forest Retreat</MudSelectItem>
+                    @foreach (var campsite in _availableCampsites)
+                    {
+                        <MudSelectItem T="string" Value="@campsite">@campsite</MudSelectItem>
+                    }
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="3">
@@ -138,6 +139,7 @@
     private MudBlazor.DateRange? _dateRange = null;
     private BookingManagementDto? _selectedBooking = null;
     private List<BookingManagementDto> _bookings = new();
+    private List<string> _availableCampsites = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -163,6 +165,16 @@
             var allAccommodationTypes = await context.AccommodationTypes.ToListAsync();
 
             Console.WriteLine($"📊 Loaded {bookingEntities.Count} bookings from database");
+
+            // Populate available campsites for filter dropdown
+            _availableCampsites = allCampsites
+                .Where(c => !string.IsNullOrEmpty(c.Name))
+                .Select(c => c.Name!)
+                .Distinct()
+                .OrderBy(name => name)
+                .ToList();
+
+            Console.WriteLine($"📊 Loaded {_availableCampsites.Count} campsites for filter");
 
             // Convert entities to DTOs with null-safe access
             _bookings = bookingEntities.Select(b =>
@@ -198,6 +210,7 @@
             }
             Snackbar.Add($"Error loading bookings: {ex.Message}", Severity.Error);
             _bookings = new List<BookingManagementDto>();
+            _availableCampsites = new List<string>();
         }
     }
 

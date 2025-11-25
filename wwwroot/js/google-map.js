@@ -3,86 +3,10 @@ let map = null;
 let homePageMarkers = [];
 let mapInitialized = false;
 
-// Campsite data with Danish coordinates
-const campsites = [
-    {
-        id: 1,
-        name: "Copenhagen Beach Camp",
-        region: "Zealand",
-        description: "Beautiful beachside camping near Copenhagen",
-        lat: 55.6761,
-        lng: 12.5683,
-        availableSpots: 45
-    },
-    {
-        id: 2,
-        name: "Skagen North Point",
-        region: "North Jutland",
-        description: "Denmark's northernmost campsite with stunning views",
-        lat: 57.7209,
-        lng: 10.5882,
-        availableSpots: 32
-    },
-    {
-        id: 3,
-        name: "Aarhus Forest Retreat",
-        region: "East Jutland",
-        description: "Peaceful forest camping near Aarhus city",
-        lat: 56.1629,
-        lng: 10.2039,
-        availableSpots: 28
-    },
-    {
-        id: 4,
-        name: "Odense Family Camp",
-        region: "Funen",
-        description: "Family-friendly campsite on Funen island",
-        lat: 55.4038,
-        lng: 10.4024,
-        availableSpots: 52
-    },
-    {
-        id: 5,
-        name: "Bornholm Island Camp",
-        region: "Bornholm",
-        description: "Scenic island camping with rocky coastline",
-        lat: 55.1367,
-        lng: 14.9155,
-        availableSpots: 18
-    },
-    {
-        id: 6,
-        name: "Ribe Viking Camp",
-        region: "Southwest Jutland",
-        description: "Historic campsite near Denmark's oldest town",
-        lat: 55.3282,
-        lng: 8.7619,
-        availableSpots: 38
-    },
-    {
-        id: 7,
-        name: "Roskilde Fjord Camp",
-        region: "Zealand",
-        description: "Waterfront camping by the beautiful Roskilde Fjord",
-        lat: 55.6415,
-        lng: 12.0803,
-        availableSpots: 41
-    },
-    {
-        id: 8,
-        name: "Aalborg Limfjord",
-        region: "North Jutland",
-        description: "Camping by the Limfjord with water activities",
-        lat: 57.0488,
-        lng: 9.9217,
-        availableSpots: 35
-    }
-];
-
-// Initialize the map with default data (fallback)
+// Initialize the map (will be called with data from Blazor component)
 window.initMap = function() {
-    console.log("Initializing Google Maps with default data...");
-    initMapWithData(campsites);
+    console.log("⚠️ initMap called without data - waiting for Blazor to provide campsite data");
+    // Map will be initialized when Blazor calls initMapWithData() with database data
 };
 
 // Initialize the map with provided campsite data

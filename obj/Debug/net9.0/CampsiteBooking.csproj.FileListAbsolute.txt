@@ -221,4 +221,5 @@
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Stripe.net.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/System.Configuration.ConfigurationManager.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/System.Security.Cryptography.ProtectedData.dll
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/e425yznsag-rofg9yjk77.gz
+/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/e425yznsag-oakuqyaquy.gz
+/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/d627t1rjdm-f6h0qchprf.gz

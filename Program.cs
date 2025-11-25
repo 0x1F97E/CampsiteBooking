@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Components;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddRazorPages(); // Add Razor Pages support for login/logout pages
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options =>
     {
@@ -87,7 +88,7 @@ builder.Services.AddAuthentication("CookieAuth")
         options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
             ? CookieSecurePolicy.SameAsRequest
             : CookieSecurePolicy.Always;
-        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.Cookie.SameSite = SameSiteMode.Lax; // Changed from Strict to Lax to allow cookie on redirects
         options.ExpireTimeSpan = TimeSpan.FromHours(8); // Default session timeout
         options.SlidingExpiration = true; // Extend session on activity
     })
@@ -112,8 +113,16 @@ builder.Services.AddAuthentication("CookieAuth")
 
 builder.Services.AddAuthorization();
 
+// Add Circuit Handler to capture authentication state from HTTP request
+builder.Services.AddScoped<CampsiteBooking.Services.AuthenticationCircuitHandler>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler>(
+    sp => sp.GetRequiredService<CampsiteBooking.Services.AuthenticationCircuitHandler>());
+
 // Add Blazor Server authentication state provider
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<CampsiteBooking.Services.ServerAuthenticationStateProvider>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider>(
+    sp => sp.GetRequiredService<CampsiteBooking.Services.ServerAuthenticationStateProvider>());
 
 // Register Authentication Service
 builder.Services.AddScoped<CampsiteBooking.Services.AuthenticationService>();
@@ -236,6 +245,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+app.MapRazorPages(); // Add Razor Pages routing
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
