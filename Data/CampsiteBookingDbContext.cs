@@ -70,6 +70,7 @@ public class CampsiteBookingDbContext : DbContext
                 .HasMaxLength(255)
                 .IsRequired();
 
+            entity.Property("_passwordHash").HasColumnName("PasswordHash").HasMaxLength(500);
             entity.Property("_firstName").HasColumnName("FirstName").HasMaxLength(100).IsRequired();
             entity.Property("_lastName").HasColumnName("LastName").HasMaxLength(100).IsRequired();
             entity.Property("_phone").HasColumnName("Phone").HasMaxLength(20);

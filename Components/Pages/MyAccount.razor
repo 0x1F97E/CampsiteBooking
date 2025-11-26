@@ -1,14 +1,18 @@
 @page "/my-account"
 @rendermode InteractiveServer
+@attribute [Authorize]
 @inject IDialogService DialogService
 @inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
-@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @using CampsiteBooking.Data
 @using CampsiteBooking.Models
 @using CampsiteBooking.Models.ValueObjects
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
 
 <PageTitle>My Account - Campsite Booking</PageTitle>
 
@@ -261,24 +265,35 @@ else
     {
         try
         {
-            // Check if user is logged in (using localStorage for demo)
-            var userIdString = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentUserId");
+            // Get authentication state from the AuthenticationStateProvider
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
-            if (!string.IsNullOrEmpty(userIdString) && int.TryParse(userIdString, out int userId) && userId > 0)
+            if (user?.Identity?.IsAuthenticated == true)
             {
-                _currentUserId = userId;
-                _isAuthenticated = true;
-                Console.WriteLine($"✅ User authenticated: UserId = {_currentUserId}");
+                // Get user ID from claims
+                var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    _currentUserId = userId;
+                    _isAuthenticated = true;
+                    Console.WriteLine($"✅ MyAccount: User authenticated - UserId = {_currentUserId}, Name = {user.FindFirst(ClaimTypes.Name)?.Value}");
+                }
+                else
+                {
+                    _isAuthenticated = false;
+                    Console.WriteLine("❌ MyAccount: User ID claim not found or invalid");
+                }
             }
             else
             {
                 _isAuthenticated = false;
-                Console.WriteLine("❌ User not authenticated");
+                Console.WriteLine("⚠️ MyAccount: User not authenticated");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error checking authentication: {ex.Message}");
+            Console.WriteLine($"❌ MyAccount: Error checking authentication: {ex.Message}");
             _isAuthenticated = false;
         }
     }
@@ -379,18 +394,47 @@ else
 
     private async Task EditProfile()
     {
-        await DialogService.ShowMessageBox(
-            "Edit Profile",
-            "Profile editing functionality will be implemented here. You can update your personal information.",
-            yesText: "OK");
+        var parameters = new DialogParameters
+        {
+            { "FirstName", _firstName },
+            { "LastName", _lastName },
+            { "Phone", _phone },
+            { "Country", _country },
+            { "PreferredCommunication", _preferredCommunication }
+        };
+
+        var dialog = await DialogService.ShowAsync<EditProfileDialog>("Edit Profile", parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        });
+
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Console.WriteLine("✅ Profile updated successfully from MyAccount page");
+            // Reload user data to show updated information
+            await LoadUserData();
+        }
     }
 
     private async Task ChangePassword()
     {
-        await DialogService.ShowMessageBox(
-            "Change Password",
-            "Password change functionality will be implemented here. You will need to enter your current password and a new password.",
-            yesText: "OK");
+        var dialog = await DialogService.ShowAsync<ChangePasswordDialog>("Change Password", new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        });
+
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Console.WriteLine("✅ Password changed successfully from MyAccount page");
+        }
     }
 
     private async Task LoadPurchaseHistory()

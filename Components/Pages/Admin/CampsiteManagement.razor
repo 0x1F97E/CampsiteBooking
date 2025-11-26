@@ -8,6 +8,7 @@
 @using CampsiteBooking.Models
 @using CampsiteBooking.Models.ValueObjects
 @using CampsiteBooking.Models.DTOs
+@using CampsiteBooking.Models.Common
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Authorization
 
@@ -655,6 +656,10 @@
                 Name = c.Name ?? "Unknown",
                 Region = c.Region ?? "Denmark",
                 Description = c.Description ?? "",
+                Attractiveness = c.Attractiveness ?? "",
+                PhoneNumber = c.PhoneNumber ?? "",
+                Email = c.Email?.Value,
+                WebsiteUrl = c.WebsiteUrl ?? "",
                 TotalSpots = 0, // TODO: Calculate from accommodation spots
                 AvailableSpots = 0, // TODO: Calculate from bookings
                 Latitude = c.Latitude,
@@ -765,10 +770,60 @@
 
     private async Task SaveCampsiteDetails(CampsiteManagementDto campsite)
     {
-        // Simulate API call to save campsite details
-        await Task.Delay(500);
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
 
-        Snackbar.Add($"Campsite details for '{campsite.Name}' saved successfully!", Severity.Success);
+            var campsiteId = CampsiteId.Create(campsite.Id);
+            var dbCampsite = await context.Campsites.FirstOrDefaultAsync(c => c.Id == campsiteId);
+
+            if (dbCampsite == null)
+            {
+                Snackbar.Add($"Campsite not found", Severity.Error);
+                return;
+            }
+
+            // Parse email if provided
+            Email? email = null;
+            if (!string.IsNullOrWhiteSpace(campsite.Email))
+            {
+                try
+                {
+                    email = Email.Create(campsite.Email);
+                }
+                catch
+                {
+                    Snackbar.Add("Invalid email format", Severity.Error);
+                    return;
+                }
+            }
+
+            // Use domain method to update campsite information
+            dbCampsite.UpdateInformation(
+                campsite.Name,
+                campsite.Region,
+                campsite.Description,
+                campsite.Attractiveness,
+                campsite.PhoneNumber ?? string.Empty,
+                email,
+                campsite.WebsiteUrl ?? string.Empty
+            );
+
+            await context.SaveChangesAsync();
+
+            Console.WriteLine($"✅ Campsite '{campsite.Name}' updated successfully");
+            Snackbar.Add($"Campsite details for '{campsite.Name}' saved successfully!", Severity.Success);
+        }
+        catch (DomainException ex)
+        {
+            Console.WriteLine($"❌ Domain error saving campsite: {ex.Message}");
+            Snackbar.Add($"Cannot save campsite: {ex.Message}", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error saving campsite: {ex.Message}");
+            Snackbar.Add($"Error saving campsite: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task OpenCampsiteGalleryDialog(CampsiteManagementDto campsite)
@@ -912,9 +967,38 @@
 
     private async Task SaveAccommodationType(AccommodationTypeDto accType)
     {
-        // In a real application, this would save to the backend
-        await Task.Delay(300); // Simulate API call
-        Snackbar.Add($"Changes to '{accType.Type}' saved successfully!", Severity.Success);
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var accommodationTypeId = AccommodationTypeId.Create(accType.Id);
+            var dbAccommodationType = await context.AccommodationTypes
+                .FirstOrDefaultAsync(a => a.Id == accommodationTypeId);
+
+            if (dbAccommodationType == null)
+            {
+                Snackbar.Add($"Accommodation type not found", Severity.Error);
+                return;
+            }
+
+            // Update information using domain method
+            dbAccommodationType.UpdateInformation(accType.Description, accType.ImageUrl);
+
+            await context.SaveChangesAsync();
+
+            Console.WriteLine($"✅ Accommodation type '{accType.Type}' updated successfully");
+            Snackbar.Add($"Changes to '{accType.Type}' saved successfully!", Severity.Success);
+        }
+        catch (DomainException ex)
+        {
+            Console.WriteLine($"❌ Domain error saving accommodation type: {ex.Message}");
+            Snackbar.Add($"Cannot save accommodation type: {ex.Message}", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error saving accommodation type: {ex.Message}");
+            Snackbar.Add($"Error saving accommodation type: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task DeleteAccommodationType(AccommodationTypeDto accType)
@@ -926,8 +1010,35 @@
 
         if (result == true)
         {
-            _accommodationTypes.Remove(accType);
-            Snackbar.Add($"Accommodation type '{accType.Type}' deleted successfully!", Severity.Success);
+            try
+            {
+                using var context = await DbContextFactory.CreateDbContextAsync();
+
+                var accommodationTypeId = AccommodationTypeId.Create(accType.Id);
+                var dbAccommodationType = await context.AccommodationTypes
+                    .FirstOrDefaultAsync(a => a.Id == accommodationTypeId);
+
+                if (dbAccommodationType == null)
+                {
+                    Snackbar.Add($"Accommodation type not found", Severity.Error);
+                    return;
+                }
+
+                // Remove from database
+                context.AccommodationTypes.Remove(dbAccommodationType);
+                await context.SaveChangesAsync();
+
+                // Remove from in-memory list
+                _accommodationTypes.Remove(accType);
+
+                Console.WriteLine($"✅ Accommodation type '{accType.Type}' deleted successfully");
+                Snackbar.Add($"Accommodation type '{accType.Type}' deleted successfully!", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error deleting accommodation type: {ex.Message}");
+                Snackbar.Add($"Error deleting accommodation type: {ex.Message}", Severity.Error);
+            }
         }
     }
 
@@ -996,9 +1107,32 @@
 
         if (result == true)
         {
-            accType.Spots.Remove(spot);
-            Snackbar.Add($"Spot #{spot.SpotNumber} removed from {accType.Type}", Severity.Success);
-            StateHasChanged();
+            try
+            {
+                using var context = await DbContextFactory.CreateDbContextAsync();
+
+                var accommodationSpotId = AccommodationSpotId.Create(spot.Id);
+                var dbSpot = await context.AccommodationSpots
+                    .FirstOrDefaultAsync(s => s.Id == accommodationSpotId);
+
+                if (dbSpot != null)
+                {
+                    // Remove from database
+                    context.AccommodationSpots.Remove(dbSpot);
+                    await context.SaveChangesAsync();
+                    Console.WriteLine($"✅ Spot #{spot.SpotNumber} deleted from database");
+                }
+
+                // Remove from in-memory list
+                accType.Spots.Remove(spot);
+                Snackbar.Add($"Spot #{spot.SpotNumber} removed from {accType.Type}", Severity.Success);
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error removing spot: {ex.Message}");
+                Snackbar.Add($"Error removing spot: {ex.Message}", Severity.Error);
+            }
         }
     }
 
@@ -1050,6 +1184,10 @@
         public string Name { get; set; } = string.Empty;
         public string Region { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public string Attractiveness { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
+        public string? Email { get; set; }
+        public string? WebsiteUrl { get; set; }
         public int TotalSpots { get; set; }
         public int AvailableSpots { get; set; }
         public double Latitude { get; set; }

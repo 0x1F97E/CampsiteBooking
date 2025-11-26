@@ -1,6 +1,7 @@
 using CampsiteBooking.Data;
 using CampsiteBooking.Models;
 using CampsiteBooking.Models.ValueObjects;
+using CampsiteBooking.Models.Common;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor;
@@ -120,6 +121,7 @@ public class PricingManagementBase : ComponentBase
 
                     return new SeasonalMultiplierDto
                     {
+                        Id = first.Id.Value,
                         Name = first.SeasonName ?? "Unknown Season",
                         DateRange = dateRange,
                         Multiplier = first.PriceMultiplier
@@ -148,6 +150,7 @@ public class PricingManagementBase : ComponentBase
             // Convert entities to DTOs with null-safe access
             _discounts = discountEntities.Select(d => new DiscountDto
             {
+                Id = d.Id.Value,
                 Code = d.Code ?? "",
                 Description = d.Description ?? "",
                 Type = d.Type ?? "Percentage",
@@ -201,57 +204,143 @@ public class PricingManagementBase : ComponentBase
 
     protected void AddAccommodationType()
     {
-        Snackbar.Add("Add new accommodation type", Severity.Info);
+        // TODO: Open dialog to add new accommodation type
+        Snackbar.Add("Add accommodation type dialog coming soon", Severity.Info);
     }
 
     protected void EditAccommodationType(BasePricingDto accommodation)
     {
-        Snackbar.Add($"Edit {accommodation.Type}", Severity.Info);
+        // TODO: Open dialog to edit accommodation type pricing
+        Snackbar.Add($"Edit accommodation type dialog coming soon", Severity.Info);
     }
 
-    protected void DeleteAccommodationType(BasePricingDto accommodation)
+    protected async Task DeleteAccommodationType(BasePricingDto accommodation)
     {
         var campsite = GetSelectedCampsite();
-        if (campsite != null)
+        if (campsite == null) return;
+
+        try
         {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var accommodationTypeId = AccommodationTypeId.Create(accommodation.Id);
+            var dbAccommodationType = await context.AccommodationTypes
+                .FirstOrDefaultAsync(a => a.Id == accommodationTypeId);
+
+            if (dbAccommodationType == null)
+            {
+                Snackbar.Add("Accommodation type not found", Severity.Error);
+                return;
+            }
+
+            // Remove from database
+            context.AccommodationTypes.Remove(dbAccommodationType);
+            await context.SaveChangesAsync();
+
+            // Remove from in-memory list
             campsite.Pricing.Remove(accommodation);
+
+            Console.WriteLine($"✅ Accommodation type '{accommodation.Type}' deleted successfully");
             Snackbar.Add($"Accommodation type '{accommodation.Type}' deleted successfully", Severity.Success);
             StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error deleting accommodation type: {ex.Message}");
+            Snackbar.Add($"Error deleting accommodation type: {ex.Message}", Severity.Error);
         }
     }
 
     protected void AddSeasonalMultiplier()
     {
-        Snackbar.Add("Add new seasonal multiplier", Severity.Info);
+        // TODO: Open dialog to add new seasonal multiplier
+        Snackbar.Add("Add seasonal multiplier dialog coming soon", Severity.Info);
     }
 
     protected void EditSeasonalMultiplier(SeasonalMultiplierDto multiplier)
     {
-        Snackbar.Add($"Edit {multiplier.Name}", Severity.Info);
+        // TODO: Open dialog to edit seasonal multiplier
+        Snackbar.Add($"Edit seasonal multiplier dialog coming soon", Severity.Info);
     }
 
-    protected void DeleteSeasonalMultiplier(SeasonalMultiplierDto multiplier)
+    protected async Task DeleteSeasonalMultiplier(SeasonalMultiplierDto multiplier)
     {
-        _seasonalMultipliers.Remove(multiplier);
-        Snackbar.Add($"Seasonal multiplier '{multiplier.Name}' deleted successfully", Severity.Success);
-        StateHasChanged();
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var seasonalPricingId = SeasonalPricingId.Create(multiplier.Id);
+            var dbSeasonalPricing = await context.SeasonalPricings
+                .FirstOrDefaultAsync(s => s.Id == seasonalPricingId);
+
+            if (dbSeasonalPricing == null)
+            {
+                Snackbar.Add("Seasonal pricing not found", Severity.Error);
+                return;
+            }
+
+            // Remove from database
+            context.SeasonalPricings.Remove(dbSeasonalPricing);
+            await context.SaveChangesAsync();
+
+            // Remove from in-memory list
+            _seasonalMultipliers.Remove(multiplier);
+
+            Console.WriteLine($"✅ Seasonal multiplier '{multiplier.Name}' deleted successfully");
+            Snackbar.Add($"Seasonal multiplier '{multiplier.Name}' deleted successfully", Severity.Success);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error deleting seasonal multiplier: {ex.Message}");
+            Snackbar.Add($"Error deleting seasonal multiplier: {ex.Message}", Severity.Error);
+        }
     }
 
     protected void AddDiscount()
     {
-        Snackbar.Add("Add new discount", Severity.Info);
+        // TODO: Open dialog to add new discount
+        Snackbar.Add("Add discount dialog coming soon", Severity.Info);
     }
 
     protected void EditDiscount(DiscountDto discount)
     {
-        Snackbar.Add($"Edit {discount.Code}", Severity.Info);
+        // TODO: Open dialog to edit discount
+        Snackbar.Add($"Edit discount dialog coming soon", Severity.Info);
     }
 
-    protected void DeleteDiscount(DiscountDto discount)
+    protected async Task DeleteDiscount(DiscountDto discount)
     {
-        _discounts.Remove(discount);
-        Snackbar.Add($"Discount '{discount.Code}' deleted successfully", Severity.Success);
-        StateHasChanged();
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var discountId = DiscountId.Create(discount.Id);
+            var dbDiscount = await context.Discounts
+                .FirstOrDefaultAsync(d => d.Id == discountId);
+
+            if (dbDiscount == null)
+            {
+                Snackbar.Add("Discount not found", Severity.Error);
+                return;
+            }
+
+            // Remove from database
+            context.Discounts.Remove(dbDiscount);
+            await context.SaveChangesAsync();
+
+            // Remove from in-memory list
+            _discounts.Remove(discount);
+
+            Console.WriteLine($"✅ Discount '{discount.Code}' deleted successfully");
+            Snackbar.Add($"Discount '{discount.Code}' deleted successfully", Severity.Success);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error deleting discount: {ex.Message}");
+            Snackbar.Add($"Error deleting discount: {ex.Message}", Severity.Error);
+        }
     }
 
     protected void AddAccommodationPeripheralPurchase(BasePricingDto accommodation)

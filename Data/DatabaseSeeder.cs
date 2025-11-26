@@ -1,6 +1,7 @@
 using CampsiteBooking.Models;
 using CampsiteBooking.Models.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 namespace CampsiteBooking.Data;
 
@@ -11,90 +12,8 @@ public static class DatabaseSeeder
 {
     public static async Task SeedAsync(CampsiteBookingDbContext context)
     {
-        // Drop the UserId column if it exists (legacy column, no longer needed)
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users DROP COLUMN UserId");
-        }
-        catch
-        {
-            // Column might not exist, ignore error
-        }
-
-        // Make Id column auto-increment if it isn't already
-        await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users MODIFY COLUMN Id INT AUTO_INCREMENT");
-
-        // Add missing columns to Users table if they don't exist
-        var columnsToAdd = new[]
-        {
-            "ALTER TABLE Users ADD COLUMN Email VARCHAR(255) NULL",
-            "ALTER TABLE Users ADD COLUMN FirstName VARCHAR(100) NULL",
-            "ALTER TABLE Users ADD COLUMN LastName VARCHAR(100) NULL",
-            "ALTER TABLE Users ADD COLUMN Phone VARCHAR(20) NULL",
-            "ALTER TABLE Users ADD COLUMN Country VARCHAR(100) NULL",
-            "ALTER TABLE Users ADD COLUMN JoinedDate DATETIME NULL",
-            "ALTER TABLE Users ADD COLUMN LastLogin DATETIME NULL",
-            "ALTER TABLE Users ADD COLUMN IsActive TINYINT(1) NULL DEFAULT 1"
-        };
-
-        foreach (var sql in columnsToAdd)
-        {
-            try
-            {
-                await context.Database.ExecuteSqlRawAsync(sql);
-            }
-            catch
-            {
-                // Column might already exist, ignore error
-            }
-        }
-
-        // Make Campsites Id column auto-increment if it isn't already
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync("ALTER TABLE Campsites MODIFY COLUMN Id INT AUTO_INCREMENT");
-        }
-        catch
-        {
-            // Might already be auto-increment, ignore error
-        }
-
-        // Add missing columns to Campsites table if they don't exist
-        var campsiteColumnsToAdd = new[]
-        {
-            "ALTER TABLE Campsites ADD COLUMN Name VARCHAR(200) NULL",
-            "ALTER TABLE Campsites ADD COLUMN Region VARCHAR(100) NULL",
-            "ALTER TABLE Campsites ADD COLUMN Description TEXT NULL",
-            "ALTER TABLE Campsites ADD COLUMN Latitude DOUBLE NULL",
-            "ALTER TABLE Campsites ADD COLUMN Longitude DOUBLE NULL",
-            "ALTER TABLE Campsites ADD COLUMN Attractiveness VARCHAR(50) NULL",
-            "ALTER TABLE Campsites ADD COLUMN PhoneNumber VARCHAR(20) NULL",
-            "ALTER TABLE Campsites ADD COLUMN Email VARCHAR(255) NULL",
-            "ALTER TABLE Campsites ADD COLUMN WebsiteUrl VARCHAR(500) NULL",
-            "ALTER TABLE Campsites ADD COLUMN EstablishedYear INT NULL",
-            "ALTER TABLE Campsites ADD COLUMN IsActive TINYINT(1) NULL DEFAULT 1",
-            "ALTER TABLE Campsites ADD COLUMN TotalArea DECIMAL(18,2) NULL",
-            "ALTER TABLE Campsites ADD COLUMN CreatedDate DATETIME NULL",
-            "ALTER TABLE Campsites ADD COLUMN UpdatedDate DATETIME NULL"
-        };
-
-        foreach (var sql in campsiteColumnsToAdd)
-        {
-            try
-            {
-                await context.Database.ExecuteSqlRawAsync(sql);
-            }
-            catch
-            {
-                // Column might already exist, ignore error
-            }
-        }
-
-        // Delete ALL campsites (to clean up any invalid data with NULL values)
-        await context.Database.ExecuteSqlRawAsync("DELETE FROM Campsites");
-
-        // Reset auto-increment counter for Campsites
-        await context.Database.ExecuteSqlRawAsync("ALTER TABLE Campsites AUTO_INCREMENT = 1");
+        // Note: Schema should be managed by EF Core Migrations in production
+        // This seeder only populates initial data
 
         // Seed Campsites first (before users, since Staff references CampsiteId)
         if (!await context.Campsites.AnyAsync())
@@ -387,31 +306,46 @@ public static class DatabaseSeeder
         // Seed Users if none exist
         if (userCount == 0)
         {
+            // Create password hasher (ASP.NET Core Identity)
+            var passwordHasher = new PasswordHasher<User>();
+
             // Add users one by one to avoid ID conflicts (all have ID = 0 before persistence)
             var guest1 = Guest.Create(Email.Create("john.doe@example.com"), "John", "Doe", "+45 12 34 56 78", "Denmark");
+            guest1.SetPasswordHash(passwordHasher.HashPassword(guest1, "Password123!")); // Demo password
             await context.Users.AddAsync(guest1);
             await context.SaveChangesAsync();
             context.Entry(guest1).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
             var guest2 = Guest.Create(Email.Create("jane.smith@example.com"), "Jane", "Smith", "+45 23 45 67 89", "Denmark");
+            guest2.SetPasswordHash(passwordHasher.HashPassword(guest2, "Password123!"));
             await context.Users.AddAsync(guest2);
             await context.SaveChangesAsync();
             context.Entry(guest2).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
             var guest3 = Guest.Create(Email.Create("mike.johnson@example.com"), "Mike", "Johnson", "+45 34 56 78 90", "Sweden");
+            guest3.SetPasswordHash(passwordHasher.HashPassword(guest3, "Password123!"));
             await context.Users.AddAsync(guest3);
             await context.SaveChangesAsync();
             context.Entry(guest3).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
             var admin = Admin.Create(Email.Create("admin@campsitebooking.dk"), "Admin", "User", "+45 45 67 89 01", "Denmark");
+            admin.SetPasswordHash(passwordHasher.HashPassword(admin, "Admin123!"));
             await context.Users.AddAsync(admin);
             await context.SaveChangesAsync();
             context.Entry(admin).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
             var staff = Staff.Create(Email.Create("staff@campsitebooking.dk"), "Staff", "Member", "EMP001", CampsiteId.Create(1), DateTime.UtcNow.AddYears(-2), "", "+45 56 78 90 12", "Denmark");
+            staff.SetPasswordHash(passwordHasher.HashPassword(staff, "Staff123!"));
             await context.Users.AddAsync(staff);
             await context.SaveChangesAsync();
             context.Entry(staff).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+
+            Console.WriteLine("✅ Seeded users with hashed passwords:");
+            Console.WriteLine("   - john.doe@example.com / Password123!");
+            Console.WriteLine("   - jane.smith@example.com / Password123!");
+            Console.WriteLine("   - mike.johnson@example.com / Password123!");
+            Console.WriteLine("   - admin@campsitebooking.dk / Admin123!");
+            Console.WriteLine("   - staff@campsitebooking.dk / Staff123!");
         }
 
         // Check if photos already exist

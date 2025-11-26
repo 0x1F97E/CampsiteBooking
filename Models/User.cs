@@ -13,8 +13,9 @@ public class User : AggregateRoot<UserId>
     // ============================================================================
     // PRIVATE FIELDS - Encapsulation
     // ============================================================================
-    
+
     private Email _email = null!;
+    private string _passwordHash = string.Empty; // ASP.NET Core Identity password hash
     private string _phone = string.Empty;
     private string _firstName = string.Empty;
     private string _lastName = string.Empty;
@@ -35,6 +36,7 @@ public class User : AggregateRoot<UserId>
     }
 
     public Email Email => _email;
+    public string PasswordHash => _passwordHash; // For EF Core
     public string Phone => _phone;
     public string FirstName => _firstName;
     public string LastName => _lastName;
@@ -187,6 +189,17 @@ public class User : AggregateRoot<UserId>
 
         _firstName = firstName.Trim();
         _lastName = lastName.Trim();
+    }
+
+    /// <summary>
+    /// Set password hash (used by ASP.NET Core Identity)
+    /// </summary>
+    public void SetPasswordHash(string passwordHash)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new DomainException("Password hash cannot be empty");
+
+        _passwordHash = passwordHash;
     }
 }
 

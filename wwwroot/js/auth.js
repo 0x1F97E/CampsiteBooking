@@ -45,6 +45,61 @@ window.authHelper = {
                 error: 'An error occurred during logout.'
             };
         }
+    },
+
+    // Change password function
+    changePassword: async function (currentPassword, newPassword) {
+        try {
+            const response = await fetch('/api/auth/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    currentPassword: currentPassword,
+                    newPassword: newPassword
+                }),
+                credentials: 'include' // Important: include cookies for authentication
+            });
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Change password error:', error);
+            return {
+                success: false,
+                error: 'An error occurred while changing your password. Please try again.'
+            };
+        }
+    },
+
+    // Update profile function
+    updateProfile: async function (firstName, lastName, phone, country, preferredCommunication) {
+        try {
+            const response = await fetch('/api/auth/update-profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    firstName: firstName,
+                    lastName: lastName,
+                    phone: phone,
+                    country: country,
+                    preferredCommunication: preferredCommunication
+                }),
+                credentials: 'include' // Important: include cookies for authentication
+            });
+
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Update profile error:', error);
+            return {
+                success: false,
+                error: 'An error occurred while updating your profile. Please try again.'
+            };
+        }
     }
 };
 

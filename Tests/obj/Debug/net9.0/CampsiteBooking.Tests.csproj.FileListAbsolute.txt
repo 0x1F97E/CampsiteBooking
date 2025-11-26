@@ -167,3 +167,4 @@
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Stripe.net.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/System.Configuration.ConfigurationManager.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/System.Security.Cryptography.ProtectedData.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Microsoft.AspNetCore.Identity.EntityFrameworkCore.dll

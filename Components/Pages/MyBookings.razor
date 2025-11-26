@@ -1,12 +1,17 @@
 @page "/bookings"
 @rendermode InteractiveServer
+@attribute [Authorize]
 @inject IDialogService DialogService
 @inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
 @inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @using CampsiteBooking.Data
 @using CampsiteBooking.Models
 @using CampsiteBooking.Models.ValueObjects
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 <PageTitle>My Bookings - Campsite Booking</PageTitle>
 
@@ -241,10 +246,32 @@
     private List<BookingDto> _upcomingBookings = new();
     private List<BookingDto> _pastBookings = new();
     private List<BookingDto> _cancelledBookings = new();
+    private int _currentUserId = 0;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadBookings();
+        // Get current user ID from authentication claims
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+            {
+                _currentUserId = userId;
+                Console.WriteLine($"✅ MyBookings: User authenticated - UserId = {_currentUserId}");
+                await LoadBookings();
+            }
+            else
+            {
+                Console.WriteLine("❌ MyBookings: User ID claim not found");
+            }
+        }
+        else
+        {
+            Console.WriteLine("⚠️ MyBookings: User not authenticated");
+        }
     }
 
     private async Task LoadBookings()
@@ -253,8 +280,13 @@
         {
             using var context = await DbContextFactory.CreateDbContextAsync();
 
-            // Load all bookings from database
-            var dbBookings = await context.Bookings.ToListAsync();
+            // SECURITY: Only load bookings for the current authenticated user
+            var currentGuestId = GuestId.Create(_currentUserId);
+            var dbBookings = await context.Bookings
+                .Where(b => b.GuestId == currentGuestId)
+                .ToListAsync();
+
+            Console.WriteLine($"🔒 SECURITY: Loading bookings only for user {_currentUserId} - Found {dbBookings.Count} bookings");
 
             // Load all related entities
             // Convert GuestId to UserId for querying (Guest inherits from User)
@@ -357,15 +389,25 @@
 
                 // Find the booking in the database
                 var bookingIdValue = BookingId.Create(id);
+                var currentGuestId = GuestId.Create(_currentUserId);
                 var booking = await context.Bookings
                     .FirstOrDefaultAsync(b => b.Id == bookingIdValue);
 
                 if (booking != null)
                 {
+                    // SECURITY: Verify the booking belongs to the current user
+                    if (booking.GuestId != currentGuestId)
+                    {
+                        Console.WriteLine($"🚨 SECURITY VIOLATION: User {_currentUserId} attempted to cancel booking {id} owned by user {booking.GuestId.Value}");
+                        Snackbar.Add("You can only cancel your own bookings", Severity.Error);
+                        return;
+                    }
+
                     // Update booking status to Cancelled
                     booking.Cancel();
                     await context.SaveChangesAsync();
 
+                    Console.WriteLine($"✅ User {_currentUserId} cancelled their booking {id}");
                     Snackbar.Add("Booking cancelled successfully", Severity.Success);
 
                     // Reload bookings to reflect the change

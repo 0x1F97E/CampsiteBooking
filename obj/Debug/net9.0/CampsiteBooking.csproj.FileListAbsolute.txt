@@ -153,13 +153,7 @@
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/0wz98yz2xy-tjzqk7tnel.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/hnmgrfpfgm-3852rn77ci.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/g8n8dwhloy-laf9iglwpr.gz
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/r15crycqs5-y40fckwc4l.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/8cce8728dm-ic4ran110o.gz
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/xnxiy5r43u-62agjtghwy.gz
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/veu5386o2m-33g1wh4kzh.gz
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/qexyx9p8uj-g7rsstt5bg.gz
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/uqolbwxk0d-ze7a1e59ra.gz
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/qriuql99vp-eyz5tc3bqi.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/e6vk8diy4o-bqjiyaj88i.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/945byykpc2-c2jlpeoesf.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/efyoqiqpiu-erw9l3u2r3.gz
@@ -204,7 +198,6 @@
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/iumzlyiwq4-h1s4sie4z3.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/tj209c8lsg-63fj8s7r0e.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/tvi9w3ea71-0j3bgjxly4.gz
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/1ji5htbmzd-602xkzt5gn.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/3a2m8skrz7-hnxpnvm2o5.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/rkjl0thiyf-hnxpnvm2o5.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/staticwebassets.build.json
@@ -222,4 +215,6 @@
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/System.Configuration.ConfigurationManager.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/System.Security.Cryptography.ProtectedData.dll
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/e425yznsag-oakuqyaquy.gz
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/d627t1rjdm-f6h0qchprf.gz
+/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/r15crycqs5-m7akf9ayvn.gz
+/Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Microsoft.AspNetCore.Identity.EntityFrameworkCore.dll
+/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/d627t1rjdm-v0xe9qyji1.gz

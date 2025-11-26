@@ -3,6 +3,7 @@
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject HttpClient HttpClient
+@inject IJSRuntime JSRuntime
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
 @implements IDisposable
@@ -123,20 +124,37 @@
     {
         try
         {
-            // Call the logout API endpoint
-            await HttpClient.PostAsync("/api/auth/logout", null);
+            // Call the logout API endpoint using JavaScript interop
+            // This ensures the browser's cookie is properly cleared
+            var result = await JSRuntime.InvokeAsync<LogoutResult>("authHelper.logout");
 
-            _isAuthenticated = false;
-            _userName = "";
+            if (result?.Success == true)
+            {
+                _isAuthenticated = false;
+                _userName = "";
 
-            Snackbar.Add("You have been logged out successfully.", Severity.Success);
-            Navigation.NavigateTo("/login", forceLoad: true);
+                Console.WriteLine("✅ User logged out successfully");
+                Snackbar.Add("You have been logged out successfully.", Severity.Success);
+                Navigation.NavigateTo("/login", forceLoad: true);
+            }
+            else
+            {
+                Console.WriteLine($"❌ Logout failed: {result?.Error}");
+                Snackbar.Add("Error during logout. Please try again.", Severity.Error);
+            }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Error during logout: {ex.Message}");
             Snackbar.Add("Error during logout. Please try again.", Severity.Error);
         }
+    }
+
+    // DTO for logout result
+    private class LogoutResult
+    {
+        public bool Success { get; set; }
+        public string? Error { get; set; }
     }
 
     private void ToggleDrawer()

@@ -582,8 +582,34 @@
 
         if (result == true)
         {
-            _events.Remove(eventDto);
-            Snackbar.Add("Event deleted successfully", Severity.Success);
+            try
+            {
+                using var context = await DbContextFactory.CreateDbContextAsync();
+
+                var eventId = EventId.Create(eventDto.Id);
+                var dbEvent = await context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+
+                if (dbEvent == null)
+                {
+                    Snackbar.Add("Event not found", Severity.Error);
+                    return;
+                }
+
+                // Remove from database
+                context.Events.Remove(dbEvent);
+                await context.SaveChangesAsync();
+
+                // Remove from in-memory list
+                _events.Remove(eventDto);
+
+                Console.WriteLine($"✅ Event '{eventDto.Name}' deleted successfully");
+                Snackbar.Add("Event deleted successfully", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error deleting event: {ex.Message}");
+                Snackbar.Add($"Error deleting event: {ex.Message}", Severity.Error);
+            }
         }
     }
 

@@ -12,6 +12,10 @@ using Microsoft.AspNetCore.Localization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Identity;
+using CampsiteBooking.Models;
+using CampsiteBooking.Models.ValueObjects;
+using CampsiteBooking.Models.Common;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -268,8 +272,17 @@ app.MapPost("/api/auth/login", async (LoginRequest request, IDbContextFactory<Ca
             return Results.Json(new { success = false, error = "Invalid email or password." });
         }
 
-        // TODO: Verify password hash (currently accepting any password for demo)
-        Console.WriteLine($"⚠️ WARNING: Password verification skipped for demo purposes!");
+        // Verify password using ASP.NET Core Identity password hasher
+        var passwordHasher = new PasswordHasher<User>();
+        var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+
+        if (verificationResult == PasswordVerificationResult.Failed)
+        {
+            Console.WriteLine($"❌ Failed login attempt for {request.Email} - Invalid password");
+            return Results.Json(new { success = false, error = "Invalid email or password." });
+        }
+
+        Console.WriteLine($"✅ Password verified for {user.Email.Value}");
 
         // Update last login time
         user.UpdateLastLogin();
@@ -329,6 +342,161 @@ app.MapPost("/api/auth/logout", async (HttpContext httpContext) =>
     return Results.Json(new { success = true });
 });
 
+// Add change password endpoint
+app.MapPost("/api/auth/change-password", async (HttpContext httpContext, IDbContextFactory<CampsiteBookingDbContext> dbContextFactory) =>
+{
+    try
+    {
+        // Get authenticated user from claims (server-side, cannot be tampered with)
+        var user = httpContext.User;
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            Console.WriteLine("❌ Change password failed: User not authenticated");
+            return Results.Json(new { success = false, error = "You must be logged in to change your password." });
+        }
+
+        // Get user ID from claims (cryptographically signed, cannot be forged)
+        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+        {
+            Console.WriteLine("❌ Change password failed: Invalid user ID claim");
+            return Results.Json(new { success = false, error = "Invalid authentication state." });
+        }
+
+        // Parse request body
+        var request = await httpContext.Request.ReadFromJsonAsync<ChangePasswordRequest>();
+        if (request == null || string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            Console.WriteLine("❌ Change password failed: Invalid request data");
+            return Results.Json(new { success = false, error = "Current password and new password are required." });
+        }
+
+        // Validate new password
+        if (request.NewPassword.Length < 6)
+        {
+            Console.WriteLine("❌ Change password failed: New password too short");
+            return Results.Json(new { success = false, error = "New password must be at least 6 characters long." });
+        }
+
+        // Load user from database
+        using var context = await dbContextFactory.CreateDbContextAsync();
+        var dbUser = await context.Users.FirstOrDefaultAsync(u => u.Id == UserId.Create(userId));
+
+        if (dbUser == null)
+        {
+            Console.WriteLine($"❌ Change password failed: User {userId} not found in database");
+            return Results.Json(new { success = false, error = "User not found." });
+        }
+
+        // Verify current password using ASP.NET Core Identity password hasher
+        var passwordHasher = new PasswordHasher<User>();
+        var verificationResult = passwordHasher.VerifyHashedPassword(dbUser, dbUser.PasswordHash, request.CurrentPassword);
+
+        if (verificationResult == PasswordVerificationResult.Failed)
+        {
+            Console.WriteLine($"❌ Change password failed for {dbUser.Email?.Value} - Incorrect current password");
+            return Results.Json(new { success = false, error = "Current password is incorrect." });
+        }
+
+        // Hash the new password
+        var newPasswordHash = passwordHasher.HashPassword(dbUser, request.NewPassword);
+
+        // Update password hash in database
+        dbUser.SetPasswordHash(newPasswordHash);
+        await context.SaveChangesAsync();
+
+        Console.WriteLine($"✅ Password changed successfully for user {dbUser.Email?.Value} (UserId: {userId})");
+        return Results.Json(new { success = true });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Change password error: {ex.Message}");
+        return Results.Json(new { success = false, error = "An error occurred while changing your password. Please try again." });
+    }
+});
+
+// Add update profile endpoint
+app.MapPost("/api/auth/update-profile", async (HttpContext httpContext, IDbContextFactory<CampsiteBookingDbContext> dbContextFactory) =>
+{
+    try
+    {
+        // Get authenticated user from claims (server-side, cannot be tampered with)
+        var user = httpContext.User;
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            Console.WriteLine("❌ Update profile failed: User not authenticated");
+            return Results.Json(new { success = false, error = "You must be logged in to update your profile." });
+        }
+
+        // Get user ID from claims (cryptographically signed, cannot be forged)
+        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+        {
+            Console.WriteLine("❌ Update profile failed: Invalid user ID claim");
+            return Results.Json(new { success = false, error = "Invalid authentication state." });
+        }
+
+        // Parse request body
+        var request = await httpContext.Request.ReadFromJsonAsync<UpdateProfileRequest>();
+        if (request == null)
+        {
+            Console.WriteLine("❌ Update profile failed: Invalid request data");
+            return Results.Json(new { success = false, error = "Invalid request data." });
+        }
+
+        // Validate required fields
+        if (string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName))
+        {
+            Console.WriteLine("❌ Update profile failed: First name and last name are required");
+            return Results.Json(new { success = false, error = "First name and last name are required." });
+        }
+
+        // Validate preferred communication
+        var validCommunicationOptions = new[] { "Email", "SMS", "Both" };
+        if (!validCommunicationOptions.Contains(request.PreferredCommunication))
+        {
+            Console.WriteLine("❌ Update profile failed: Invalid preferred communication");
+            return Results.Json(new { success = false, error = "Invalid preferred communication option." });
+        }
+
+        // Load user from database
+        using var context = await dbContextFactory.CreateDbContextAsync();
+        var dbUser = await context.Users.FirstOrDefaultAsync(u => u.Id == UserId.Create(userId));
+
+        if (dbUser == null)
+        {
+            Console.WriteLine($"❌ Update profile failed: User {userId} not found in database");
+            return Results.Json(new { success = false, error = "User not found." });
+        }
+
+        // Update user information using domain methods
+        dbUser.UpdateName(request.FirstName, request.LastName);
+        dbUser.UpdateContactInfo(request.Phone ?? "", request.Country ?? "");
+
+        // Update preferred communication if user is a Guest
+        if (dbUser is Guest guest)
+        {
+            guest.UpdatePreferredCommunication(request.PreferredCommunication);
+        }
+
+        // Save changes to database
+        await context.SaveChangesAsync();
+
+        Console.WriteLine($"✅ Profile updated successfully for user {dbUser.Email?.Value} (UserId: {userId})");
+        return Results.Json(new { success = true });
+    }
+    catch (DomainException ex)
+    {
+        Console.WriteLine($"❌ Update profile validation error: {ex.Message}");
+        return Results.Json(new { success = false, error = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Update profile error: {ex.Message}");
+        return Results.Json(new { success = false, error = "An error occurred while updating your profile. Please try again." });
+    }
+});
+
 // Apply database migrations automatically and seed data
 using (var scope = app.Services.CreateScope())
 {
@@ -343,6 +511,12 @@ app.Run();
 
 // Login request model
 public record LoginRequest(string Email, string Password, bool RememberMe);
+
+// Change password request model
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
+// Update profile request model
+public record UpdateProfileRequest(string FirstName, string LastName, string Phone, string Country, string PreferredCommunication);
 
 // Simple DbContext Factory implementation for Blazor components
 class SimpleDbContextFactory : IDbContextFactory<CampsiteBookingDbContext>

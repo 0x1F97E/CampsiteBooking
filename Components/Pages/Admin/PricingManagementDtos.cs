@@ -23,6 +23,7 @@ public class BasePricingDto
 
 public class SeasonalMultiplierDto
 {
+    public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string DateRange { get; set; } = string.Empty;
     public decimal Multiplier { get; set; }
@@ -30,6 +31,7 @@ public class SeasonalMultiplierDto
 
 public class DiscountDto
 {
+    public int Id { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
