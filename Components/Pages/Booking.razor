@@ -6,12 +6,14 @@
 @inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
 @inject ISnackbar Snackbar
 @inject StripePaymentService StripeService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @using CampsiteBooking.Data
 @using CampsiteBooking.Models
 @using CampsiteBooking.Models.ValueObjects
 @using CampsiteBooking.Services
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.WebUtilities
+@using System.Security.Claims
 
 <PageTitle>Book Accommodation - Campsite Booking</PageTitle>
 
@@ -159,33 +161,61 @@
                         </MudSelect>
 
                         <MudDivider Class="my-4" />
-                        
+
                         <MudText Typo="Typo.h6" GutterBottom="true">Guest Information</MudText>
-                        
-                        <MudTextField @bind-Value="_guestName" 
-                                     Label="Full Name" 
+
+                        @if (_isAuthenticated)
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Small" />
+                                    <MudText Typo="Typo.body2">
+                                        Using your account information. To update, visit <MudLink Href="/my-account" Color="Color.Primary">My Account</MudLink>.
+                                    </MudText>
+                                </MudStack>
+                            </MudAlert>
+                        }
+
+                        <MudTextField @bind-Value="_guestName"
+                                     Label="Full Name"
                                      Variant="Variant.Outlined"
                                      Required="true"
-                                     RequiredError="Name is required" />
-                        
-                        <MudTextField @bind-Value="_guestEmail" 
-                                     Label="Email" 
+                                     RequiredError="Name is required"
+                                     ReadOnly="_isAuthenticated"
+                                     Disabled="_isAuthenticated" />
+
+                        <MudTextField @bind-Value="_guestEmail"
+                                     Label="Email"
                                      Variant="Variant.Outlined"
                                      InputType="InputType.Email"
                                      Required="true"
                                      RequiredError="Email is required"
-                                     Class="mt-3" />
-                        
-                        <MudTextField @bind-Value="_guestPhone" 
-                                     Label="Phone Number" 
+                                     Class="mt-3"
+                                     ReadOnly="_isAuthenticated"
+                                     Disabled="_isAuthenticated" />
+
+                        <MudTextField @bind-Value="_guestPhone"
+                                     Label="Phone Number"
                                      Variant="Variant.Outlined"
                                      InputType="InputType.Telephone"
                                      Required="true"
                                      RequiredError="Phone is required"
-                                     Class="mt-3" />
-                        
-                        <MudTextField @bind-Value="_specialRequests" 
-                                     Label="Special Requests (Optional)" 
+                                     Class="mt-3"
+                                     ReadOnly="_isAuthenticated"
+                                     Disabled="_isAuthenticated" />
+
+                        @if (_isAuthenticated && !string.IsNullOrWhiteSpace(_guestCountry))
+                        {
+                            <MudTextField @bind-Value="_guestCountry"
+                                         Label="Country"
+                                         Variant="Variant.Outlined"
+                                         Class="mt-3"
+                                         ReadOnly="true"
+                                         Disabled="true" />
+                        }
+
+                        <MudTextField @bind-Value="_specialRequests"
+                                     Label="Special Requests (Optional)"
                                      Variant="Variant.Outlined"
                                      Lines="3"
                                      Class="mt-3" />
@@ -315,7 +345,12 @@
     private string _guestName = string.Empty;
     private string _guestEmail = string.Empty;
     private string _guestPhone = string.Empty;
+    private string _guestCountry = string.Empty;
     private string _specialRequests = string.Empty;
+
+    // Authentication state
+    private bool _isAuthenticated = false;
+    private int _currentUserId = 0;
 
     private List<CampingSpot> _campingSpots = new();
     private CampingSpot? _selectedSpot = null;
@@ -357,6 +392,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Check authentication and load user data first
+        await CheckAuthenticationAndLoadUserData();
+
         // Check if campsiteId comes from route parameter (old format: /booking/1)
         if (CampsiteIdParam.HasValue)
         {
@@ -443,6 +481,79 @@
         }
     }
 
+    private async Task CheckAuthenticationAndLoadUserData()
+    {
+        try
+        {
+            // Get authentication state from the AuthenticationStateProvider
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                // Get user ID from claims
+                var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    _currentUserId = userId;
+                    _isAuthenticated = true;
+
+                    Console.WriteLine($"✅ Booking: User authenticated - UserId = {_currentUserId}, Name = {user.FindFirst(ClaimTypes.Name)?.Value}");
+
+                    // Load user data from database to populate guest information fields
+                    await LoadUserDataFromDatabase(userId);
+                }
+                else
+                {
+                    _isAuthenticated = false;
+                    Console.WriteLine("⚠️ Booking: User ID claim not found or invalid");
+                }
+            }
+            else
+            {
+                _isAuthenticated = false;
+                Console.WriteLine("⚠️ Booking: User not authenticated - guest information must be entered manually");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error checking authentication: {ex.Message}");
+            _isAuthenticated = false;
+        }
+    }
+
+    private async Task LoadUserDataFromDatabase(int userId)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load user from database
+            var userIdValue = UserId.Create(userId);
+            var user = await context.Users
+                .FirstOrDefaultAsync(u => u.Id == userIdValue);
+
+            if (user != null)
+            {
+                // Auto-populate guest information fields from user account
+                _guestName = $"{user.FirstName} {user.LastName}";
+                _guestEmail = user.Email.Value;
+                _guestPhone = user.Phone ?? string.Empty;
+                _guestCountry = user.Country ?? string.Empty;
+
+                Console.WriteLine($"✅ Auto-populated guest information for {_guestName}");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ User not found in database: {userId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading user data: {ex.Message}");
+        }
+    }
+
     private async Task LoadCampsiteData()
     {
         try
@@ -507,7 +618,7 @@
             // Load first accommodation type for this campsite
             var campsiteId = CampsiteId.Create(_campsiteId);
             var accommodationType = await context.AccommodationTypes
-                .Where(at => at.CampsiteId == campsiteId)
+                .Where(at => EF.Property<CampsiteId>(at, "_campsiteId") == campsiteId)
                 .FirstOrDefaultAsync();
 
             if (accommodationType != null)
@@ -680,13 +791,19 @@
     {
         try
         {
-            // Check if user is logged in
-            var currentUserIdStr = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentUserId");
-            if (string.IsNullOrEmpty(currentUserIdStr) || !int.TryParse(currentUserIdStr, out var currentUserId))
+            // Check if user is logged in (use authenticated user ID if available)
+            int currentUserId = _currentUserId;
+
+            // Fallback to localStorage if not authenticated via AuthenticationStateProvider
+            if (currentUserId == 0)
             {
-                Snackbar.Add("Please log in to complete your booking", Severity.Error);
-                Navigation.NavigateTo("/login");
-                return;
+                var currentUserIdStr = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "currentUserId");
+                if (string.IsNullOrEmpty(currentUserIdStr) || !int.TryParse(currentUserIdStr, out currentUserId))
+                {
+                    Snackbar.Add("Please log in to complete your booking", Severity.Error);
+                    Navigation.NavigateTo("/login");
+                    return;
+                }
             }
 
             // Validate form

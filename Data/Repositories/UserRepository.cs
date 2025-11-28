@@ -103,8 +103,8 @@ public class UserRepository : IUserRepository
     {
         return await _context.Users
             .OfType<Staff>()
-            .Where(s => s.CampsiteId == campsiteId)
-            .OrderBy(s => s.LastName)
+            .Where(s => EF.Property<CampsiteId>(s, "_campsiteId") == campsiteId)
+            .OrderBy(s => EF.Property<string>(s, "_lastName"))
             .ToListAsync(cancellationToken);
     }
 

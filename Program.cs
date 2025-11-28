@@ -527,7 +527,6 @@ class SimpleDbContextFactory : IDbContextFactory<CampsiteBookingDbContext>
     {
         _connectionString = connectionString;
     }
-
     public CampsiteBookingDbContext CreateDbContext()
     {
         var optionsBuilder = new DbContextOptionsBuilder<CampsiteBookingDbContext>();

@@ -283,7 +283,7 @@
             // SECURITY: Only load bookings for the current authenticated user
             var currentGuestId = GuestId.Create(_currentUserId);
             var dbBookings = await context.Bookings
-                .Where(b => b.GuestId == currentGuestId)
+                .Where(b => EF.Property<GuestId>(b, "_guestId") == currentGuestId)
                 .ToListAsync();
 
             Console.WriteLine($"🔒 SECURITY: Loading bookings only for user {_currentUserId} - Found {dbBookings.Count} bookings");

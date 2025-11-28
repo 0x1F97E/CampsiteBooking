@@ -48,10 +48,12 @@
                            Label="Campsites"
                            Variant="Variant.Outlined"
                            MultiSelection="true"
-                           @bind-SelectedValues="_selectedCampsiteIds"
+                           SelectedValues="_selectedCampsiteIds"
+                           SelectedValuesChanged="OnCampsiteSelectionChanged"
                            MultiSelectionTextFunc="@GetCampsiteSelectionText"
                            Adornment="Adornment.Start"
-                           AdornmentIcon="@Icons.Material.Filled.Landscape">
+                           AdornmentIcon="@Icons.Material.Filled.Landscape"
+                           CheckMark="true">
                     @foreach (var campsite in _availableCampsites)
                     {
                         <MudSelectItem T="string" Value="@campsite.Id.ToString()">@campsite.Name</MudSelectItem>
@@ -165,7 +167,7 @@
                             <MudButton Variant="Variant.Filled"
                                       Color="Color.Primary"
                                       FullWidth="true"
-                                      Href="@($"/booking?campsiteId={accommodation.Id}")">
+                                      Href="@($"/booking?campsiteId={accommodation.CampsiteId}")">
                                 Book Now
                             </MudButton>
                         </MudCardActions>
@@ -217,6 +219,10 @@
             }).ToList();
 
             Console.WriteLine($"✅ Loaded {_availableCampsites.Count} campsites for search filter");
+            foreach (var campsite in _availableCampsites)
+            {
+                Console.WriteLine($"   Campsite: ID={campsite.Id}, Name={campsite.Name}, ToString={campsite.Id.ToString()}");
+            }
         }
         catch (Exception ex)
         {
@@ -353,6 +359,30 @@
         }
     }
 
+    private async Task OnCampsiteSelectionChanged(IEnumerable<string> selectedValues)
+    {
+        Console.WriteLine($"🔍 OnCampsiteSelectionChanged called with {selectedValues?.Count() ?? 0} values");
+        if (selectedValues != null)
+        {
+            foreach (var val in selectedValues)
+            {
+                Console.WriteLine($"   Selected value: '{val}'");
+            }
+        }
+
+        _selectedCampsiteIds = selectedValues != null ? new HashSet<string>(selectedValues) : new HashSet<string>();
+        Console.WriteLine($"🔍 _selectedCampsiteIds now has {_selectedCampsiteIds.Count()} items");
+
+        await SearchAvailability();
+    }
+
+    private async Task OnAmenitySelectionChanged(IEnumerable<string> selectedValues)
+    {
+        _selectedAmenities = selectedValues ?? new HashSet<string>();
+        Console.WriteLine($"🔍 Amenity selection changed: {string.Join(", ", _selectedAmenities)}");
+        await SearchAvailability();
+    }
+
     private string GetCampsiteSelectionText(List<string> selectedValues)
     {
         if (!selectedValues.Any())
@@ -401,6 +431,19 @@
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Region { get; set; } = string.Empty;
+    }
+
+    public class StringEqualityComparer : IEqualityComparer<string>
+    {
+        public bool Equals(string? x, string? y)
+        {
+            return string.Equals(x, y, StringComparison.Ordinal);
+        }
+
+        public int GetHashCode(string obj)
+        {
+            return obj?.GetHashCode() ?? 0;
+        }
     }
 }
 

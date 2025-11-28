@@ -77,7 +77,7 @@
     private int _adults = 2;
     private int _children = 0;
 
-    private IEnumerable<string> _selectedAmenities = new List<string>();
+    private IEnumerable<string> _selectedAmenities = new HashSet<string>();
     private readonly List<string> _availableAmenities = new()
     {
         "Electric-Hookup",

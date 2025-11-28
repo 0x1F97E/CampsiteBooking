@@ -80,14 +80,130 @@ public class CampsiteBookingDbContext : DbContext
             entity.Property("_isActive").HasColumnName("IsActive");
         });
 
-        // Add RowVersion for Optimistic Concurrency on Booking
-        modelBuilder.Entity<Booking>()
-            .Property<byte[]>("RowVersion")
-            .IsRowVersion();
+        // Configure Booking entity to map private fields
+        modelBuilder.Entity<Booking>(entity =>
+        {
+            // Configure the Id property to use the Id column with value converter
+            entity.Property(b => b.Id).HasColumnName("Id")
+                .HasConversion(new BookingIdConverter());
+
+            // Ignore the legacy BookingId property - we use Id instead
+            entity.Ignore(b => b.BookingId);
+
+            // Ignore the public properties that are backed by private fields
+            // We'll map the private fields directly to avoid conflicts
+            entity.Ignore(b => b.GuestId);
+            entity.Ignore(b => b.CampsiteId);
+            entity.Ignore(b => b.AccommodationSpotId);
+            entity.Ignore(b => b.AccommodationTypeId);
+            entity.Ignore(b => b.Period);
+            entity.Ignore(b => b.Status);
+            entity.Ignore(b => b.BasePrice);
+            entity.Ignore(b => b.TotalPrice);
+            entity.Ignore(b => b.NumberOfAdults);
+            entity.Ignore(b => b.NumberOfChildren);
+            entity.Ignore(b => b.SpecialRequests);
+            entity.Ignore(b => b.CreatedDate);
+            entity.Ignore(b => b.LastModifiedDate);
+            entity.Ignore(b => b.CancellationDate);
+
+            // Ignore legacy properties
+            entity.Ignore(b => b.UserId);
+            entity.Ignore(b => b.CheckInDate);
+            entity.Ignore(b => b.CheckOutDate);
+            entity.Ignore(b => b.SpotId);
+
+            // Map the private fields to database columns using value converters
+            entity.Property("_guestId").HasColumnName("GuestId")
+                .HasConversion(new GuestIdConverter());
+            entity.Property("_campsiteId").HasColumnName("CampsiteId")
+                .HasConversion(new CampsiteIdConverter());
+            entity.Property("_accommodationSpotId").HasColumnName("AccommodationSpotId")
+                .HasConversion(new AccommodationSpotIdConverter());
+            entity.Property("_accommodationTypeId").HasColumnName("AccommodationTypeId")
+                .HasConversion(new AccommodationTypeIdConverter());
+            entity.Property("_period").HasColumnName("Period")
+                .HasConversion(new DateRangeConverter());
+            entity.Property("_status").HasColumnName("Status")
+                .HasConversion(new BookingStatusConverter());
+            entity.Property("_basePrice").HasColumnName("BasePrice");
+            entity.Property("_totalPrice").HasColumnName("TotalPrice");
+            entity.Property("_numberOfAdults").HasColumnName("NumberOfAdults");
+            entity.Property("_numberOfChildren").HasColumnName("NumberOfChildren");
+            entity.Property("_specialRequests").HasColumnName("SpecialRequests");
+            entity.Property("_createdDate").HasColumnName("CreatedDate");
+            entity.Property("_lastModifiedDate").HasColumnName("LastModifiedDate");
+            entity.Property("_cancellationDate").HasColumnName("CancellationDate");
+
+            // Ignore the RowVersion property for now - MySQL timestamp handling is different
+            // entity.Property<byte[]>("RowVersion").IsRowVersion();
+        });
+
+        // Configure Payment entity to map private fields
+        modelBuilder.Entity<Payment>(entity =>
+        {
+            // Configure the Id property to use the Id column with value converter
+            entity.Property(p => p.Id).HasColumnName("Id")
+                .HasConversion(new PaymentIdConverter());
+
+            // Ignore the legacy PaymentId property - we use Id instead
+            entity.Ignore(p => p.PaymentId);
+
+            // Ignore the public properties that are backed by private fields
+            entity.Ignore(p => p.BookingId);
+            entity.Ignore(p => p.Amount);
+            entity.Ignore(p => p.Method);
+            entity.Ignore(p => p.TransactionId);
+            entity.Ignore(p => p.Status);
+            entity.Ignore(p => p.PaymentDate);
+            entity.Ignore(p => p.RefundDate);
+            entity.Ignore(p => p.RefundAmount);
+            entity.Ignore(p => p.CreatedDate);
+
+            // Ignore legacy properties
+            entity.Ignore(p => p.Currency);
+
+            // Map the private fields to database columns
+            entity.Property("_bookingId").HasColumnName("BookingId")
+                .HasConversion(new BookingIdConverter());
+            entity.Property("_amount").HasColumnName("Amount");
+            entity.Property("_method").HasColumnName("Method").HasMaxLength(50);
+            entity.Property("_transactionId").HasColumnName("TransactionId").HasMaxLength(100);
+            entity.Property("_status").HasColumnName("Status")
+                .HasConversion(new PaymentStatusConverter());
+            entity.Property("_paymentDate").HasColumnName("PaymentDate");
+            entity.Property("_refundDate").HasColumnName("RefundDate");
+            entity.Property("_refundAmount").HasColumnName("RefundAmount");
+            entity.Property("_createdDate").HasColumnName("CreatedDate");
+        });
 
         // Configure Campsite entity to map private fields
         modelBuilder.Entity<Campsite>(entity =>
         {
+            // Configure the Id property to use the Id column with value converter
+            entity.Property(c => c.Id).HasColumnName("Id")
+                .HasConversion(new CampsiteIdConverter());
+
+            // Ignore the legacy CampsiteId property - we use Id instead
+            entity.Ignore(c => c.CampsiteId);
+
+            // Ignore public properties that are backed by private fields
+            entity.Ignore(c => c.Name);
+            entity.Ignore(c => c.Region);
+            entity.Ignore(c => c.Description);
+            entity.Ignore(c => c.Latitude);
+            entity.Ignore(c => c.Longitude);
+            entity.Ignore(c => c.Attractiveness);
+            entity.Ignore(c => c.PhoneNumber);
+            entity.Ignore(c => c.Email);
+            entity.Ignore(c => c.WebsiteUrl);
+            entity.Ignore(c => c.EstablishedYear);
+            entity.Ignore(c => c.IsActive);
+            entity.Ignore(c => c.TotalArea);
+            entity.Ignore(c => c.CreatedDate);
+            entity.Ignore(c => c.UpdatedDate);
+
+            // Map private fields to database columns
             entity.Property("_name").HasColumnName("Name").IsRequired();
             entity.Property("_region").HasColumnName("Region").IsRequired();
             entity.Property("_description").HasColumnName("Description");
@@ -100,6 +216,92 @@ public class CampsiteBookingDbContext : DbContext
             entity.Property("_establishedYear").HasColumnName("EstablishedYear");
             entity.Property("_isActive").HasColumnName("IsActive");
             entity.Property("_totalArea").HasColumnName("TotalArea");
+            entity.Property("_createdDate").HasColumnName("CreatedDate");
+            entity.Property("_updatedDate").HasColumnName("UpdatedDate");
+        });
+
+        // Configure AccommodationType entity to map private fields
+        modelBuilder.Entity<AccommodationType>(entity =>
+        {
+            // Configure the Id property to use the AccommodationTypeId column
+            // The AccommodationTypeId property is a legacy property that provides int access to the Id
+            entity.Property(a => a.Id).HasColumnName("Id")
+                .HasConversion(new AccommodationTypeIdConverter());
+
+            // Ignore the legacy AccommodationTypeId property - we use Id instead
+            entity.Ignore(a => a.AccommodationTypeId);
+
+            // Ignore public properties that are backed by private fields
+            entity.Ignore(a => a.CampsiteId);
+            entity.Ignore(a => a.Type);
+            entity.Ignore(a => a.Description);
+            entity.Ignore(a => a.MaxCapacity);
+            entity.Ignore(a => a.BasePrice);
+            entity.Ignore(a => a.ImageUrl);
+            entity.Ignore(a => a.AvailableUnits);
+            entity.Ignore(a => a.IsActive);
+            entity.Ignore(a => a.CreatedDate);
+            entity.Ignore(a => a.BasePrice_Legacy);
+
+            // Map private fields to database columns
+            entity.Property("_campsiteId").HasColumnName("CampsiteId")
+                .HasConversion(new CampsiteIdConverter());
+            entity.Property("_type").HasColumnName("Type").HasMaxLength(50).IsRequired();
+            entity.Property("_description").HasColumnName("Description");
+            entity.Property("_maxCapacity").HasColumnName("MaxCapacity");
+            entity.Property("_basePrice").HasColumnName("BasePrice");
+            entity.Property("_imageUrl").HasColumnName("ImageUrl");
+            entity.Property("_availableUnits").HasColumnName("AvailableUnits");
+            entity.Property("_isActive").HasColumnName("IsActive");
+            entity.Property("_createdDate").HasColumnName("CreatedDate");
+        });
+
+        // Configure AccommodationSpot entity to map private fields
+        modelBuilder.Entity<AccommodationSpot>(entity =>
+        {
+            // Configure the Id property to use the Id column with value converter
+            entity.Property(a => a.Id).HasColumnName("Id")
+                .HasConversion(new AccommodationSpotIdConverter());
+
+            // Ignore public properties that are backed by private fields
+            entity.Ignore(a => a.SpotIdentifier);
+            entity.Ignore(a => a.CampsiteId);
+            entity.Ignore(a => a.CampsiteName);
+            entity.Ignore(a => a.AccommodationTypeId);
+            entity.Ignore(a => a.Latitude);
+            entity.Ignore(a => a.Longitude);
+            entity.Ignore(a => a.Type);
+            entity.Ignore(a => a.Status);
+            entity.Ignore(a => a.PriceModifier);
+            entity.Ignore(a => a.CreatedDate);
+            entity.Ignore(a => a.SpotId);
+            entity.Ignore(a => a.Status_Legacy);
+
+            // Map private fields to database columns
+            entity.Property("_spotIdentifier").HasColumnName("SpotIdentifier").HasMaxLength(50).IsRequired();
+            entity.Property("_campsiteId").HasColumnName("CampsiteId")
+                .HasConversion(new CampsiteIdConverter());
+            entity.Property("_campsiteName").HasColumnName("CampsiteName").HasMaxLength(200);
+            entity.Property("_accommodationTypeId").HasColumnName("AccommodationTypeId")
+                .HasConversion(new AccommodationTypeIdConverter());
+            entity.Property("_latitude").HasColumnName("Latitude");
+            entity.Property("_longitude").HasColumnName("Longitude");
+            entity.Property("_type").HasColumnName("Type").HasMaxLength(50).IsRequired();
+            entity.Property("_status").HasColumnName("Status")
+                .HasConversion<string>();
+            entity.Property("_priceModifier").HasColumnName("PriceModifier");
+            entity.Property("_createdDate").HasColumnName("CreatedDate");
+        });
+
+        // Configure Amenity entity to map private fields
+        modelBuilder.Entity<Amenity>(entity =>
+        {
+            entity.Property("_campsiteId").HasColumnName("CampsiteId");
+            entity.Property("_name").HasColumnName("Name").HasMaxLength(100).IsRequired();
+            entity.Property("_description").HasColumnName("Description");
+            entity.Property("_iconUrl").HasColumnName("IconUrl");
+            entity.Property("_category").HasColumnName("Category").HasMaxLength(50);
+            entity.Property("_isAvailable").HasColumnName("IsAvailable");
             entity.Property("_createdDate").HasColumnName("CreatedDate");
             entity.Property("_updatedDate").HasColumnName("UpdatedDate");
         });

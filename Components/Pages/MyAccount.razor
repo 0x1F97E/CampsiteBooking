@@ -446,7 +446,7 @@ else
             // Load all bookings for this user
             var guestId = GuestId.Create(_currentUserId);
             var bookings = await context.Bookings
-                .Where(b => b.GuestId == guestId)
+                .Where(b => EF.Property<GuestId>(b, "_guestId") == guestId)
                 .ToListAsync();
 
             // Load related entities

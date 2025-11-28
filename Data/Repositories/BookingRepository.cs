@@ -64,16 +64,16 @@ public class BookingRepository : IBookingRepository
     public async Task<IEnumerable<Booking>> GetByGuestIdAsync(GuestId guestId, CancellationToken cancellationToken = default)
     {
         return await _context.Bookings
-            .Where(b => b.GuestId == guestId)
-            .OrderByDescending(b => b.Period.StartDate)
+            .Where(b => EF.Property<GuestId>(b, "_guestId") == guestId)
+            .OrderByDescending(b => EF.Property<DateRange>(b, "_period").StartDate)
             .ToListAsync(cancellationToken);
     }
 
     public async Task<IEnumerable<Booking>> GetByCampsiteIdAsync(CampsiteId campsiteId, CancellationToken cancellationToken = default)
     {
         return await _context.Bookings
-            .Where(b => b.CampsiteId == campsiteId)
-            .OrderByDescending(b => b.Period.StartDate)
+            .Where(b => EF.Property<CampsiteId>(b, "_campsiteId") == campsiteId)
+            .OrderByDescending(b => EF.Property<DateRange>(b, "_period").StartDate)
             .ToListAsync(cancellationToken);
     }
 
