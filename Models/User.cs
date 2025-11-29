@@ -192,6 +192,17 @@ public class User : AggregateRoot<UserId>
     }
 
     /// <summary>
+    /// Update user email address
+    /// </summary>
+    public void UpdateEmail(Email email)
+    {
+        if (email == null)
+            throw new DomainException("Email cannot be null");
+
+        _email = email;
+    }
+
+    /// <summary>
     /// Set password hash (used by ASP.NET Core Identity)
     /// </summary>
     public void SetPasswordHash(string passwordHash)

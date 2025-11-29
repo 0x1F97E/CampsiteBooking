@@ -22,7 +22,18 @@
                                   Variant="Variant.Outlined"
                                   Margin="Margin.Dense" />
                 </MudItem>
-                
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_email"
+                                  Label="Email"
+                                  Required="true"
+                                  RequiredError="Email is required"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  InputType="InputType.Email"
+                                  Validation="@(new Func<string, string?>(ValidateEmail))" />
+                </MudItem>
+
                 <MudItem xs="12">
                     <MudTextField @bind-Value="_phone"
                                   Label="Phone"
@@ -83,16 +94,19 @@
 
     [Parameter]
     public string FirstName { get; set; } = "";
-    
+
     [Parameter]
     public string LastName { get; set; } = "";
-    
+
+    [Parameter]
+    public string Email { get; set; } = "";
+
     [Parameter]
     public string Phone { get; set; } = "";
-    
+
     [Parameter]
     public string Country { get; set; } = "";
-    
+
     [Parameter]
     public string PreferredCommunication { get; set; } = "Email";
 
@@ -101,6 +115,7 @@
     private bool _isProcessing;
     private string _firstName = "";
     private string _lastName = "";
+    private string _email = "";
     private string _phone = "";
     private string _country = "";
     private string _preferredCommunication = "Email";
@@ -111,6 +126,7 @@
         // Initialize with current values
         _firstName = FirstName;
         _lastName = LastName;
+        _email = Email;
         _phone = Phone;
         _country = Country;
         _preferredCommunication = PreferredCommunication;
@@ -132,8 +148,8 @@
             }
 
             // Call API using JavaScript interop
-            var result = await JSRuntime.InvokeAsync<UpdateProfileResult>("authHelper.updateProfile", 
-                _firstName, _lastName, _phone, _country, _preferredCommunication);
+            var result = await JSRuntime.InvokeAsync<UpdateProfileResult>("authHelper.updateProfile",
+                _firstName, _lastName, _email, _phone, _country, _preferredCommunication);
 
             if (result?.Success == true)
             {
@@ -159,6 +175,26 @@
     private void Cancel()
     {
         MudDialog.Cancel();
+    }
+
+    private string? ValidateEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return "Email is required";
+
+        // Basic email validation
+        if (!email.Contains("@") || !email.Contains("."))
+            return "Please enter a valid email address";
+
+        // Check for valid email format
+        var emailParts = email.Split('@');
+        if (emailParts.Length != 2 || string.IsNullOrWhiteSpace(emailParts[0]) || string.IsNullOrWhiteSpace(emailParts[1]))
+            return "Please enter a valid email address";
+
+        if (!emailParts[1].Contains("."))
+            return "Please enter a valid email address";
+
+        return null;
     }
 
     // DTO for update profile result

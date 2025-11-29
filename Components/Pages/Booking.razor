@@ -7,10 +7,13 @@
 @inject ISnackbar Snackbar
 @inject StripePaymentService StripeService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IKafkaProducer KafkaProducer
 @using CampsiteBooking.Data
 @using CampsiteBooking.Models
 @using CampsiteBooking.Models.ValueObjects
+@using CampsiteBooking.Models.DomainEvents
 @using CampsiteBooking.Services
+@using CampsiteBooking.Infrastructure.Kafka
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.WebUtilities
 @using System.Security.Claims
@@ -839,6 +842,23 @@
 
             var bookingId = booking.Id?.Value ?? 0;
             Console.WriteLine($"✅ Created booking {bookingId} for user {currentUserId}");
+
+            // Publish BookingCreatedEvent to Kafka for email/SMS notifications
+            try
+            {
+                var domainEvents = booking.GetDomainEvents();
+                foreach (var domainEvent in domainEvents)
+                {
+                    await KafkaProducer.PublishAsync(domainEvent);
+                    Console.WriteLine($"✅ Published {domainEvent.GetType().Name} to Kafka for booking {bookingId}");
+                }
+                booking.ClearDomainEvents();
+            }
+            catch (Exception kafkaEx)
+            {
+                // Log Kafka error but don't fail the booking
+                Console.WriteLine($"⚠️ Failed to publish Kafka event for booking {bookingId}: {kafkaEx.Message}");
+            }
 
             // Create Stripe Checkout Session
             var checkoutUrl = await StripeService.CreateCheckoutSessionAsync(

@@ -74,7 +74,7 @@ window.authHelper = {
     },
 
     // Update profile function
-    updateProfile: async function (firstName, lastName, phone, country, preferredCommunication) {
+    updateProfile: async function (firstName, lastName, email, phone, country, preferredCommunication) {
         try {
             const response = await fetch('/api/auth/update-profile', {
                 method: 'POST',
@@ -84,6 +84,7 @@ window.authHelper = {
                 body: JSON.stringify({
                     firstName: firstName,
                     lastName: lastName,
+                    email: email,
                     phone: phone,
                     country: country,
                     preferredCommunication: preferredCommunication

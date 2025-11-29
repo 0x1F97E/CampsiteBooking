@@ -207,12 +207,18 @@ builder.Services.AddScoped<ICampsiteRepository, CampsiteRepository>();
 // Register Unit of Work (Application Layer - Transaction Management)
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+// Register Email and SMS Services
+builder.Services.AddScoped<CampsiteBooking.Services.IEmailService, CampsiteBooking.Services.EmailService>();
+builder.Services.AddScoped<CampsiteBooking.Services.ISMSService, CampsiteBooking.Services.SMSService>();
+
+// Register Event Handlers
+builder.Services.AddScoped<CampsiteBooking.Infrastructure.EventHandlers.IEventHandler, CampsiteBooking.Infrastructure.EventHandlers.NotificationEventHandler>();
+
 // Register Kafka Producer (Event-Driven Architecture)
 builder.Services.AddSingleton<IKafkaProducer, KafkaProducer>();
 
 // Register Kafka Consumer as Hosted Service (Background Processing)
-// Temporarily disabled to allow app to start
-// builder.Services.AddHostedService<KafkaConsumer>();
+builder.Services.AddHostedService<KafkaConsumer>();
 
 var app = builder.Build();
 
@@ -451,6 +457,12 @@ app.MapPost("/api/auth/update-profile", async (HttpContext httpContext, IDbConte
             return Results.Json(new { success = false, error = "First name and last name are required." });
         }
 
+        if (string.IsNullOrWhiteSpace(request.Email))
+        {
+            Console.WriteLine("❌ Update profile failed: Email is required");
+            return Results.Json(new { success = false, error = "Email is required." });
+        }
+
         // Validate preferred communication
         var validCommunicationOptions = new[] { "Email", "SMS", "Both" };
         if (!validCommunicationOptions.Contains(request.PreferredCommunication))
@@ -467,6 +479,21 @@ app.MapPost("/api/auth/update-profile", async (HttpContext httpContext, IDbConte
         {
             Console.WriteLine($"❌ Update profile failed: User {userId} not found in database");
             return Results.Json(new { success = false, error = "User not found." });
+        }
+
+        // Check if email is being changed and if new email already exists
+        var newEmail = Email.Create(request.Email);
+        if (dbUser.Email.Value != newEmail.Value)
+        {
+            var emailExists = await context.Users.AnyAsync(u => u.Id != UserId.Create(userId) && EF.Property<string>(u, "_email") == newEmail.Value);
+            if (emailExists)
+            {
+                Console.WriteLine($"❌ Update profile failed: Email {request.Email} already exists");
+                return Results.Json(new { success = false, error = "This email address is already in use by another account." });
+            }
+
+            // Update email
+            dbUser.UpdateEmail(newEmail);
         }
 
         // Update user information using domain methods
@@ -516,7 +543,7 @@ public record LoginRequest(string Email, string Password, bool RememberMe);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
 // Update profile request model
-public record UpdateProfileRequest(string FirstName, string LastName, string Phone, string Country, string PreferredCommunication);
+public record UpdateProfileRequest(string FirstName, string LastName, string Email, string Phone, string Country, string PreferredCommunication);
 
 // Simple DbContext Factory implementation for Blazor components
 class SimpleDbContextFactory : IDbContextFactory<CampsiteBookingDbContext>

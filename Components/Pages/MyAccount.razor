@@ -73,7 +73,39 @@ else
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Email</MudText>
-                            <MudText Typo="Typo.body1" Class="mb-4">@_email</MudText>
+                            @if (_isEditingEmail)
+                            {
+                                <div class="d-flex align-center gap-2">
+                                    <MudTextField @bind-Value="_editEmailValue"
+                                                  Variant="Variant.Outlined"
+                                                  Margin="Margin.Dense"
+                                                  InputType="InputType.Email"
+                                                  Immediate="true"
+                                                  Class="flex-grow-1"
+                                                  Error="@(!string.IsNullOrEmpty(_emailError))"
+                                                  ErrorText="@_emailError" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Check"
+                                                   Color="Color.Success"
+                                                   Size="Size.Small"
+                                                   OnClick="SaveEmailEdit"
+                                                   Disabled="_isSavingEmail" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                   Color="Color.Default"
+                                                   Size="Size.Small"
+                                                   OnClick="CancelEmailEdit"
+                                                   Disabled="_isSavingEmail" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex align-center gap-2 mb-4">
+                                    <MudText Typo="Typo.body1">@_email</MudText>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                   Color="Color.Primary"
+                                                   Size="Size.Small"
+                                                   OnClick="StartEmailEdit" />
+                                </div>
+                            }
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Phone</MudText>
@@ -157,9 +189,43 @@ else
                                Color="Color.Primary"
                                Label="SMS Notifications"
                                Class="mt-2" />
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3">
-                        Current preference: @_preferredCommunication
-                    </MudText>
+
+                    <MudDivider Class="my-3" />
+
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">Contact Email</MudText>
+                    @if (_isEditingEmailPreferences)
+                    {
+                        <div class="d-flex align-center gap-2">
+                            <MudTextField @bind-Value="_editEmailPreferencesValue"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          InputType="InputType.Email"
+                                          Immediate="true"
+                                          Class="flex-grow-1"
+                                          Error="@(!string.IsNullOrEmpty(_emailPreferencesError))"
+                                          ErrorText="@_emailPreferencesError" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Check"
+                                           Color="Color.Success"
+                                           Size="Size.Small"
+                                           OnClick="SaveEmailPreferencesEdit"
+                                           Disabled="_isSavingEmailPreferences" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                           Color="Color.Default"
+                                           Size="Size.Small"
+                                           OnClick="CancelEmailPreferencesEdit"
+                                           Disabled="_isSavingEmailPreferences" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex align-center gap-2">
+                            <MudText Typo="Typo.body2">@_email</MudText>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           OnClick="StartEmailPreferencesEdit" />
+                        </div>
+                    }
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -246,6 +312,18 @@ else
 
     // Purchase history
     private List<PurchaseHistoryDto> _purchaseHistory = new();
+
+    // Inline email editing state (Profile Information card)
+    private bool _isEditingEmail = false;
+    private string _editEmailValue = "";
+    private string _emailError = "";
+    private bool _isSavingEmail = false;
+
+    // Inline email editing state (Communication Preferences card)
+    private bool _isEditingEmailPreferences = false;
+    private string _editEmailPreferencesValue = "";
+    private string _emailPreferencesError = "";
+    private bool _isSavingEmailPreferences = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -392,12 +470,212 @@ else
         }
     }
 
+    private void StartEmailEdit()
+    {
+        _isEditingEmail = true;
+        _editEmailValue = _email;
+        _emailError = "";
+    }
+
+    private void CancelEmailEdit()
+    {
+        _isEditingEmail = false;
+        _editEmailValue = "";
+        _emailError = "";
+    }
+
+    private async Task SaveEmailEdit()
+    {
+        _emailError = "";
+        _isSavingEmail = true;
+
+        try
+        {
+            // Validate email format
+            if (string.IsNullOrWhiteSpace(_editEmailValue))
+            {
+                _emailError = "Email is required";
+                _isSavingEmail = false;
+                return;
+            }
+
+            // Basic email format validation
+            if (!_editEmailValue.Contains("@") || !_editEmailValue.Contains("."))
+            {
+                _emailError = "Please enter a valid email address";
+                _isSavingEmail = false;
+                return;
+            }
+
+            // Check if email has changed
+            if (_editEmailValue.Trim().ToLowerInvariant() == _email.Trim().ToLowerInvariant())
+            {
+                // No change, just cancel edit mode
+                CancelEmailEdit();
+                _isSavingEmail = false;
+                return;
+            }
+
+            // Check for duplicate email in database
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            var emailExists = await context.Users.AnyAsync(u =>
+                u.Id != UserId.Create(_currentUserId) &&
+                EF.Property<string>(u, "_email") == _editEmailValue.Trim().ToLowerInvariant());
+
+            if (emailExists)
+            {
+                _emailError = "This email address is already in use by another account";
+                _isSavingEmail = false;
+                return;
+            }
+
+            // Load user and update email
+            var dbUser = await context.Users.FirstOrDefaultAsync(u => u.Id == UserId.Create(_currentUserId));
+            if (dbUser == null)
+            {
+                _emailError = "User not found";
+                _isSavingEmail = false;
+                return;
+            }
+
+            // Update email using domain method
+            var newEmail = Email.Create(_editEmailValue.Trim());
+            dbUser.UpdateEmail(newEmail);
+
+            // Save changes
+            await context.SaveChangesAsync();
+
+            // Update local state
+            _email = newEmail.Value;
+            _isEditingEmail = false;
+            _editEmailValue = "";
+
+            Snackbar.Add("Email updated successfully!", Severity.Success);
+            Console.WriteLine($"✅ Email updated successfully to {_email}");
+        }
+        catch (ArgumentException ex)
+        {
+            _emailError = ex.Message;
+            Console.WriteLine($"❌ Email validation error: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            _emailError = "An error occurred while updating your email. Please try again.";
+            Console.WriteLine($"❌ Error updating email: {ex.Message}");
+        }
+        finally
+        {
+            _isSavingEmail = false;
+        }
+    }
+
+    // Communication Preferences card email editing methods
+    private void StartEmailPreferencesEdit()
+    {
+        _isEditingEmailPreferences = true;
+        _editEmailPreferencesValue = _email;
+        _emailPreferencesError = "";
+    }
+
+    private void CancelEmailPreferencesEdit()
+    {
+        _isEditingEmailPreferences = false;
+        _editEmailPreferencesValue = "";
+        _emailPreferencesError = "";
+    }
+
+    private async Task SaveEmailPreferencesEdit()
+    {
+        _emailPreferencesError = "";
+        _isSavingEmailPreferences = true;
+
+        try
+        {
+            // Validate email format
+            if (string.IsNullOrWhiteSpace(_editEmailPreferencesValue))
+            {
+                _emailPreferencesError = "Email is required";
+                _isSavingEmailPreferences = false;
+                return;
+            }
+
+            // Basic email format validation
+            if (!_editEmailPreferencesValue.Contains("@") || !_editEmailPreferencesValue.Contains("."))
+            {
+                _emailPreferencesError = "Please enter a valid email address";
+                _isSavingEmailPreferences = false;
+                return;
+            }
+
+            // Check if email has changed
+            if (_editEmailPreferencesValue.Trim().ToLowerInvariant() == _email.Trim().ToLowerInvariant())
+            {
+                // No change, just cancel edit mode
+                CancelEmailPreferencesEdit();
+                _isSavingEmailPreferences = false;
+                return;
+            }
+
+            // Check for duplicate email in database
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            var emailExists = await context.Users.AnyAsync(u =>
+                u.Id != UserId.Create(_currentUserId) &&
+                EF.Property<string>(u, "_email") == _editEmailPreferencesValue.Trim().ToLowerInvariant());
+
+            if (emailExists)
+            {
+                _emailPreferencesError = "This email address is already in use by another account";
+                _isSavingEmailPreferences = false;
+                return;
+            }
+
+            // Load user and update email
+            var dbUser = await context.Users.FirstOrDefaultAsync(u => u.Id == UserId.Create(_currentUserId));
+            if (dbUser == null)
+            {
+                _emailPreferencesError = "User not found";
+                _isSavingEmailPreferences = false;
+                return;
+            }
+
+            // Update email using domain method
+            var newEmail = Email.Create(_editEmailPreferencesValue.Trim());
+            dbUser.UpdateEmail(newEmail);
+
+            // Save changes
+            await context.SaveChangesAsync();
+
+            // Update local state
+            _email = newEmail.Value;
+            _isEditingEmailPreferences = false;
+            _editEmailPreferencesValue = "";
+
+            Snackbar.Add("Contact email updated successfully!", Severity.Success);
+            Console.WriteLine($"✅ Contact email updated successfully to {_email}");
+        }
+        catch (ArgumentException ex)
+        {
+            _emailPreferencesError = ex.Message;
+            Console.WriteLine($"❌ Email validation error: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            _emailPreferencesError = "An error occurred while updating your email. Please try again.";
+            Console.WriteLine($"❌ Error updating email: {ex.Message}");
+        }
+        finally
+        {
+            _isSavingEmailPreferences = false;
+        }
+    }
+
     private async Task EditProfile()
     {
         var parameters = new DialogParameters
         {
             { "FirstName", _firstName },
             { "LastName", _lastName },
+            { "Email", _email },
             { "Phone", _phone },
             { "Country", _country },
             { "PreferredCommunication", _preferredCommunication }

@@ -3,6 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using CampsiteBooking.Infrastructure.EventHandlers;
+using CampsiteBooking.Models.DomainEvents;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CampsiteBooking.Infrastructure.Kafka;
 
@@ -74,6 +77,8 @@ public class KafkaConsumer : BackgroundService
                 catch (ConsumeException ex)
                 {
                     _logger.LogError(ex, "Error consuming message from Kafka");
+                    // Add delay to prevent tight loop when topic doesn't exist
+                    await Task.Delay(5000, stoppingToken);
                 }
                 catch (Exception ex)
                 {
@@ -97,36 +102,48 @@ public class KafkaConsumer : BackgroundService
             "Processing event {EventType}: {EventJson}",
             eventType, eventJson);
 
-        // TODO: Deserialize and route to appropriate event handler
-        // For now, just log the event
-        switch (eventType)
+        try
         {
-            case "BookingConfirmedEvent":
-                _logger.LogInformation("BookingConfirmedEvent received - would send confirmation email/SMS");
-                break;
+            // Deserialize the event based on type
+            IDomainEvent? domainEvent = eventType switch
+            {
+                nameof(BookingCreatedEvent) => JsonSerializer.Deserialize<BookingCreatedEvent>(eventJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }),
+                nameof(BookingConfirmedEvent) => JsonSerializer.Deserialize<BookingConfirmedEvent>(eventJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }),
+                nameof(BookingCancelledEvent) => JsonSerializer.Deserialize<BookingCancelledEvent>(eventJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }),
+                nameof(PaymentCompletedEvent) => JsonSerializer.Deserialize<PaymentCompletedEvent>(eventJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }),
+                nameof(UserCreatedEvent) => JsonSerializer.Deserialize<UserCreatedEvent>(eventJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }),
+                _ => null
+            };
 
-            case "BookingCancelledEvent":
-                _logger.LogInformation("BookingCancelledEvent received - would send cancellation email/SMS");
-                break;
+            if (domainEvent == null)
+            {
+                _logger.LogWarning("Failed to deserialize event type: {EventType}", eventType);
+                return;
+            }
 
-            case "BookingCreatedEvent":
-                _logger.LogInformation("BookingCreatedEvent received - would send booking created notification");
-                break;
+            // Create a scope to resolve scoped services (DbContext, etc.)
+            using var scope = _serviceProvider.CreateScope();
+            var eventHandler = scope.ServiceProvider.GetRequiredService<IEventHandler>();
 
-            case "PaymentCompletedEvent":
-                _logger.LogInformation("PaymentCompletedEvent received - would send payment receipt");
-                break;
-
-            case "UserCreatedEvent":
-                _logger.LogInformation("UserCreatedEvent received - would send welcome email");
-                break;
-
-            default:
-                _logger.LogWarning("Unknown event type: {EventType}", eventType);
-                break;
+            if (eventHandler.CanHandle(eventType))
+            {
+                await eventHandler.HandleAsync(domainEvent, cancellationToken);
+                _logger.LogInformation("✅ Successfully handled event {EventType}", eventType);
+            }
+            else
+            {
+                _logger.LogWarning("No handler found for event type: {EventType}", eventType);
+            }
         }
-
-        await Task.CompletedTask;
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize event {EventType}", eventType);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing event {EventType}", eventType);
+            throw; // Re-throw to prevent committing the offset
+        }
     }
 
     public override void Dispose()
