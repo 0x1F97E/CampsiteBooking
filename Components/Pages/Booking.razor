@@ -5,7 +5,7 @@
 @inject IJSRuntime JSRuntime
 @inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
 @inject ISnackbar Snackbar
-@inject StripePaymentService StripeService
+@inject MockPaymentService StripeService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IKafkaProducer KafkaProducer
 @using CampsiteBooking.Data
@@ -224,7 +224,7 @@
                                      Class="mt-3" />
                         
                         <MudStack Row="true" Class="mt-4" Spacing="2">
-                            <MudButton Variant="Variant.Outlined" 
+                            <MudButton Variant="Variant.Outlined"
                                       Color="Color.Default"
                                       OnClick="Cancel">
                                 Cancel
@@ -232,9 +232,9 @@
                             <MudButton Variant="Variant.Filled"
                                       Color="Color.Primary"
                                       Disabled="@(!_formValid || _selectedSpot == null)"
-                                      OnClick="SubmitBooking"
+                                      OnClick="ShowPaymentDialog"
                                       FullWidth="true">
-                                Confirm Booking
+                                Proceed to Payment
                             </MudButton>
                         </MudStack>
 
@@ -333,6 +333,131 @@
     }
 </MudContainer>
 
+<!-- Mock Credit Card Payment Dialog -->
+@if (_showPaymentDialog)
+{
+    <MudOverlay Visible="true" DarkBackground="true" Absolute="false" ZIndex="9999">
+        <MudPaper Elevation="8" Class="pa-6" Style="max-width: 600px; width: 90vw; max-height: 90vh; overflow-y: auto;">
+            <!-- Dialog Title -->
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.CreditCard" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h5">Payment Information</MudText>
+                <MudSpacer />
+                <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="ClosePaymentDialog" />
+            </MudStack>
+
+            <!-- Info Alert -->
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+                <MudText Typo="Typo.body2">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                    This is a demo payment form. No actual payment will be processed.
+                </MudText>
+            </MudAlert>
+
+            <!-- Payment Form -->
+            <MudForm @ref="_paymentForm" @bind-IsValid="_paymentFormValid">
+                <MudStack Spacing="3">
+                    <!-- Card Number -->
+                    <MudTextField @bind-Value="_cardNumber"
+                                 Label="Card Number"
+                                 Variant="Variant.Outlined"
+                                 Placeholder="1234 5678 9012 3456"
+                                 Required="true"
+                                 RequiredError="Card number is required"
+                                 Validation="@(new Func<string, string>(ValidateCardNumber))"
+                                 Immediate="true"
+                                 MaxLength="19"
+                                 Adornment="Adornment.Start"
+                                 AdornmentIcon="@Icons.Material.Filled.CreditCard"
+                                 OnKeyUp="FormatCardNumber" />
+
+                    <!-- Cardholder Name -->
+                    <MudTextField @bind-Value="_cardholderName"
+                                 Label="Cardholder Name"
+                                 Variant="Variant.Outlined"
+                                 Placeholder="JOHN DOE"
+                                 Required="true"
+                                 RequiredError="Cardholder name is required"
+                                 Validation="@(new Func<string, string>(ValidateCardholderName))"
+                                 Adornment="Adornment.Start"
+                                 AdornmentIcon="@Icons.Material.Filled.Person" />
+
+                    <!-- Expiration Date and CVV -->
+                    <MudGrid Spacing="2">
+                        <MudItem xs="6">
+                            <MudTextField @bind-Value="_expirationDate"
+                                         Label="Expiration Date"
+                                         Variant="Variant.Outlined"
+                                         Placeholder="MM/YY"
+                                         Required="true"
+                                         RequiredError="Expiration date is required"
+                                         Validation="@(new Func<string, string>(ValidateExpirationDate))"
+                                         Immediate="true"
+                                         MaxLength="5"
+                                         OnKeyUp="FormatExpirationDate" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudTextField @bind-Value="_cvv"
+                                         Label="CVV"
+                                         Variant="Variant.Outlined"
+                                         Placeholder="123"
+                                         Required="true"
+                                         RequiredError="CVV is required"
+                                         Validation="@(new Func<string, string>(ValidateCVV))"
+                                         InputType="InputType.Password"
+                                         MaxLength="4"
+                                         Adornment="Adornment.Start"
+                                         AdornmentIcon="@Icons.Material.Filled.Lock" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Payment Summary -->
+                    <MudDivider Class="my-2" />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.body2">Campsite:</MudText>
+                        <MudText Typo="Typo.body2"><b>@_accommodation?.CampsiteName</b></MudText>
+                    </MudStack>
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.body2">Accommodation:</MudText>
+                        <MudText Typo="Typo.body2"><b>@_accommodation?.Type</b></MudText>
+                    </MudStack>
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.body2">Dates:</MudText>
+                        <MudText Typo="Typo.body2"><b>@_dateRange?.Start?.ToString("MMM dd") - @_dateRange?.End?.ToString("MMM dd, yyyy")</b></MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h6">Total Amount:</MudText>
+                        <MudText Typo="Typo.h5" Color="Color.Primary"><b>$@_totalPrice.ToString("N2")</b></MudText>
+                    </MudStack>
+                </MudStack>
+            </MudForm>
+
+            <!-- Dialog Actions -->
+            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="mt-6">
+                <MudButton OnClick="ClosePaymentDialog" Variant="Variant.Outlined" Color="Color.Default">
+                    Cancel
+                </MudButton>
+                <MudButton OnClick="ProcessPayment"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Disabled="@(!_paymentFormValid || _isProcessingPayment)"
+                           StartIcon="@Icons.Material.Filled.Lock">
+                    @if (_isProcessingPayment)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <text>Processing...</text>
+                    }
+                    else
+                    {
+                        <text>Pay $@_totalPrice.ToString("N2")</text>
+                    }
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    </MudOverlay>
+}
+
 @code {
     [Parameter]
     public int? CampsiteIdParam { get; set; }
@@ -371,6 +496,16 @@
     private string _appliedDiscountCode = string.Empty;
     private int _discountPercentage = 0;
     private string _discountError = string.Empty;
+
+    // Payment dialog fields
+    private bool _showPaymentDialog = false;
+    private MudForm? _paymentForm;
+    private bool _paymentFormValid = false;
+    private bool _isProcessingPayment = false;
+    private string _cardNumber = string.Empty;
+    private string _cardholderName = string.Empty;
+    private string _expirationDate = string.Empty;
+    private string _cvv = string.Empty;
 
     private int _numberOfNights => _dateRange?.End != null && _dateRange?.Start != null
         ? (_dateRange.End.Value - _dateRange.Start.Value).Days
@@ -878,6 +1013,182 @@
         {
             Console.WriteLine($"❌ Error creating booking: {ex.Message}");
             Snackbar.Add($"Error creating booking: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // Show payment dialog instead of directly submitting booking
+    private void ShowPaymentDialog()
+    {
+        // Validate booking form first
+        if (_accommodation == null || _selectedSpot == null || _dateRange == null || _dateRange.Start == null || _dateRange.End == null)
+        {
+            Snackbar.Add("Please fill in all required fields", Severity.Error);
+            return;
+        }
+
+        // Pre-populate payment form fields with test values for easy testing
+        _cardNumber = "1234 5678";
+        _cardholderName = "JOHN DOE";
+        _expirationDate = "12/30";
+        _cvv = "123";
+        _paymentFormValid = false;
+
+        // Show the payment dialog
+        _showPaymentDialog = true;
+    }
+
+    private void ClosePaymentDialog()
+    {
+        _showPaymentDialog = false;
+        _isProcessingPayment = false;
+    }
+
+    private async Task ProcessPayment()
+    {
+        if (!_paymentFormValid)
+        {
+            Snackbar.Add("Please fill in all payment fields correctly", Severity.Error);
+            return;
+        }
+
+        _isProcessingPayment = true;
+        StateHasChanged();
+
+        // Simulate payment processing delay for realism
+        await Task.Delay(1500);
+
+        // Close the payment dialog
+        _showPaymentDialog = false;
+
+        // Proceed with the actual booking submission
+        await SubmitBooking();
+
+        _isProcessingPayment = false;
+    }
+
+    // Credit card validation methods
+    private string ValidateCardNumber(string cardNumber)
+    {
+        if (string.IsNullOrWhiteSpace(cardNumber))
+            return "Card number is required";
+
+        var digitsOnly = new string(cardNumber.Where(char.IsDigit).ToArray());
+
+        if (digitsOnly.Length < 13 || digitsOnly.Length > 19)
+            return "Card number must be between 13 and 19 digits";
+
+        // Luhn algorithm validation (basic credit card validation)
+        if (!IsValidLuhn(digitsOnly))
+            return "Invalid card number";
+
+        return null;
+    }
+
+    private string ValidateCardholderName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "Cardholder name is required";
+
+        if (name.Length < 3)
+            return "Name must be at least 3 characters";
+
+        if (!name.All(c => char.IsLetter(c) || char.IsWhiteSpace(c)))
+            return "Name can only contain letters and spaces";
+
+        return null;
+    }
+
+    private string ValidateExpirationDate(string expDate)
+    {
+        if (string.IsNullOrWhiteSpace(expDate))
+            return "Expiration date is required";
+
+        if (!System.Text.RegularExpressions.Regex.IsMatch(expDate, @"^\d{2}/\d{2}$"))
+            return "Format must be MM/YY";
+
+        var parts = expDate.Split('/');
+        if (parts.Length != 2)
+            return "Invalid format";
+
+        if (!int.TryParse(parts[0], out int month) || !int.TryParse(parts[1], out int year))
+            return "Invalid date";
+
+        if (month < 1 || month > 12)
+            return "Invalid month";
+
+        // Check if card is expired
+        var currentYear = DateTime.Now.Year % 100;
+        var currentMonth = DateTime.Now.Month;
+
+        if (year < currentYear || (year == currentYear && month < currentMonth))
+            return "Card is expired";
+
+        return null;
+    }
+
+    private string ValidateCVV(string cvv)
+    {
+        if (string.IsNullOrWhiteSpace(cvv))
+            return "CVV is required";
+
+        if (!cvv.All(char.IsDigit))
+            return "CVV must contain only digits";
+
+        if (cvv.Length < 3 || cvv.Length > 4)
+            return "CVV must be 3 or 4 digits";
+
+        return null;
+    }
+
+    // Luhn algorithm for credit card validation
+    private bool IsValidLuhn(string cardNumber)
+    {
+        int sum = 0;
+        bool alternate = false;
+
+        for (int i = cardNumber.Length - 1; i >= 0; i--)
+        {
+            int digit = cardNumber[i] - '0';
+
+            if (alternate)
+            {
+                digit *= 2;
+                if (digit > 9)
+                    digit -= 9;
+            }
+
+            sum += digit;
+            alternate = !alternate;
+        }
+
+        return sum % 10 == 0;
+    }
+
+    // Format card number with spaces (XXXX XXXX XXXX XXXX)
+    private void FormatCardNumber(KeyboardEventArgs e)
+    {
+        var digitsOnly = new string(_cardNumber.Where(char.IsDigit).ToArray());
+
+        if (digitsOnly.Length > 0)
+        {
+            var formatted = string.Join(" ", Enumerable.Range(0, (digitsOnly.Length + 3) / 4)
+                .Select(i => digitsOnly.Substring(i * 4, Math.Min(4, digitsOnly.Length - i * 4))));
+            _cardNumber = formatted;
+        }
+    }
+
+    // Format expiration date (MM/YY)
+    private void FormatExpirationDate(KeyboardEventArgs e)
+    {
+        var digitsOnly = new string(_expirationDate.Where(char.IsDigit).ToArray());
+
+        if (digitsOnly.Length >= 2)
+        {
+            _expirationDate = digitsOnly.Substring(0, 2) + "/" + digitsOnly.Substring(2, Math.Min(2, digitsOnly.Length - 2));
+        }
+        else
+        {
+            _expirationDate = digitsOnly;
         }
     }
 

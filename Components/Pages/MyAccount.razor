@@ -151,22 +151,6 @@ else
                         </MudAvatar>
                         <MudText Typo="Typo.h6">@_firstName @_lastName</MudText>
                     </div>
-                    <MudDivider Class="my-4" />
-                    <MudText Typo="Typo.h6" Class="mb-3">Account Statistics</MudText>
-                    <div class="mb-3">
-                        <div class="d-flex justify-space-between align-center mb-2">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Total Bookings</MudText>
-                            <MudText Typo="Typo.body1"><strong>@_totalBookings</strong></MudText>
-                        </div>
-                        <div class="d-flex justify-space-between align-center mb-2">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Upcoming Trips</MudText>
-                            <MudText Typo="Typo.body1"><strong>@_upcomingTrips</strong></MudText>
-                        </div>
-                        <div class="d-flex justify-space-between align-center mb-2">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Favorite Campsite</MudText>
-                            <MudText Typo="Typo.body2">@_favoriteCampsite</MudText>
-                        </div>
-                    </div>
                 </MudCardContent>
             </MudCard>
 
@@ -300,10 +284,7 @@ else
     private DateTime _memberSince = DateTime.Today;
     private DateTime _lastPasswordChange = DateTime.Today;
 
-    // Account statistics from database
-    private int _totalBookings = 0;
-    private int _upcomingTrips = 0;
-    private string _favoriteCampsite = "None";
+
 
     // Preferences from database
     private bool _emailNotifications = true;
@@ -332,7 +313,6 @@ else
         if (_isAuthenticated)
         {
             await LoadUserData();
-            await LoadAccountStatistics();
             await LoadPurchaseHistory();
         }
 
@@ -421,54 +401,7 @@ else
         }
     }
 
-    private async Task LoadAccountStatistics()
-    {
-        try
-        {
-            using var context = await DbContextFactory.CreateDbContextAsync();
 
-            // Load bookings for this user
-            var guestId = GuestId.Create(_currentUserId);
-            var bookings = await context.Bookings
-                .Where(b => b.GuestId == guestId)
-                .ToListAsync();
-
-            // Calculate statistics
-            _totalBookings = bookings.Count;
-            _upcomingTrips = bookings.Count(b =>
-                (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Pending) &&
-                b.CheckInDate >= DateTime.Today);
-
-            // Find favorite campsite (most booked) - load campsites separately
-            var campsiteIds = bookings.Select(b => b.CampsiteId).Distinct().ToList();
-            var campsites = await context.Campsites
-                .Where(c => campsiteIds.Contains(c.Id))
-                .ToListAsync();
-
-            var campsiteBookingCounts = bookings
-                .GroupBy(b => b.CampsiteId)
-                .Select(g => new { CampsiteId = g.Key, Count = g.Count() })
-                .OrderByDescending(x => x.Count)
-                .FirstOrDefault();
-
-            if (campsiteBookingCounts != null)
-            {
-                var favoriteCampsite = campsites.FirstOrDefault(c => c.Id == campsiteBookingCounts.CampsiteId);
-                _favoriteCampsite = favoriteCampsite?.Name ?? "None";
-            }
-            else
-            {
-                _favoriteCampsite = "None";
-            }
-
-            Console.WriteLine($"✅ Statistics: {_totalBookings} total, {_upcomingTrips} upcoming, favorite: {_favoriteCampsite}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"❌ Error loading statistics: {ex.Message}");
-            // Don't show error to user - statistics are not critical
-        }
-    }
 
     private void StartEmailEdit()
     {

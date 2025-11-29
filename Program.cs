@@ -74,8 +74,11 @@ builder.Services.AddHttpClient();
 // Register ApiService for Blazor components
 builder.Services.AddScoped<ApiService>();
 
-// Register Stripe Payment Service
-builder.Services.AddScoped<StripePaymentService>();
+// Register Payment Service
+// Use MockPaymentService for testing without real Stripe API keys
+// To use real Stripe, replace MockPaymentService with StripePaymentService and configure valid API keys in appsettings.json
+builder.Services.AddScoped<MockPaymentService>();
+// builder.Services.AddScoped<StripePaymentService>(); // Uncomment to use real Stripe
 
 // Add API Controllers (REST API)
 builder.Services.AddControllers();
@@ -218,7 +221,8 @@ builder.Services.AddScoped<CampsiteBooking.Infrastructure.EventHandlers.IEventHa
 builder.Services.AddSingleton<IKafkaProducer, KafkaProducer>();
 
 // Register Kafka Consumer as Hosted Service (Background Processing)
-builder.Services.AddHostedService<KafkaConsumer>();
+// TEMPORARILY DISABLED: Kafka consumer causing errors with invalid GuestId=0 in old events
+// builder.Services.AddHostedService<KafkaConsumer>();
 
 var app = builder.Build();
 
