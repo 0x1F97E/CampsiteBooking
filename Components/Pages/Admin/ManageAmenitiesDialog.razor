@@ -1,0 +1,387 @@
+@using MudBlazor
+@using CampsiteBooking.Models
+@using CampsiteBooking.Models.ValueObjects
+@using CampsiteBooking.Data
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject ISnackbar Snackbar
+@rendermode InteractiveServer
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Style="max-height: 70vh; overflow-y: auto;">
+            <MudText Typo="Typo.h6" Class="mb-4">Manage Amenities for @CampsiteName</MudText>
+            
+            <!-- Add New Amenity Section -->
+            <MudPaper Class="pa-4 mb-4" Elevation="2">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="mr-1" />
+                    Add New Amenity
+                </MudText>
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_newAmenityName" Label="Amenity Name" Variant="Variant.Outlined"
+                                      Required="true" Placeholder="e.g., WiFi, Swimming Pool" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="string" @bind-Value="_newAmenityCategory" Label="Category" Variant="Variant.Outlined">
+                            <MudSelectItem T="string" Value="@("General")">General</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Facilities")">Facilities</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Activities")">Activities</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Services")">Services</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_newAmenityDescription" Label="Description" Variant="Variant.Outlined"
+                                      Lines="2" Placeholder="Brief description of this amenity" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="_newAmenityIconUrl" Label="Icon URL (optional)" Variant="Variant.Outlined"
+                                      Placeholder="https://example.com/icon.png" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSwitch @bind-Value="_newAmenityIsAvailable" Label="Available" Color="Color.Success" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="AddAmenity" Disabled="@string.IsNullOrWhiteSpace(_newAmenityName)">
+                            Add Amenity
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            <!-- Existing Amenities List -->
+            <MudText Typo="Typo.subtitle1" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Small" Class="mr-1" />
+                Existing Amenities (@_amenities.Count)
+            </MudText>
+
+            @if (_isLoading)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+            }
+            else if (!_amenities.Any())
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4">
+                    No amenities found for this campsite. Add your first amenity above.
+                </MudAlert>
+            }
+            else
+            {
+                <MudList T="string">
+                    @foreach (var amenity in _amenities)
+                    {
+                        <MudListItem T="string">
+                            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                <MudGrid>
+                                    <MudItem xs="12" md="8">
+                                        @if (_editingAmenityId == amenity.Id)
+                                        {
+                                            <MudTextField @bind-Value="amenity.Name" Label="Name" Variant="Variant.Outlined" Dense="true" Class="mb-2" />
+                                            <MudTextField @bind-Value="amenity.Description" Label="Description" Variant="Variant.Outlined" Dense="true" Lines="2" Class="mb-2" />
+                                            <MudSelect T="string" @bind-Value="amenity.Category" Label="Category" Variant="Variant.Outlined" Dense="true" Class="mb-2">
+                                                <MudSelectItem T="string" Value="@("General")">General</MudSelectItem>
+                                                <MudSelectItem T="string" Value="@("Facilities")">Facilities</MudSelectItem>
+                                                <MudSelectItem T="string" Value="@("Activities")">Activities</MudSelectItem>
+                                                <MudSelectItem T="string" Value="@("Services")">Services</MudSelectItem>
+                                            </MudSelect>
+                                            <MudTextField @bind-Value="amenity.IconUrl" Label="Icon URL" Variant="Variant.Outlined" Dense="true" Class="mb-2" />
+                                            <MudSwitch @bind-Value="amenity.IsAvailable" Label="Available" Color="Color.Success" Dense="true" />
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.subtitle1">
+                                                <strong>@amenity.Name</strong>
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">@amenity.Category</MudChip>
+                                                @if (!amenity.IsAvailable)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="ml-1">Unavailable</MudChip>
+                                                }
+                                            </MudText>
+                                            @if (!string.IsNullOrWhiteSpace(amenity.Description))
+                                            {
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@amenity.Description</MudText>
+                                            }
+                                        }
+                                    </MudItem>
+                                    <MudItem xs="12" md="4" Class="d-flex justify-end align-center">
+                                        @if (_editingAmenityId == amenity.Id)
+                                        {
+                                            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                                                       StartIcon="@Icons.Material.Filled.Save" OnClick="@(() => SaveAmenity(amenity))" Class="mr-2">
+                                                Save
+                                            </MudButton>
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
+                                                       OnClick="CancelEdit">
+                                                Cancel
+                                            </MudButton>
+                                        }
+                                        else
+                                        {
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                                                       StartIcon="@Icons.Material.Filled.Edit" OnClick="@(() => EditAmenity(amenity))" Class="mr-2">
+                                                Edit
+                                            </MudButton>
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                                                       StartIcon="@Icons.Material.Filled.Delete" OnClick="@(() => DeleteAmenity(amenity))">
+                                                Delete
+                                            </MudButton>
+                                        }
+                                    </MudItem>
+                                </MudGrid>
+                            </MudPaper>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public int CampsiteId { get; set; }
+    [Parameter] public string CampsiteName { get; set; } = string.Empty;
+
+    private List<AmenityDto> _amenities = new();
+    private bool _isLoading = false;
+    private int? _editingAmenityId = null;
+    private AmenityDto? _originalAmenity = null;
+
+    // New amenity fields
+    private string _newAmenityName = string.Empty;
+    private string _newAmenityDescription = string.Empty;
+    private string _newAmenityIconUrl = string.Empty;
+    private string _newAmenityCategory = "General";
+    private bool _newAmenityIsAvailable = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAmenities();
+    }
+
+    private async Task LoadAmenities()
+    {
+        _isLoading = true;
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var campsiteIdValue = CampsiteBooking.Models.ValueObjects.CampsiteId.Create(CampsiteId);
+            var amenities = await context.Amenities
+                .Where(a => a.CampsiteId == campsiteIdValue)
+                .ToListAsync();
+
+            _amenities = amenities.Select(a => new AmenityDto
+            {
+                Id = a.Id?.Value ?? 0,
+                CampsiteId = a.CampsiteId?.Value ?? 0,
+                Name = a.Name ?? "",
+                Description = a.Description ?? "",
+                IconUrl = a.IconUrl ?? "",
+                Category = a.Category ?? "General",
+                IsAvailable = a.IsAvailable
+            }).ToList();
+
+            Console.WriteLine($"✅ Loaded {_amenities.Count} amenities for campsite {CampsiteId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading amenities: {ex.Message}");
+            Snackbar.Add($"Error loading amenities: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task AddAmenity()
+    {
+        if (string.IsNullOrWhiteSpace(_newAmenityName))
+        {
+            Snackbar.Add("Amenity name is required", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var amenity = Amenity.Create(
+                CampsiteBooking.Models.ValueObjects.CampsiteId.Create(CampsiteId),
+                _newAmenityName.Trim(),
+                _newAmenityDescription?.Trim() ?? "",
+                _newAmenityIconUrl?.Trim() ?? "",
+                _newAmenityCategory
+            );
+
+            if (!_newAmenityIsAvailable)
+            {
+                amenity.MarkAsUnavailable();
+            }
+
+            context.Amenities.Add(amenity);
+            await context.SaveChangesAsync();
+
+            Console.WriteLine($"✅ Added amenity: {_newAmenityName}");
+            Snackbar.Add($"Amenity '{_newAmenityName}' added successfully!", Severity.Success);
+
+            // Clear form
+            _newAmenityName = string.Empty;
+            _newAmenityDescription = string.Empty;
+            _newAmenityIconUrl = string.Empty;
+            _newAmenityCategory = "General";
+            _newAmenityIsAvailable = true;
+
+            // Reload amenities
+            await LoadAmenities();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error adding amenity: {ex.Message}");
+            Snackbar.Add($"Error adding amenity: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void EditAmenity(AmenityDto amenity)
+    {
+        _editingAmenityId = amenity.Id;
+        _originalAmenity = new AmenityDto
+        {
+            Id = amenity.Id,
+            CampsiteId = amenity.CampsiteId,
+            Name = amenity.Name,
+            Description = amenity.Description,
+            IconUrl = amenity.IconUrl,
+            Category = amenity.Category,
+            IsAvailable = amenity.IsAvailable
+        };
+    }
+
+    private void CancelEdit()
+    {
+        if (_editingAmenityId.HasValue && _originalAmenity != null)
+        {
+            var amenity = _amenities.FirstOrDefault(a => a.Id == _editingAmenityId.Value);
+            if (amenity != null)
+            {
+                amenity.Name = _originalAmenity.Name;
+                amenity.Description = _originalAmenity.Description;
+                amenity.IconUrl = _originalAmenity.IconUrl;
+                amenity.Category = _originalAmenity.Category;
+                amenity.IsAvailable = _originalAmenity.IsAvailable;
+            }
+        }
+        _editingAmenityId = null;
+        _originalAmenity = null;
+    }
+
+    private async Task SaveAmenity(AmenityDto amenityDto)
+    {
+        if (string.IsNullOrWhiteSpace(amenityDto.Name))
+        {
+            Snackbar.Add("Amenity name is required", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var amenityId = AmenityId.Create(amenityDto.Id);
+            var amenity = await context.Amenities.FirstOrDefaultAsync(a => a.Id == amenityId);
+
+            if (amenity == null)
+            {
+                Snackbar.Add("Amenity not found", Severity.Error);
+                return;
+            }
+
+            // Update amenity using domain methods
+            amenity.UpdateDetails(
+                amenityDto.Name.Trim(),
+                amenityDto.Description?.Trim() ?? "",
+                amenityDto.IconUrl?.Trim() ?? "",
+                amenityDto.Category
+            );
+
+            if (amenityDto.IsAvailable && !amenity.IsAvailable)
+            {
+                amenity.MarkAsAvailable();
+            }
+            else if (!amenityDto.IsAvailable && amenity.IsAvailable)
+            {
+                amenity.MarkAsUnavailable();
+            }
+
+            await context.SaveChangesAsync();
+
+            Console.WriteLine($"✅ Updated amenity: {amenityDto.Name}");
+            Snackbar.Add($"Amenity '{amenityDto.Name}' updated successfully!", Severity.Success);
+
+            _editingAmenityId = null;
+            _originalAmenity = null;
+
+            await LoadAmenities();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error updating amenity: {ex.Message}");
+            Snackbar.Add($"Error updating amenity: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteAmenity(AmenityDto amenityDto)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var amenityId = AmenityId.Create(amenityDto.Id);
+            var amenity = await context.Amenities.FirstOrDefaultAsync(a => a.Id == amenityId);
+
+            if (amenity == null)
+            {
+                Snackbar.Add("Amenity not found", Severity.Error);
+                return;
+            }
+
+            context.Amenities.Remove(amenity);
+            await context.SaveChangesAsync();
+
+            Console.WriteLine($"✅ Deleted amenity: {amenityDto.Name}");
+            Snackbar.Add($"Amenity '{amenityDto.Name}' deleted successfully!", Severity.Success);
+
+            await LoadAmenities();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error deleting amenity: {ex.Message}");
+            Snackbar.Add($"Error deleting amenity: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Close()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    public class AmenityDto
+    {
+        public int Id { get; set; }
+        public int CampsiteId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string IconUrl { get; set; } = string.Empty;
+        public string Category { get; set; } = "General";
+        public bool IsAvailable { get; set; } = true;
+    }
+}
+

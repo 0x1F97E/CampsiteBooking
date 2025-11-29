@@ -147,6 +147,11 @@ public class AmenityIdConverter : ValueConverter<AmenityId, int>
     public AmenityIdConverter() : base(v => v.Value, v => AmenityId.Create(v)) { }
 }
 
+public class AmenityLookupIdConverter : ValueConverter<AmenityLookupId, int>
+{
+    public AmenityLookupIdConverter() : base(v => v.Value, v => AmenityLookupId.Create(v)) { }
+}
+
 public class PhotoIdConverter : ValueConverter<PhotoId, int>
 {
     public PhotoIdConverter() : base(

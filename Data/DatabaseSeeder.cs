@@ -1213,9 +1213,10 @@ public static class DatabaseSeeder
     // ============================================================================
     private static async Task SeedAmenities(CampsiteBookingDbContext context)
     {
+        // Only seed amenities if none exist (allow admin-managed amenities to persist)
         if (await context.Amenities.AnyAsync())
         {
-            Console.WriteLine("⏭️  Amenities already seeded, skipping...");
+            Console.WriteLine("⏭️  Amenities already exist, skipping seeding...");
             return;
         }
 

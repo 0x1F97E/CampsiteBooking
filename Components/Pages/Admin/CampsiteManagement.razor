@@ -167,6 +167,21 @@
                     </MudButton>
                 </MudItem>
 
+                <!-- Amenities Management Section -->
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Class="mr-1" />
+                        Amenities
+                    </MudText>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Star"
+                               FullWidth="true"
+                               OnClick="@(() => OpenManageAmenitiesDialog(_selectedCampsite))">
+                        Manage Amenities
+                    </MudButton>
+                </MudItem>
+
                 <!-- Save Button -->
                 <MudItem xs="12" Class="d-flex justify-end">
                     <MudButton Variant="Variant.Filled"
@@ -484,111 +499,14 @@
                                                     Amenities
                                                 </MudText>
                                                 <MudGrid>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "WiFi")"
-                                                                     Label="WiFi"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "WiFi", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Electric-Hookup")"
-                                                                     Label="Electric Hookup"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Electric-Hookup", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Water-Access")"
-                                                                     Label="Water Access"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Water-Access", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Sewage-Hookup")"
-                                                                     Label="Sewage Hookup"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Sewage-Hookup", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Heating")"
-                                                                     Label="Heating"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Heating", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Air-Conditioning")"
-                                                                     Label="Air Conditioning"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Air-Conditioning", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Fire-Pit")"
-                                                                     Label="Fire Pit"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Fire-Pit", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Picnic-Table")"
-                                                                     Label="Picnic Table"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Picnic-Table", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "BBQ-Grill")"
-                                                                     Label="BBQ Grill"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "BBQ-Grill", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Pet-Friendly")"
-                                                                     Label="Pet Friendly"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Pet-Friendly", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Kitchen")"
-                                                                     Label="Kitchen"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Kitchen", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Bathroom")"
-                                                                     Label="Private Bathroom"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Bathroom", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Close-To-Playground")"
-                                                                     Label="Close to Playground"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Close-To-Playground", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Senior-Friendly")"
-                                                                     Label="Senior Friendly"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Senior-Friendly", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Handicap-Friendly")"
-                                                                     Label="Handicap Friendly"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Handicap-Friendly", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Oven")"
-                                                                     Label="Oven"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Oven", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Fridge")"
-                                                                     Label="Fridge"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Fridge", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Freezer")"
-                                                                     Label="Freezer"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Freezer", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Deposit-Box")"
-                                                                     Label="Deposit Box"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Deposit-Box", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "TV")"
-                                                                     Label="TV"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "TV", val))" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" md="4">
-                                                        <MudCheckBox Value="@GetAmenityValue(accType, "Surveilled")"
-                                                                     Label="Surveilled"
-                                                                     ValueChanged="@((bool val) => UpdateAmenity(accType, "Surveilled", val))" />
-                                                    </MudItem>
+                                                    @foreach (var amenity in _availableAmenities)
+                                                    {
+                                                        <MudItem xs="12" sm="6" md="4">
+                                                            <MudCheckBox Value="@GetAmenityValue(accType, amenity.Name)"
+                                                                         Label="@amenity.DisplayName"
+                                                                         ValueChanged="@((bool val) => UpdateAmenity(accType, amenity.Name, val))" />
+                                                        </MudItem>
+                                                    }
                                                 </MudGrid>
                                             </MudItem>
 
@@ -620,12 +538,14 @@
     private CampsiteManagementDto? _selectedCampsite;
     private List<CampsiteManagementDto> _campsites = new();
     private List<AccommodationTypeDto> _accommodationTypes = new();
+    private List<AmenityLookup> _availableAmenities = new();
     private bool _loading = false;
 
     protected override async Task OnInitializedAsync()
     {
         Console.WriteLine("🔵 OnInitializedAsync called");
         await LoadCampsites();
+        await LoadAvailableAmenities();
         Console.WriteLine($"🔵 Loaded {_campsites.Count} campsites");
 
         // Auto-select the first campsite to show data immediately
@@ -685,6 +605,25 @@
         _loading = false;
     }
 
+    private async Task LoadAvailableAmenities()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            _availableAmenities = await context.AmenityLookups
+                .Where(a => a.IsActive)
+                .OrderBy(a => a.SortOrder)
+                .ToListAsync();
+
+            Console.WriteLine($"✅ Loaded {_availableAmenities.Count} available amenities from lookup table");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading amenities: {ex.Message}");
+            _availableAmenities = new List<AmenityLookup>();
+        }
+    }
+
     private async Task<IEnumerable<CampsiteManagementDto>> SearchCampsites(string value, CancellationToken token)
     {
         await Task.Delay(100, token); // Simulate API delay
@@ -726,7 +665,7 @@
                 PricePerNight = e.BasePrice?.Amount ?? 0m,
                 ImageUrl = e.ImageUrl ?? "",
                 Icon = "", // Default icon, can be customized later
-                Amenities = new List<string>(), // TODO: Load from database if stored
+                Amenities = e.GetAmenitiesList(), // Load from database
                 Spots = new List<AccommodationSpotDto>(), // TODO: Load spots from database
                 GalleryImages = new List<string>(),
                 IsActive = e.IsActive,
@@ -852,6 +791,31 @@
         }
     }
 
+    private async Task OpenManageAmenitiesDialog(CampsiteManagementDto campsite)
+    {
+        var parameters = new DialogParameters
+        {
+            ["CampsiteId"] = campsite.Id,
+            ["CampsiteName"] = campsite.Name
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<ManageAmenitiesDialog>("Manage Amenities", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Amenities updated successfully!", Severity.Success);
+            StateHasChanged();
+        }
+    }
+
     private async Task OpenAddAccommodationTypeDialog()
     {
         try
@@ -919,6 +883,12 @@
                 dto.Description,
                 dto.ImageUrl
             );
+
+            // Set amenities if provided
+            if (dto.Amenities != null && dto.Amenities.Any())
+            {
+                entity.UpdateAmenities(dto.Amenities);
+            }
 
             context.AccommodationTypes.Add(entity);
             await context.SaveChangesAsync();
@@ -1053,15 +1023,45 @@
         return accType.Amenities.Contains(amenity);
     }
 
-    private void UpdateAmenity(AccommodationTypeDto accType, string amenity, bool value)
+    private async Task UpdateAmenity(AccommodationTypeDto accType, string amenity, bool value)
     {
-        if (value && !accType.Amenities.Contains(amenity))
+        try
         {
-            accType.Amenities.Add(amenity);
+            // Update the DTO
+            if (value && !accType.Amenities.Contains(amenity))
+            {
+                accType.Amenities.Add(amenity);
+            }
+            else if (!value && accType.Amenities.Contains(amenity))
+            {
+                accType.Amenities.Remove(amenity);
+            }
+
+            // Save to database
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var accommodationTypeId = AccommodationTypeId.Create(accType.Id);
+            var entity = await context.AccommodationTypes.FirstOrDefaultAsync(a => a.Id == accommodationTypeId);
+
+            if (entity == null)
+            {
+                Console.WriteLine($"❌ AccommodationType with ID {accType.Id} not found");
+                Snackbar.Add("Error: Accommodation type not found", Severity.Error);
+                return;
+            }
+
+            // Update amenities using domain method
+            entity.UpdateAmenities(accType.Amenities);
+
+            await context.SaveChangesAsync();
+
+            Console.WriteLine($"✅ Updated amenities for {accType.Type}: {string.Join(", ", accType.Amenities)}");
+            Snackbar.Add($"Amenity '{amenity}' {(value ? "added" : "removed")} successfully!", Severity.Success);
         }
-        else if (!value && accType.Amenities.Contains(amenity))
+        catch (Exception ex)
         {
-            accType.Amenities.Remove(amenity);
+            Console.WriteLine($"❌ Error updating amenity: {ex.Message}");
+            Snackbar.Add($"Error updating amenity: {ex.Message}", Severity.Error);
         }
     }
 

@@ -1,6 +1,9 @@
 ﻿@page "/home"
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@using CampsiteBooking.Data
+@using Microsoft.EntityFrameworkCore
 
 <PageTitle>Quick Search - Campsite Booking</PageTitle>
 
@@ -78,17 +81,38 @@
     private int _children = 0;
 
     private IEnumerable<string> _selectedAmenities = new HashSet<string>();
-    private readonly List<string> _availableAmenities = new()
+    private List<string> _availableAmenities = new();
+
+    protected override async Task OnInitializedAsync()
     {
-        "Electric-Hookup",
-        "Water-Access",
-        "WiFi",
-        "Picnic-Table",
-        "Near-Beach",
-        "Fire-Pit",
-        "BBQ-Area",
-        "Playground"
-    };
+        await LoadAmenities();
+    }
+
+    private async Task LoadAmenities()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load amenities from the global AmenityLookup table
+            var amenityLookups = await context.AmenityLookups
+                .Where(a => a.IsActive)
+                .OrderBy(a => a.SortOrder)
+                .ToListAsync();
+
+            _availableAmenities = amenityLookups
+                .Select(a => a.Name)
+                .ToList();
+
+            Console.WriteLine($"✅ Loaded {_availableAmenities.Count} amenities for home page filter from AmenityLookup table");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading amenities: {ex.Message}");
+            // Fallback to empty list
+            _availableAmenities = new List<string>();
+        }
+    }
 
     private void SearchCampsites()
     {

@@ -238,22 +238,21 @@
         {
             using var context = await DbContextFactory.CreateDbContextAsync();
 
-            var amenities = await context.Amenities.ToListAsync();
+            // Load amenities from the global AmenityLookup table
+            var amenityLookups = await context.AmenityLookups
+                .Where(a => a.IsActive)
+                .OrderBy(a => a.SortOrder)
+                .ToListAsync();
 
-            // Get distinct amenity names
-            _availableAmenities = amenities
-                .Where(a => !string.IsNullOrEmpty(a.Name) && a.IsAvailable)
+            _availableAmenities = amenityLookups
                 .Select(a => new AmenityFilterDto
                 {
                     Name = a.Name,
                     Category = a.Category
                 })
-                .GroupBy(a => a.Name)
-                .Select(g => g.First())
-                .OrderBy(a => a.Name)
                 .ToList();
 
-            Console.WriteLine($"✅ Loaded {_availableAmenities.Count} amenities for search filter");
+            Console.WriteLine($"✅ Loaded {_availableAmenities.Count} amenities for search filter from AmenityLookup table");
         }
         catch (Exception ex)
         {
@@ -295,7 +294,14 @@
 
             Console.WriteLine($"📊 Loaded {allAccommodationTypes.Count} accommodation types from database");
 
-            // Convert to DTOs with campsite information
+            // Load all amenities from database
+            var allAmenities = await context.Amenities
+                .Where(a => a.IsAvailable)
+                .ToListAsync();
+
+            Console.WriteLine($"📊 Loaded {allAmenities.Count} amenities from database");
+
+            // Convert to DTOs with campsite information and amenities
             var allAccommodations = new List<AccommodationDto>();
 
             foreach (var accType in allAccommodationTypes)
@@ -306,6 +312,12 @@
 
                 if (campsite != null)
                 {
+                    // Get amenities for this campsite
+                    var campsiteAmenities = allAmenities
+                        .Where(a => a.CampsiteId.Value == campsite.Id.Value)
+                        .Select(a => a.Name)
+                        .ToList();
+
                     allAccommodations.Add(new AccommodationDto
                     {
                         Id = accType.Id?.Value ?? 0,
@@ -317,7 +329,7 @@
                         Capacity = accType.MaxCapacity,
                         PricePerNight = accType.BasePrice?.Amount ?? 0m,
                         ImageUrl = accType.ImageUrl ?? "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400",
-                        Amenities = new List<string>() // TODO: Load amenities from database if stored
+                        Amenities = campsiteAmenities
                     });
                 }
             }

@@ -131,6 +131,13 @@ public sealed class AmenityId : StronglyTypedId
     public static AmenityId CreateNew() => new(0, allowZero: true);
 }
 
+public sealed class AmenityLookupId : StronglyTypedId
+{
+    private AmenityLookupId(int value, bool allowZero = false) : base(value, allowZero) { }
+    public static AmenityLookupId Create(int value) => new(value);
+    public static AmenityLookupId CreateNew() => new(0, allowZero: true);
+}
+
 public sealed class PhotoId : StronglyTypedId
 {
     private PhotoId(int value, bool allowZero = false) : base(value, allowZero) { }

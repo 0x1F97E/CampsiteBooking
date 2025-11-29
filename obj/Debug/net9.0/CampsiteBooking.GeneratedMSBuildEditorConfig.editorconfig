@@ -95,6 +95,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9NYW5hZ2VBZGRPbnNEaWFsb2cucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/pc/CampsiteBooking-1/Components/Pages/Admin/ManageAmenitiesDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9NYW5hZ2VBbWVuaXRpZXNEaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/pc/CampsiteBooking-1/Components/Pages/Admin/ManageGalleryDialog.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9NYW5hZ2VHYWxsZXJ5RGlhbG9nLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 

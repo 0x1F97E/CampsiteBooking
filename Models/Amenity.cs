@@ -13,15 +13,15 @@ public class Amenity : Entity<AmenityId>
     private bool _isAvailable;
     private DateTime _createdDate;
     private DateTime _updatedDate;
-    
-    public CampsiteId CampsiteId => _campsiteId;
-    public string Name => _name;
-    public string Description => _description;
-    public string IconUrl => _iconUrl;
-    public string Category => _category;
-    public bool IsAvailable => _isAvailable;
-    public DateTime CreatedDate => _createdDate;
-    public DateTime UpdatedDate => _updatedDate;
+
+    public CampsiteId CampsiteId { get => _campsiteId; private set => _campsiteId = value; }
+    public string Name { get => _name; private set => _name = value; }
+    public string Description { get => _description; private set => _description = value; }
+    public string IconUrl { get => _iconUrl; private set => _iconUrl = value; }
+    public string Category { get => _category; private set => _category = value; }
+    public bool IsAvailable { get => _isAvailable; private set => _isAvailable = value; }
+    public DateTime CreatedDate { get => _createdDate; private set => _createdDate = value; }
+    public DateTime UpdatedDate { get => _updatedDate; private set => _updatedDate = value; }
     
     public int AmenityId
     {

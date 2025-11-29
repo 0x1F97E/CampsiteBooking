@@ -22,6 +22,7 @@ public class AccommodationType : Entity<AccommodationTypeId>
     private int _availableUnits;
     private bool _isActive;
     private DateTime _createdDate;
+    private string _amenities = string.Empty; // Comma-separated list of amenities
     
     // ============================================================================
     // PUBLIC PROPERTIES (Read-only)
@@ -36,6 +37,7 @@ public class AccommodationType : Entity<AccommodationTypeId>
     public int AvailableUnits => _availableUnits;
     public bool IsActive => _isActive;
     public DateTime CreatedDate => _createdDate;
+    public string Amenities => _amenities;
     
     // ============================================================================
     // LEGACY PROPERTIES (for EF Core backward compatibility)
@@ -151,6 +153,29 @@ public class AccommodationType : Entity<AccommodationTypeId>
     {
         _description = description?.Trim() ?? string.Empty;
         _imageUrl = imageUrl?.Trim() ?? string.Empty;
+    }
+
+    public void UpdateAmenities(List<string> amenities)
+    {
+        if (amenities == null)
+        {
+            _amenities = string.Empty;
+            return;
+        }
+
+        // Store as comma-separated string
+        _amenities = string.Join(",", amenities.Where(a => !string.IsNullOrWhiteSpace(a)).Select(a => a.Trim()));
+    }
+
+    public List<string> GetAmenitiesList()
+    {
+        if (string.IsNullOrWhiteSpace(_amenities))
+            return new List<string>();
+
+        return _amenities.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(a => a.Trim())
+            .Where(a => !string.IsNullOrWhiteSpace(a))
+            .ToList();
     }
 }
 

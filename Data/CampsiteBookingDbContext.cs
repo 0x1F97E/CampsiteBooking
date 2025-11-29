@@ -33,6 +33,7 @@ public class CampsiteBookingDbContext : DbContext
     public DbSet<Discount> Discounts => Set<Discount>();
     public DbSet<PeripheralPurchase> PeripheralPurchases => Set<PeripheralPurchase>();
     public DbSet<Amenity> Amenities => Set<Amenity>();
+    public DbSet<AmenityLookup> AmenityLookups => Set<AmenityLookup>();
     public DbSet<Photo> Photos => Set<Photo>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Event> Events => Set<Event>();
@@ -242,6 +243,7 @@ public class CampsiteBookingDbContext : DbContext
             entity.Ignore(a => a.IsActive);
             entity.Ignore(a => a.CreatedDate);
             entity.Ignore(a => a.BasePrice_Legacy);
+            entity.Ignore(a => a.Amenities);
 
             // Map private fields to database columns
             entity.Property("_campsiteId").HasColumnName("CampsiteId")
@@ -254,6 +256,7 @@ public class CampsiteBookingDbContext : DbContext
             entity.Property("_availableUnits").HasColumnName("AvailableUnits");
             entity.Property("_isActive").HasColumnName("IsActive");
             entity.Property("_createdDate").HasColumnName("CreatedDate");
+            entity.Property("_amenities").HasColumnName("Amenities");
         });
 
         // Configure AccommodationSpot entity to map private fields
@@ -293,17 +296,69 @@ public class CampsiteBookingDbContext : DbContext
             entity.Property("_createdDate").HasColumnName("CreatedDate");
         });
 
-        // Configure Amenity entity to map private fields
+        // Configure Amenity entity
         modelBuilder.Entity<Amenity>(entity =>
         {
-            entity.Property("_campsiteId").HasColumnName("CampsiteId");
-            entity.Property("_name").HasColumnName("Name").HasMaxLength(100).IsRequired();
-            entity.Property("_description").HasColumnName("Description");
-            entity.Property("_iconUrl").HasColumnName("IconUrl");
-            entity.Property("_category").HasColumnName("Category").HasMaxLength(50);
-            entity.Property("_isAvailable").HasColumnName("IsAvailable");
-            entity.Property("_createdDate").HasColumnName("CreatedDate");
-            entity.Property("_updatedDate").HasColumnName("UpdatedDate");
+            // Configure the Id property to use the Id column with value converter
+            entity.Property(a => a.Id).HasColumnName("Id")
+                .HasConversion(new AmenityIdConverter());
+
+            // Map the AmenityId property to the AmenityId column
+            entity.Property(a => a.AmenityId).HasColumnName("AmenityId");
+
+            // Map properties to database columns
+            entity.Property(a => a.CampsiteId).HasColumnName("CampsiteId")
+                .HasConversion(new CampsiteIdConverter());
+
+            entity.Property(a => a.Name).HasColumnName("Name")
+                .HasMaxLength(100).IsRequired();
+
+            entity.Property(a => a.Description).HasColumnName("Description");
+
+            entity.Property(a => a.IconUrl).HasColumnName("IconUrl");
+
+            entity.Property(a => a.Category).HasColumnName("Category")
+                .HasMaxLength(50);
+
+            entity.Property(a => a.IsAvailable).HasColumnName("IsAvailable");
+
+            entity.Property(a => a.CreatedDate).HasColumnName("CreatedDate");
+
+            entity.Property(a => a.UpdatedDate).HasColumnName("UpdatedDate");
+        });
+
+        // Configure AmenityLookup entity
+        modelBuilder.Entity<AmenityLookup>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+
+            entity.Property(a => a.Id).HasColumnName("Id")
+                .HasConversion(new AmenityLookupIdConverter());
+
+            entity.Property(a => a.AmenityLookupId).HasColumnName("AmenityLookupId");
+
+            entity.Property(a => a.Name).HasColumnName("Name")
+                .HasMaxLength(100).IsRequired();
+
+            entity.Property(a => a.DisplayName).HasColumnName("DisplayName")
+                .HasMaxLength(100).IsRequired();
+
+            entity.Property(a => a.Category).HasColumnName("Category")
+                .HasMaxLength(50);
+
+            entity.Property(a => a.IconClass).HasColumnName("IconClass")
+                .HasMaxLength(100);
+
+            entity.Property(a => a.IsActive).HasColumnName("IsActive");
+
+            entity.Property(a => a.SortOrder).HasColumnName("SortOrder");
+
+            entity.Property(a => a.CreatedDate).HasColumnName("CreatedDate");
+
+            entity.Property(a => a.UpdatedDate).HasColumnName("UpdatedDate");
+
+            // Create unique index on Name
+            entity.HasIndex(a => a.Name).IsUnique();
         });
 
         // Configure Photo entity to map private fields
@@ -367,6 +422,7 @@ public class CampsiteBookingDbContext : DbContext
         configurationBuilder.Properties<DiscountId>().HaveConversion<DiscountIdConverter>();
         configurationBuilder.Properties<PeripheralPurchaseId>().HaveConversion<PeripheralPurchaseIdConverter>();
         configurationBuilder.Properties<AmenityId>().HaveConversion<AmenityIdConverter>();
+        configurationBuilder.Properties<AmenityLookupId>().HaveConversion<AmenityLookupIdConverter>();
         configurationBuilder.Properties<PhotoId>().HaveConversion<PhotoIdConverter>();
         configurationBuilder.Properties<ReviewId>().HaveConversion<ReviewIdConverter>();
         configurationBuilder.Properties<CampsiteBooking.Models.ValueObjects.EventId>().HaveConversion<EventIdConverter>();
