@@ -20,9 +20,24 @@
                 Information & Newsletter Management
             </MudText>
             <MudText Typo="Typo.body1" Color="Color.Secondary">
-                Manage campsite information, events, activities, and send newsletters to subscribers
+                Manage campsite information, events, activities, and send newsletters to subscribers (@_events.Count events, @_newsletterHistory.Count newsletters)
             </MudText>
         </div>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="RefreshData"
+                   Disabled="@_loading">
+            @if (_loading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Loading...</span>
+            }
+            else
+            {
+                <span>Refresh</span>
+            }
+        </MudButton>
     </div>
 
     <MudGrid>
@@ -396,8 +411,9 @@
     private bool _sendTestEmail = false;
 
     // Statistics
-    private int _totalSubscribers = 2847;
-    private int _newSubscribersThisWeek = 156;
+    private int _totalSubscribers = 0;
+    private int _newSubscribersThisWeek = 0;
+    private bool _loading = false;
 
     // Data lists
     private List<CampsiteSubscriberDto> _campsites = new();
@@ -412,10 +428,26 @@
         await LoadPhotosAsync();
     }
 
+    private async Task RefreshData()
+    {
+        Console.WriteLine("🔄 Admin manually refreshing information management data...");
+        await LoadData();
+        await LoadPhotosAsync();
+        Snackbar.Add($"Refreshed! Found {_events.Count} events and {_newsletterHistory.Count} newsletters", Severity.Success);
+        StateHasChanged();
+    }
+
     private async Task LoadData()
     {
+        _loading = true;
+        StateHasChanged();
+
         try
         {
+            Console.WriteLine("\n" + new string('=', 80));
+            Console.WriteLine("📰 ADMIN INFORMATION MANAGEMENT - Loading data from database...");
+            Console.WriteLine(new string('=', 80));
+
             using var context = await DbContextFactory.CreateDbContextAsync();
 
             // Load campsites from database
@@ -424,37 +456,114 @@
             {
                 Id = c.Id?.Value ?? 0,
                 Name = c.Name ?? "",
-                SubscriberCount = 0 // TODO: Load from NewsletterSubscriptions table when created
+                SubscriberCount = 0 // Will be calculated from subscriptions
             }).ToList();
+            Console.WriteLine($"   ✅ Loaded {_campsites.Count} campsites");
 
-            // TODO: Load newsletters from database when Newsletters table is created
-            _recentNewsletters = new List<NewsletterDto>();
+            // Load newsletter subscriptions and calculate statistics
+            var subscriptions = await context.NewsletterSubscriptions.ToListAsync();
+            var activeSubscriptions = subscriptions.Where(s => s.IsActive).ToList();
+            _totalSubscribers = activeSubscriptions.Count;
 
-            Console.WriteLine($"✅ Loaded {_campsites.Count} campsites for information management");
+            var oneWeekAgo = DateTime.UtcNow.AddDays(-7);
+            _newSubscribersThisWeek = activeSubscriptions.Count(s => s.SubscribedDate >= oneWeekAgo);
+            Console.WriteLine($"   ✅ Loaded {_totalSubscribers} active newsletter subscribers ({_newSubscribersThisWeek} new this week)");
+
+            // Load events from database
+            var dbEvents = await context.Events.ToListAsync();
+            _events = dbEvents.Select(e => new EventDto
+            {
+                Id = e.EventId,
+                Name = e.Title ?? string.Empty,
+                Description = e.Description ?? string.Empty,
+                CampsiteName = GetCampsiteName(e.CampsiteId?.Value ?? 0),
+                EventDate = e.EventDate,
+                EventTime = e.EventDate.ToString("h:mm tt"),
+                Category = "Event", // Default category since Event model doesn't have category field
+                MaxCapacity = e.MaxParticipants,
+                RegisteredCount = e.CurrentParticipants,
+                Status = e.IsActive ? (e.IsFull() ? "Full" : "Open") : "Closed"
+            }).OrderBy(e => e.EventDate).ToList();
+            Console.WriteLine($"   ✅ Loaded {_events.Count} events from Events table");
+
+            // Load newsletters from database
+            var dbNewsletters = await context.Newsletters.ToListAsync();
+
+            // Recent newsletters (for sidebar)
+            _recentNewsletters = dbNewsletters
+                .Where(n => n.Status == "Sent")
+                .OrderByDescending(n => n.SentDate)
+                .Take(5)
+                .Select(n => new NewsletterDto
+                {
+                    Subject = n.Subject,
+                    SentDate = n.SentDate ?? DateTime.Now,
+                    RecipientCount = n.RecipientCount
+                }).ToList();
+            Console.WriteLine($"   ✅ Loaded {_recentNewsletters.Count} recent newsletters");
+
+            // Newsletter history (for table)
+            var newsletterAnalytics = await context.NewsletterAnalytics.ToListAsync();
+            _newsletterHistory = dbNewsletters
+                .OrderByDescending(n => n.SentDate ?? n.ScheduledDate)
+                .Select(n =>
+                {
+                    var analytics = newsletterAnalytics.FirstOrDefault(a => a.NewsletterId.Value == n.NewsletterId);
+                    return new NewsletterHistoryDto
+                    {
+                        Id = n.NewsletterId,
+                        Subject = n.Subject,
+                        CampsiteName = "All Campsites", // Newsletters don't have campsite association in current model
+                        SentDate = n.SentDate ?? n.ScheduledDate ?? DateTime.Now,
+                        RecipientCount = n.RecipientCount,
+                        OpenedCount = analytics?.TotalOpened ?? 0,
+                        ClickedCount = analytics?.TotalClicked ?? 0,
+                        OpenRate = analytics != null ? (int)(analytics.OpenRate * 100) : 0,
+                        ClickRate = analytics != null ? (int)(analytics.ClickRate * 100) : 0,
+                        Status = n.Status
+                    };
+                }).ToList();
+            Console.WriteLine($"   ✅ Loaded {_newsletterHistory.Count} newsletters for history table");
+
+            if (_events.Any())
+            {
+                Console.WriteLine($"\n   📋 Recent events (last 3):");
+                foreach (var evt in _events.Take(3))
+                {
+                    Console.WriteLine($"      - {evt.Name} at {evt.CampsiteName} on {evt.EventDate:MMM dd, yyyy}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"\n   ⚠️  NO EVENTS FOUND! Events should be seeded in the database.");
+            }
+
+            if (_newsletterHistory.Any())
+            {
+                Console.WriteLine($"\n   📋 Recent newsletters (last 3):");
+                foreach (var newsletter in _newsletterHistory.Take(3))
+                {
+                    Console.WriteLine($"      - {newsletter.Subject} ({newsletter.Status}) - {newsletter.RecipientCount} recipients");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"\n   ⚠️  NO NEWSLETTERS FOUND! Newsletters should be seeded in the database.");
+            }
+
+            Console.WriteLine(new string('=', 80) + "\n");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Error loading data: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
         }
-
-        // Load events
-        _events = new List<EventDto>
+        finally
         {
-            new() { Id = 1, Name = "Beach Volleyball Tournament", Description = "Friendly competition for all ages", CampsiteName = "Copenhagen Beach Camp", EventDate = DateTime.Today.AddDays(1), EventTime = "10:00 AM", Category = "Sports", MaxCapacity = 32, RegisteredCount = 28, Status = "Open" },
-            new() { Id = 2, Name = "Kids' Craft Workshop", Description = "Make your own camping souvenirs", CampsiteName = "Copenhagen Beach Camp", EventDate = DateTime.Today, EventTime = "2:00 PM", Category = "Kids", MaxCapacity = 20, RegisteredCount = 15, Status = "Open" },
-            new() { Id = 3, Name = "Campfire Stories & S'mores", Description = "Evening storytelling by the fire", CampsiteName = "Copenhagen Beach Camp", EventDate = DateTime.Today, EventTime = "7:00 PM", Category = "Entertainment", MaxCapacity = 0, RegisteredCount = 45, Status = "Open" },
-            new() { Id = 4, Name = "Guided Nature Walk", Description = "Explore local flora and fauna", CampsiteName = "Aarhus Forest Retreat", EventDate = DateTime.Today.AddDays(2), EventTime = "3:00 PM", Category = "Nature", MaxCapacity = 15, RegisteredCount = 15, Status = "Full" },
-            new() { Id = 5, Name = "Yoga at Sunrise", Description = "Start your day with mindfulness", CampsiteName = "Bornholm Island Camp", EventDate = DateTime.Today.AddDays(1), EventTime = "6:00 AM", Category = "Wellness", MaxCapacity = 25, RegisteredCount = 18, Status = "Open" }
-        };
-
-        // Load newsletter history
-        _newsletterHistory = new List<NewsletterHistoryDto>
-        {
-            new() { Id = 1, Subject = "Weekend Beach Volleyball Tournament", CampsiteName = "Copenhagen Beach Camp", SentDate = DateTime.Now.AddDays(-1), RecipientCount = 892, OpenedCount = 645, ClickedCount = 234, OpenRate = 72, ClickRate = 26, Status = "Sent" },
-            new() { Id = 2, Subject = "Kids' Summer Camp Activities", CampsiteName = "Skagen North Point", SentDate = DateTime.Now.AddDays(-2), RecipientCount = 645, OpenedCount = 512, ClickedCount = 189, OpenRate = 79, ClickRate = 29, Status = "Sent" },
-            new() { Id = 3, Subject = "Evening Campfire & Live Music", CampsiteName = "Aarhus Forest Retreat", SentDate = DateTime.Now.AddDays(-3), RecipientCount = 523, OpenedCount = 398, ClickedCount = 145, OpenRate = 76, ClickRate = 28, Status = "Sent" },
-            new() { Id = 4, Subject = "Weekly Activities Schedule", CampsiteName = "All Campsites", SentDate = DateTime.Now.AddDays(-7), RecipientCount = 2847, OpenedCount = 2105, ClickedCount = 856, OpenRate = 74, ClickRate = 30, Status = "Sent" }
-        };
+            _loading = false;
+            StateHasChanged();
+        }
     }
 
     private async Task LoadPhotosAsync()
@@ -536,7 +645,7 @@
             _scheduledTime = null;
             _sendTestEmail = false;
 
-            LoadData(); // Refresh history
+            await LoadData(); // Refresh history
         }
     }
 
@@ -554,7 +663,7 @@
 
         if (!result.Canceled)
         {
-            LoadData();
+            await LoadData();
             Snackbar.Add("Event added successfully", Severity.Success);
         }
     }
@@ -568,7 +677,7 @@
 
         if (!result.Canceled)
         {
-            LoadData();
+            await LoadData();
             Snackbar.Add("Event updated successfully", Severity.Success);
         }
     }

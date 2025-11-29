@@ -21,12 +21,29 @@
                 Booking Management
             </MudText>
             <MudText Typo="Typo.body1" Color="Color.Secondary">
-                View and manage all campsite bookings
+                View and manage all campsite bookings (@_bookings.Count total)
             </MudText>
         </div>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FileDownload">
-            Export to CSV
-        </MudButton>
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="RefreshBookings"
+                       Disabled="@_loading">
+                @if (_loading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Loading...</span>
+                }
+                else
+                {
+                    <span>Refresh</span>
+                }
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FileDownload">
+                Export to CSV
+            </MudButton>
+        </MudStack>
     </div>
 
     <!-- Filters -->
@@ -147,25 +164,42 @@
         await LoadBookings();
     }
 
+    private async Task RefreshBookings()
+    {
+        Console.WriteLine("🔄 Admin manually refreshing bookings...");
+        await LoadBookings();
+        Snackbar.Add($"Refreshed! Found {_bookings.Count} bookings", Severity.Success);
+        StateHasChanged();
+    }
+
     private async Task LoadBookings()
     {
+        _loading = true;
+        StateHasChanged();
+
         try
         {
+            Console.WriteLine("\n" + new string('=', 80));
+            Console.WriteLine("📊 ADMIN BOOKINGS MANAGEMENT - Loading bookings from database...");
+            Console.WriteLine(new string('=', 80));
+
             using var context = await DbContextFactory.CreateDbContextAsync();
 
             // Load all bookings from database
             var bookingEntities = await context.Bookings.ToListAsync();
+            Console.WriteLine($"   ✅ Loaded {bookingEntities.Count} bookings from Bookings table");
 
             // Load all guests to get guest information
             var allGuests = await context.Guests.ToListAsync();
+            Console.WriteLine($"   ✅ Loaded {allGuests.Count} guests from Guests table");
 
             // Load all campsites to get campsite names
             var allCampsites = await context.Campsites.ToListAsync();
+            Console.WriteLine($"   ✅ Loaded {allCampsites.Count} campsites from Campsites table");
 
             // Load all accommodation types to get type names
             var allAccommodationTypes = await context.AccommodationTypes.ToListAsync();
-
-            Console.WriteLine($"📊 Loaded {bookingEntities.Count} bookings from database");
+            Console.WriteLine($"   ✅ Loaded {allAccommodationTypes.Count} accommodation types from AccommodationTypes table");
 
             // Populate available campsites for filter dropdown
             _availableCampsites = allCampsites
@@ -174,8 +208,6 @@
                 .Distinct()
                 .OrderBy(name => name)
                 .ToList();
-
-            Console.WriteLine($"📊 Loaded {_availableCampsites.Count} campsites for filter");
 
             // Convert entities to DTOs with null-safe access
             _bookings = bookingEntities.Select(b =>
@@ -199,7 +231,26 @@
                 };
             }).ToList();
 
-            Console.WriteLine($"✅ Loaded {_bookings.Count} bookings successfully");
+            Console.WriteLine($"   ✅ Converted {_bookings.Count} bookings to DTOs");
+
+            if (_bookings.Any())
+            {
+                Console.WriteLine($"\n   📋 Recent bookings (last 3):");
+                foreach (var booking in _bookings.OrderByDescending(b => b.Id).Take(3))
+                {
+                    Console.WriteLine($"      - ID: {booking.Id}, Guest: {booking.GuestName}, " +
+                                    $"Campsite: {booking.CampsiteName}, Status: {booking.Status}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"\n   ⚠️  NO BOOKINGS FOUND! This could mean:");
+                Console.WriteLine($"      1. No bookings have been created yet");
+                Console.WriteLine($"      2. Bookings are not being saved to the database");
+                Console.WriteLine($"      3. Database connection issue");
+            }
+
+            Console.WriteLine(new string('=', 80) + "\n");
         }
         catch (Exception ex)
         {
@@ -212,6 +263,11 @@
             Snackbar.Add($"Error loading bookings: {ex.Message}", Severity.Error);
             _bookings = new List<BookingManagementDto>();
             _availableCampsites = new List<string>();
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
         }
     }
 

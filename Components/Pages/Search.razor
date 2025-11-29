@@ -308,6 +308,15 @@
                     // Get amenities directly from the accommodation type
                     var accommodationAmenities = accType.GetAmenitiesList();
 
+                    // DEBUG: Log amenities for each accommodation type
+                    Console.WriteLine($"🏠 Homepage - Loading {accType.Type} (ID: {accType.Id?.Value})");
+                    Console.WriteLine($"   Campsite: {campsite.Name}");
+                    Console.WriteLine($"   Amenities ({accommodationAmenities.Count}): [{string.Join(", ", accommodationAmenities)}]");
+                    if (accommodationAmenities.Count == 0)
+                    {
+                        Console.WriteLine($"   ⚠️  NO AMENITIES FOUND FOR THIS ACCOMMODATION TYPE!");
+                    }
+
                     allAccommodations.Add(new AccommodationDto
                     {
                         Id = accType.Id?.Value ?? 0,

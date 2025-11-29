@@ -39,18 +39,16 @@ public class AccommodationTypeTests
         Assert.Throws<DomainException>(() => CreateValidAccommodationType(type: ""));
     }
 
-    [Fact]
-    public void AccommodationType_Create_ThrowsException_WhenTypeIsInvalid()
-    {
-        Assert.Throws<DomainException>(() => CreateValidAccommodationType(type: "Invalid"));
-    }
-
     [Theory]
     [InlineData("Cabin")]
     [InlineData("Tent Site")]
     [InlineData("RV Spot")]
     [InlineData("Glamping")]
-    public void AccommodationType_Create_AcceptsValidTypes(string type)
+    [InlineData("Luxury RV Spot")]
+    [InlineData("Lakeside Cabin")]
+    [InlineData("Premium Tent Area")]
+    [InlineData("Custom Accommodation Type")]
+    public void AccommodationType_Create_AcceptsAnyNonEmptyTypeName(string type)
     {
         var accommodationType = CreateValidAccommodationType(type: type);
         Assert.Equal(type, accommodationType.Type);

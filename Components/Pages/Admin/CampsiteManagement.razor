@@ -55,20 +55,29 @@
                     </ItemTemplate>
                 </MudAutocomplete>
             </MudItem>
-            <MudItem xs="12" md="4" Class="d-flex align-center">
-                @if (_selectedCampsite != null)
-                {
-                    <MudChip T="string" Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success">
-                        Selected: @_selectedCampsite.Name
-                    </MudChip>
-                }
-                else
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
-                        No campsite selected
-                    </MudText>
-                }
+            <MudItem xs="12" md="4" Class="d-flex align-center justify-space-between">
+                <div>
+                    @if (_selectedCampsite != null)
+                    {
+                        <MudChip T="string" Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success">
+                            Selected: @_selectedCampsite.Name
+                        </MudChip>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                            No campsite selected
+                        </MudText>
+                    }
+                </div>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Info"
+                           Size="Size.Small"
+                           OnClick="QueryDatabaseState"
+                           StartIcon="@Icons.Material.Filled.BugReport">
+                    Debug DB
+                </MudButton>
             </MudItem>
         </MudGrid>
     </MudPaper>
@@ -533,6 +542,9 @@
         await LoadAvailableAmenities();
         Console.WriteLine($"🔵 Loaded {_campsites.Count} campsites");
 
+        // Debug: Query database to see what's actually stored
+        await QueryDatabaseState();
+
         // Auto-select the first campsite to show data immediately
         if (_campsites.Any())
         {
@@ -543,6 +555,45 @@
         else
         {
             Console.WriteLine("🔴 No campsites found to auto-select");
+        }
+    }
+
+    private async Task QueryDatabaseState()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var allAccommodationTypes = await context.AccommodationTypes
+                .OrderBy(a => a.CampsiteId.Value)
+                .ThenBy(a => a.Type)
+                .ToListAsync();
+
+            Console.WriteLine($"\n📊 ========== DATABASE STATE - ALL ACCOMMODATION TYPES ==========");
+            Console.WriteLine($"   Total: {allAccommodationTypes.Count} accommodation types");
+            Console.WriteLine();
+
+            var groupedByCampsite = allAccommodationTypes.GroupBy(a => a.CampsiteId.Value);
+            foreach (var group in groupedByCampsite)
+            {
+                Console.WriteLine($"   🏕️  Campsite ID: {group.Key}");
+                foreach (var accType in group)
+                {
+                    var amenities = accType.GetAmenitiesList();
+                    Console.WriteLine($"      - {accType.Type} (ID: {accType.Id.Value})");
+                    Console.WriteLine($"        Amenities ({amenities.Count}): [{string.Join(", ", amenities)}]");
+                    if (amenities.Count == 0)
+                    {
+                        Console.WriteLine($"        ⚠️  NO AMENITIES!");
+                    }
+                }
+                Console.WriteLine();
+            }
+            Console.WriteLine($"📊 ========== END DATABASE STATE ==========\n");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error querying database state: {ex.Message}");
         }
     }
 
@@ -851,6 +902,14 @@
             }
 
             context.AccommodationTypes.Add(entity);
+
+            // CRITICAL FIX: Explicitly mark the _amenities field as modified for new entities
+            // This ensures EF Core tracks the amenities field properly
+            if (dto.Amenities != null && dto.Amenities.Any())
+            {
+                context.Entry(entity).Property("_amenities").IsModified = true;
+            }
+
             await context.SaveChangesAsync();
 
             // Update the DTO with the generated ID
@@ -911,13 +970,32 @@
                 return;
             }
 
+            Console.WriteLine($"🔍 SaveAccommodationType - Before update:");
+            Console.WriteLine($"   DTO Amenities: [{string.Join(", ", accType.Amenities)}]");
+            Console.WriteLine($"   DB Amenities: [{string.Join(", ", dbAccommodationType.GetAmenitiesList())}]");
+
             // Update information using domain method
             dbAccommodationType.UpdateInformation(accType.Description, accType.ImageUrl);
 
+            // IMPORTANT: Also update amenities from the DTO
+            dbAccommodationType.UpdateAmenities(accType.Amenities);
+
+            // CRITICAL FIX: Explicitly mark the _amenities field as modified
+            // EF Core doesn't automatically detect changes to private fields
+            context.Entry(dbAccommodationType).Property("_amenities").IsModified = true;
+
             await context.SaveChangesAsync();
 
+            Console.WriteLine($"🔍 SaveAccommodationType - After update:");
+            Console.WriteLine($"   DB Amenities: [{string.Join(", ", dbAccommodationType.GetAmenitiesList())}]");
             Console.WriteLine($"✅ Accommodation type '{accType.Type}' updated successfully");
             Snackbar.Add($"Changes to '{accType.Type}' saved successfully!", Severity.Success);
+
+            // Reload accommodation types to ensure UI is in sync with database
+            if (_selectedCampsite != null)
+            {
+                await LoadAccommodationTypes(_selectedCampsite.Id);
+            }
         }
         catch (DomainException ex)
         {
@@ -1010,8 +1088,19 @@
                 return;
             }
 
+            Console.WriteLine($"🔍 Before UpdateAmenities - DB Amenities: [{string.Join(", ", entity.GetAmenitiesList())}]");
+            Console.WriteLine($"🔍 DTO Amenities to save: [{string.Join(", ", accType.Amenities)}]");
+
             // Update amenities using domain method
             entity.UpdateAmenities(accType.Amenities);
+
+            Console.WriteLine($"🔍 After UpdateAmenities - DB Amenities: [{string.Join(", ", entity.GetAmenitiesList())}]");
+
+            // CRITICAL FIX: Explicitly mark the _amenities field as modified
+            // EF Core doesn't automatically detect changes to private fields
+            context.Entry(entity).Property("_amenities").IsModified = true;
+
+            Console.WriteLine($"🔍 Marked _amenities as modified, saving changes...");
 
             await context.SaveChangesAsync();
 

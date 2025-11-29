@@ -7,19 +7,19 @@ public class Newsletter : Entity<NewsletterId>
 {
     private string _subject = string.Empty;
     private string _content = string.Empty;
-    private DateTime _scheduledDate;
+    private DateTime? _scheduledDate;
     private DateTime? _sentDate;
     private string _status = "Draft";
     private int _recipientCount;
-    private DateTime _createdDate;
-    
+    private DateTime? _createdDate;
+
     public string Subject => _subject;
     public string Content => _content;
-    public DateTime ScheduledDate => _scheduledDate;
+    public DateTime? ScheduledDate => _scheduledDate;
     public DateTime? SentDate => _sentDate;
     public string Status => _status;
     public int RecipientCount => _recipientCount;
-    public DateTime CreatedDate => _createdDate;
+    public DateTime? CreatedDate => _createdDate;
     
     public int NewsletterId
     {

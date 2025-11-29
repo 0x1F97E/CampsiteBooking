@@ -152,21 +152,6 @@
                     </MudItem>
 
                     <MudItem xs="12">
-                        <MudText Typo="Typo.subtitle2" GutterBottom="true">Amenities</MudText>
-                        <div class="d-flex flex-wrap gap-2">
-                            <MudCheckBox @bind-Value="_amenityWiFi" Label="WiFi" />
-                            <MudCheckBox @bind-Value="_amenityElectric" Label="Electric Hookup" />
-                            <MudCheckBox @bind-Value="_amenityWater" Label="Water Access" />
-                            <MudCheckBox @bind-Value="_amenitySewage" Label="Sewage Hookup" />
-                            <MudCheckBox @bind-Value="_amenityHeating" Label="Heating" />
-                            <MudCheckBox @bind-Value="_amenityFirePit" Label="Fire Pit" />
-                            <MudCheckBox @bind-Value="_amenityPicnicTable" Label="Picnic Table" />
-                            <MudCheckBox @bind-Value="_amenityBBQ" Label="BBQ Grill" />
-                            <MudCheckBox @bind-Value="_amenityPetFriendly" Label="Pet Friendly" />
-                        </div>
-                    </MudItem>
-
-                    <MudItem xs="12">
                         <MudSwitch @bind-Value="AccommodationType.IsActive" Label="Active" Color="Color.Success" />
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
                             Inactive accommodation types won't be available for booking
@@ -193,43 +178,9 @@
 
     private MudForm _form = null!;
     private bool _isValid;
-    
-    private bool _amenityWiFi;
-    private bool _amenityElectric;
-    private bool _amenityWater;
-    private bool _amenitySewage;
-    private bool _amenityHeating;
-    private bool _amenityFirePit;
-    private bool _amenityPicnicTable;
-    private bool _amenityBBQ;
-    private bool _amenityPetFriendly;
-
-    protected override void OnInitialized()
-    {
-        _amenityWiFi = AccommodationType.Amenities.Contains("WiFi");
-        _amenityElectric = AccommodationType.Amenities.Contains("Electric-Hookup");
-        _amenityWater = AccommodationType.Amenities.Contains("Water-Access");
-        _amenitySewage = AccommodationType.Amenities.Contains("Sewage-Hookup");
-        _amenityHeating = AccommodationType.Amenities.Contains("Heating");
-        _amenityFirePit = AccommodationType.Amenities.Contains("Fire-Pit");
-        _amenityPicnicTable = AccommodationType.Amenities.Contains("Picnic-Table");
-        _amenityBBQ = AccommodationType.Amenities.Contains("BBQ-Grill");
-        _amenityPetFriendly = AccommodationType.Amenities.Contains("Pet-Friendly");
-    }
 
     private void Submit()
     {
-        AccommodationType.Amenities.Clear();
-        if (_amenityWiFi) AccommodationType.Amenities.Add("WiFi");
-        if (_amenityElectric) AccommodationType.Amenities.Add("Electric-Hookup");
-        if (_amenityWater) AccommodationType.Amenities.Add("Water-Access");
-        if (_amenitySewage) AccommodationType.Amenities.Add("Sewage-Hookup");
-        if (_amenityHeating) AccommodationType.Amenities.Add("Heating");
-        if (_amenityFirePit) AccommodationType.Amenities.Add("Fire-Pit");
-        if (_amenityPicnicTable) AccommodationType.Amenities.Add("Picnic-Table");
-        if (_amenityBBQ) AccommodationType.Amenities.Add("BBQ-Grill");
-        if (_amenityPetFriendly) AccommodationType.Amenities.Add("Pet-Friendly");
-        
         MudDialog.Close(DialogResult.Ok(AccommodationType));
     }
 

@@ -9,6 +9,7 @@
 @using Microsoft.AspNetCore.Authorization
 @inject IDialogService DialogService
 @inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject ISnackbar Snackbar
 
 <PageTitle>User Management - Campsite Booking</PageTitle>
 
@@ -20,12 +21,29 @@
                 User Management
             </MudText>
             <MudText Typo="Typo.body1" Color="Color.Secondary">
-                Manage users and their roles
+                Manage users and their roles (@_users.Count total)
             </MudText>
         </div>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenAddUserDialog">
-            Add User
-        </MudButton>
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="RefreshUsers"
+                       Disabled="@_loading">
+                @if (_loading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Loading...</span>
+                }
+                else
+                {
+                    <span>Refresh</span>
+                }
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenAddUserDialog">
+                Add User
+            </MudButton>
+        </MudStack>
     </div>
 
     <!-- User Statistics -->
@@ -197,21 +215,37 @@
         await LoadCampsitesAsync();
     }
 
+    private async Task RefreshUsers()
+    {
+        Console.WriteLine("🔄 Admin manually refreshing users...");
+        await LoadUsersAsync();
+        Snackbar.Add($"Refreshed! Found {_users.Count} users", Severity.Success);
+        StateHasChanged();
+    }
+
     private async Task LoadUsersAsync()
     {
         _loading = true;
+        StateHasChanged();
+
         try
         {
+            Console.WriteLine("\n" + new string('=', 80));
+            Console.WriteLine("👥 ADMIN USER MANAGEMENT - Loading users from database...");
+            Console.WriteLine(new string('=', 80));
+
             using var context = await DbContextFactory.CreateDbContextAsync();
 
             // Load all users from database
             var users = await context.Users.ToListAsync();
+            Console.WriteLine($"   ✅ Loaded {users.Count} users from Users table");
 
             // Get booking counts for each user - load into memory first to avoid LINQ translation issues
             var allBookings = await context.Bookings.ToListAsync();
             var bookingCounts = allBookings
                 .GroupBy(b => b.GuestId.Value)
                 .ToDictionary(g => g.Key, g => g.Count());
+            Console.WriteLine($"   ✅ Loaded {allBookings.Count} bookings for user statistics");
 
             _users = users.Select(u => new UserManagementDto
             {
@@ -229,10 +263,45 @@
                 IsActive = u.IsActive,
                 CampsiteId = u is Staff staff ? staff.CampsiteId?.Value : null
             }).ToList();
+
+            Console.WriteLine($"   ✅ Converted {_users.Count} users to DTOs");
+
+            if (_users.Any())
+            {
+                var roleGroups = _users.GroupBy(u => u.Role).ToList();
+                Console.WriteLine($"\n   📋 Users by role:");
+                foreach (var group in roleGroups)
+                {
+                    Console.WriteLine($"      - {group.Key}: {group.Count()}");
+                }
+
+                Console.WriteLine($"\n   📋 Recent users (last 3):");
+                foreach (var user in _users.OrderByDescending(u => u.Id).Take(3))
+                {
+                    Console.WriteLine($"      - ID: {user.Id}, Name: {user.Name}, " +
+                                    $"Email: {user.Email}, Role: {user.Role}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"\n   ⚠️  NO USERS FOUND! This could mean:");
+                Console.WriteLine($"      1. No users have been created yet");
+                Console.WriteLine($"      2. Users are not being saved to the database");
+                Console.WriteLine($"      3. Database connection issue");
+            }
+
+            Console.WriteLine(new string('=', 80) + "\n");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading users: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+            _users = new List<UserManagementDto>();
         }
         finally
         {
             _loading = false;
+            StateHasChanged();
         }
     }
 

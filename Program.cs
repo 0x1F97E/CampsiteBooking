@@ -534,8 +534,168 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<CampsiteBookingDbContext>();
     db.Database.Migrate();
 
+    // Add missing columns to Events, Newsletters, and Reviews tables
+    Console.WriteLine("\n🔧 Adding missing columns to Events, Newsletters, and Reviews tables...");
+    try
+    {
+        // Check if CampsiteId column exists in Events table
+        var eventColumnsExist = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='Events' AND COLUMN_NAME='CampsiteId'"
+        ).FirstOrDefaultAsync();
+
+        if (eventColumnsExist == 0)
+        {
+            Console.WriteLine("   Adding columns to Events table...");
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE Events
+                ADD COLUMN CampsiteId INT NOT NULL DEFAULT 0,
+                ADD COLUMN Title VARCHAR(200) NOT NULL DEFAULT '',
+                ADD COLUMN Description LONGTEXT NULL,
+                ADD COLUMN EventDate DATETIME(6) NOT NULL DEFAULT '1000-01-01 00:00:00',
+                ADD COLUMN MaxParticipants INT NOT NULL DEFAULT 0,
+                ADD COLUMN CurrentParticipants INT NOT NULL DEFAULT 0,
+                ADD COLUMN Price LONGTEXT NULL,
+                ADD COLUMN IsActive TINYINT(1) NOT NULL DEFAULT 1,
+                ADD COLUMN CreatedDate DATETIME(6) NOT NULL DEFAULT '1000-01-01 00:00:00'
+            ");
+            Console.WriteLine("   ✅ Events table columns added");
+        }
+        else
+        {
+            Console.WriteLine("   ✅ Events table columns already exist");
+        }
+
+        // Always check and drop EventId column if it exists
+        var eventIdColumnExists = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='Events' AND COLUMN_NAME='EventId'"
+        ).FirstOrDefaultAsync();
+
+        if (eventIdColumnExists > 0)
+        {
+            Console.WriteLine("   Dropping EventId column from Events table...");
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE Events DROP COLUMN EventId");
+            Console.WriteLine("   ✅ EventId column dropped");
+        }
+
+        // Check if Subject column exists in Newsletters table
+        var newsletterColumnsExist = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='Newsletters' AND COLUMN_NAME='Subject'"
+        ).FirstOrDefaultAsync();
+
+        if (newsletterColumnsExist == 0)
+        {
+            Console.WriteLine("   Adding columns to Newsletters table...");
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE Newsletters
+                ADD COLUMN Subject VARCHAR(200) NOT NULL DEFAULT '',
+                ADD COLUMN Content LONGTEXT NULL,
+                ADD COLUMN ScheduledDate DATETIME(6) NULL,
+                ADD COLUMN SentDate DATETIME(6) NULL,
+                ADD COLUMN Status VARCHAR(50) NOT NULL DEFAULT 'Draft',
+                ADD COLUMN RecipientCount INT NOT NULL DEFAULT 0,
+                ADD COLUMN CreatedDate DATETIME(6) NOT NULL DEFAULT '1000-01-01 00:00:00'
+            ");
+            Console.WriteLine("   ✅ Newsletters table columns added");
+        }
+        else
+        {
+            Console.WriteLine("   ✅ Newsletters table columns already exist");
+
+            // Fix Content, ScheduledDate, and CreatedDate columns to be nullable if they're not already
+            Console.WriteLine("   Ensuring Content, ScheduledDate, and CreatedDate columns are nullable...");
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE Newsletters
+                MODIFY COLUMN Content LONGTEXT NULL,
+                MODIFY COLUMN ScheduledDate DATETIME(6) NULL,
+                MODIFY COLUMN CreatedDate DATETIME(6) NULL
+            ");
+            Console.WriteLine("   ✅ Content, ScheduledDate, and CreatedDate columns updated to nullable");
+        }
+
+        // Always check and drop NewsletterId column if it exists
+        var newsletterIdColumnExists = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='Newsletters' AND COLUMN_NAME='NewsletterId'"
+        ).FirstOrDefaultAsync();
+
+        if (newsletterIdColumnExists > 0)
+        {
+            Console.WriteLine("   Dropping NewsletterId column from Newsletters table...");
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE Newsletters DROP COLUMN NewsletterId");
+            Console.WriteLine("   ✅ NewsletterId column dropped");
+        }
+
+        // Check if CampsiteId column exists in Reviews table
+        var reviewColumnsExist = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='Reviews' AND COLUMN_NAME='CampsiteId'"
+        ).FirstOrDefaultAsync();
+
+        if (reviewColumnsExist == 0)
+        {
+            Console.WriteLine("   Adding columns to Reviews table...");
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE Reviews
+                ADD COLUMN CampsiteId INT NOT NULL DEFAULT 0,
+                ADD COLUMN UserId INT NOT NULL DEFAULT 0,
+                ADD COLUMN BookingId INT NULL,
+                ADD COLUMN Rating INT NOT NULL DEFAULT 0,
+                ADD COLUMN Comment LONGTEXT NULL,
+                ADD COLUMN ReviewerName VARCHAR(100) NOT NULL DEFAULT '',
+                ADD COLUMN CreatedDate DATETIME(6) NOT NULL DEFAULT '1000-01-01 00:00:00',
+                ADD COLUMN UpdatedDate DATETIME(6) NOT NULL DEFAULT '1000-01-01 00:00:00',
+                ADD COLUMN IsApproved TINYINT(1) NOT NULL DEFAULT 0,
+                ADD COLUMN IsVisible TINYINT(1) NOT NULL DEFAULT 1,
+                ADD COLUMN AdminResponse LONGTEXT NULL,
+                ADD COLUMN AdminResponseDate DATETIME(6) NULL
+            ");
+            Console.WriteLine("   ✅ Reviews table columns added");
+        }
+        else
+        {
+            Console.WriteLine("   ✅ Reviews table columns already exist");
+
+            // Fix Comment and AdminResponse columns to be nullable if they're not already
+            Console.WriteLine("   Ensuring Comment and AdminResponse columns are nullable...");
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE Reviews
+                MODIFY COLUMN Comment LONGTEXT NULL,
+                MODIFY COLUMN AdminResponse LONGTEXT NULL
+            ");
+            Console.WriteLine("   ✅ Comment and AdminResponse columns updated to nullable");
+        }
+
+        // Always check and drop ReviewId column if it exists
+        var reviewIdColumnExists = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='Reviews' AND COLUMN_NAME='ReviewId'"
+        ).FirstOrDefaultAsync();
+
+        if (reviewIdColumnExists > 0)
+        {
+            Console.WriteLine("   Dropping ReviewId column from Reviews table...");
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE Reviews DROP COLUMN ReviewId");
+            Console.WriteLine("   ✅ ReviewId column dropped");
+        }
+
+        Console.WriteLine("✅ Database schema update completed\n");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error updating database schema: {ex.Message}");
+        Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+    }
+
     // Seed initial data
     await DatabaseSeeder.SeedAsync(db);
+
+    // FIX: Apply amenities data fix to correct old data from before EF Core change tracking fix
+    // This ensures all amenities are properly saved with the _amenities field marked as modified
+    // You can comment this out after running once to fix the data
+    Console.WriteLine("\n🔧 Applying amenities data fix...");
+    await AmenitiesDataFixer.FixAmenitiesDataAsync(db);
+    Console.WriteLine("✅ Amenities data fix completed\n");
+
+    // DIAGNOSTICS: Run data synchronization diagnostics to help identify issues
+    // This will show all bookings and users in the database
+    await DataSyncDiagnostics.RunDiagnosticsAsync(db);
 }
 
 app.Run();

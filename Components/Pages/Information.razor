@@ -235,6 +235,10 @@
 
     private async Task LoadDataAsync()
     {
+        Console.WriteLine("\n" + new string('=', 80));
+        Console.WriteLine("📰 USER INFORMATION PAGE - Loading data from database...");
+        Console.WriteLine(new string('=', 80));
+
         // Load events and photos from database using DbContextFactory
         await using var context = await DbContextFactory.CreateDbContextAsync();
 
@@ -247,9 +251,21 @@
             Region = c.Region ?? ""
         }).ToList();
 
-        Console.WriteLine($"✅ Loaded {_campsites.Count} campsites for Information page");
+        Console.WriteLine($"   ✅ Loaded {_campsites.Count} campsites for Information page");
 
+        Console.WriteLine($"   🔍 Querying Events table...");
         var dbEvents = await context.Events.ToListAsync();
+        Console.WriteLine($"   📊 Raw query returned {dbEvents.Count} events from database");
+
+        if (dbEvents.Count > 0)
+        {
+            Console.WriteLine($"   📋 Event details:");
+            foreach (var evt in dbEvents)
+            {
+                Console.WriteLine($"      - Event ID: {evt.EventId}, Title: {evt.Title}, CampsiteId: {evt.CampsiteId?.Value ?? 0}");
+            }
+        }
+
         _events = dbEvents
             .Where(e => e.CampsiteId != null)
             .Select(e => new EventDto
@@ -258,7 +274,7 @@
                 CampsiteId = e.CampsiteId.Value,
                 Name = e.Title ?? string.Empty,
                 Description = e.Description ?? string.Empty,
-                CampsiteName = e.CampsiteId.Value == 0 ? "All Campsites" : $"Campsite {e.CampsiteId.Value}",
+                CampsiteName = GetCampsiteNameById(e.CampsiteId.Value),
                 EventDate = e.EventDate,
                 EventTime = e.EventDate.ToString("h:mm tt"),
                 Category = "Event", // Default category since Event model doesn't have category
@@ -266,6 +282,8 @@
                 RegisteredCount = e.CurrentParticipants,
                 Status = e.IsActive ? (e.IsFull() ? "Full" : "Open") : "Closed"
             }).ToList();
+
+        Console.WriteLine($"   ✅ Loaded {_events.Count} events for Information page");
 
         // Load photos from database - Include both "Information" and "General" categories
         var dbPhotos = await context.Photos.ToListAsync();
@@ -280,6 +298,23 @@
                 Description = p.AltText ?? string.Empty,
                 ImageUrl = p.Url ?? string.Empty
             }).ToList();
+        Console.WriteLine($"   ✅ Loaded {_photos.Count} photos for Information page");
+
+        if (_events.Any())
+        {
+            Console.WriteLine($"\n   📋 Events by campsite:");
+            var eventsByCampsite = _events.GroupBy(e => e.CampsiteName).ToList();
+            foreach (var group in eventsByCampsite)
+            {
+                Console.WriteLine($"      - {group.Key}: {group.Count()} events");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"\n   ⚠️  NO EVENTS FOUND! Events should be seeded in the database.");
+        }
+
+        Console.WriteLine(new string('=', 80) + "\n");
     }
 
     private void OnCampsiteChanged(int newValue)

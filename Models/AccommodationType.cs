@@ -71,22 +71,18 @@ public class AccommodationType : Entity<AccommodationTypeId>
         // Validate business rules
         if (string.IsNullOrWhiteSpace(type))
             throw new DomainException("Accommodation type cannot be empty");
-        
-        var validTypes = new[] { "Cabin", "Tent Site", "RV Spot", "Glamping" };
-        if (!validTypes.Contains(type))
-            throw new DomainException("Type must be Cabin, Tent Site, RV Spot, or Glamping");
-        
+
         if (maxCapacity <= 0)
             throw new DomainException("Max capacity must be greater than 0");
-        
+
         if (availableUnits < 0)
             throw new DomainException("Available units cannot be negative");
-        
+
         var accommodationType = new AccommodationType
         {
             Id = ValueObjects.AccommodationTypeId.CreateNew(),
             _campsiteId = campsiteId,
-            _type = type,
+            _type = type.Trim(),
             _description = description?.Trim() ?? string.Empty,
             _maxCapacity = maxCapacity,
             _basePrice = basePrice,
@@ -95,7 +91,7 @@ public class AccommodationType : Entity<AccommodationTypeId>
             _isActive = true,
             _createdDate = DateTime.UtcNow
         };
-        
+
         return accommodationType;
     }
     

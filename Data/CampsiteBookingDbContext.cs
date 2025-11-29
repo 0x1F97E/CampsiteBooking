@@ -375,6 +375,112 @@ public class CampsiteBookingDbContext : DbContext
             entity.Property("_updatedDate").HasColumnName("UpdatedDate");
             entity.Property("_category").HasColumnName("Category").HasMaxLength(50).HasDefaultValue("General");
         });
+
+        // Configure Event entity to map private fields
+        modelBuilder.Entity<Event>(entity =>
+        {
+            // Configure the Id property to use the Id column with value converter
+            entity.Property(e => e.Id).HasColumnName("Id")
+                .HasConversion(new EventIdConverter());
+
+            // Ignore the EventId property - it's a computed property
+            entity.Ignore(e => e.EventId);
+
+            // Ignore public properties that are backed by private fields
+            entity.Ignore(e => e.CampsiteId);
+            entity.Ignore(e => e.Title);
+            entity.Ignore(e => e.Description);
+            entity.Ignore(e => e.EventDate);
+            entity.Ignore(e => e.MaxParticipants);
+            entity.Ignore(e => e.CurrentParticipants);
+            entity.Ignore(e => e.Price);
+            entity.Ignore(e => e.IsActive);
+            entity.Ignore(e => e.CreatedDate);
+
+            // Map private fields to database columns
+            entity.Property("_campsiteId").HasColumnName("CampsiteId")
+                .HasConversion(new CampsiteIdConverter());
+            entity.Property("_title").HasColumnName("Title").HasMaxLength(200).IsRequired();
+            entity.Property("_description").HasColumnName("Description");
+            entity.Property("_eventDate").HasColumnName("EventDate");
+            entity.Property("_maxParticipants").HasColumnName("MaxParticipants");
+            entity.Property("_currentParticipants").HasColumnName("CurrentParticipants");
+            entity.Property("_price").HasColumnName("Price")
+                .HasConversion(new MoneyConverter());
+            entity.Property("_isActive").HasColumnName("IsActive");
+            entity.Property("_createdDate").HasColumnName("CreatedDate");
+        });
+
+        // Configure Newsletter entity to map private fields
+        modelBuilder.Entity<Newsletter>(entity =>
+        {
+            // Configure the Id property to use the Id column with value converter
+            entity.Property(n => n.Id).HasColumnName("Id")
+                .HasConversion(new NewsletterIdConverter());
+
+            // Ignore the NewsletterId property - it's a computed property
+            entity.Ignore(n => n.NewsletterId);
+
+            // Ignore public properties that are backed by private fields
+            entity.Ignore(n => n.Subject);
+            entity.Ignore(n => n.Content);
+            entity.Ignore(n => n.ScheduledDate);
+            entity.Ignore(n => n.SentDate);
+            entity.Ignore(n => n.Status);
+            entity.Ignore(n => n.RecipientCount);
+            entity.Ignore(n => n.CreatedDate);
+
+            // Map private fields to database columns
+            entity.Property("_subject").HasColumnName("Subject").HasMaxLength(200).IsRequired();
+            entity.Property("_content").HasColumnName("Content").IsRequired();
+            entity.Property("_scheduledDate").HasColumnName("ScheduledDate");
+            entity.Property("_sentDate").HasColumnName("SentDate");
+            entity.Property("_status").HasColumnName("Status").HasMaxLength(50).IsRequired();
+            entity.Property("_recipientCount").HasColumnName("RecipientCount");
+            entity.Property("_createdDate").HasColumnName("CreatedDate");
+        });
+
+        // Configure Review entity to map private fields
+        modelBuilder.Entity<Review>(entity =>
+        {
+            // Configure the Id property to use the Id column with value converter
+            entity.Property(r => r.Id).HasColumnName("Id")
+                .HasConversion(new ReviewIdConverter());
+
+            // Ignore the ReviewId property - it's a computed property
+            entity.Ignore(r => r.ReviewId);
+
+            // Ignore public properties that are backed by private fields
+            entity.Ignore(r => r.CampsiteId);
+            entity.Ignore(r => r.UserId);
+            entity.Ignore(r => r.BookingId);
+            entity.Ignore(r => r.Rating);
+            entity.Ignore(r => r.Comment);
+            entity.Ignore(r => r.ReviewerName);
+            entity.Ignore(r => r.CreatedDate);
+            entity.Ignore(r => r.UpdatedDate);
+            entity.Ignore(r => r.IsApproved);
+            entity.Ignore(r => r.IsVisible);
+            entity.Ignore(r => r.AdminResponse);
+            entity.Ignore(r => r.AdminResponseDate);
+
+            // Map private fields to database columns
+            entity.Property("_campsiteId").HasColumnName("CampsiteId")
+                .HasConversion(new CampsiteIdConverter());
+            entity.Property("_userId").HasColumnName("UserId")
+                .HasConversion(new UserIdConverter());
+            entity.Property("_bookingId").HasColumnName("BookingId")
+                .HasConversion(new BookingIdConverter());
+            entity.Property("_rating").HasColumnName("Rating");
+            entity.Property("_comment").HasColumnName("Comment");
+            entity.Property("_reviewerName").HasColumnName("ReviewerName").HasMaxLength(100).IsRequired();
+            entity.Property("_createdDate").HasColumnName("CreatedDate");
+            entity.Property("_updatedDate").HasColumnName("UpdatedDate");
+            entity.Property("_isApproved").HasColumnName("IsApproved");
+            entity.Property("_isVisible").HasColumnName("IsVisible");
+            entity.Property("_adminResponse").HasColumnName("AdminResponse");
+            entity.Property("_adminResponseDate").HasColumnName("AdminResponseDate");
+        });
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

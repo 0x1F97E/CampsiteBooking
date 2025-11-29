@@ -121,19 +121,22 @@ public static class DatabaseSeeder
             // Might already be auto-increment, ignore error
         }
 
-        // Delete ALL accommodation types (to clean up any invalid data)
-        await context.Database.ExecuteSqlRawAsync("DELETE FROM AccommodationTypes");
-
-        // Reset auto-increment counter for AccommodationTypes
-        await context.Database.ExecuteSqlRawAsync("ALTER TABLE AccommodationTypes AUTO_INCREMENT = 1");
-
-        // Get the actual campsite IDs from the database (they should be 1-5 after truncate and reseed)
-        var campsiteIds = await context.Database.SqlQueryRaw<int>("SELECT Id as Value FROM Campsites ORDER BY Id").ToListAsync();
-        if (campsiteIds.Count < 5)
+        // Check if accommodation types already exist - if so, skip seeding to preserve admin changes
+        var existingAccommodationTypes = await context.AccommodationTypes.AnyAsync();
+        if (existingAccommodationTypes)
         {
-            Console.WriteLine($"❌ Expected 5 campsites, found {campsiteIds.Count}. Skipping accommodation types seeding.");
-            return;
+            Console.WriteLine("⏭️  Accommodation types already exist, skipping seeding to preserve admin changes...");
         }
+        else
+        {
+            // Get the actual campsite IDs from the database (they should be 1-5 after truncate and reseed)
+            var campsiteIds = await context.Database.SqlQueryRaw<int>("SELECT Id as Value FROM Campsites ORDER BY Id").ToListAsync();
+            if (campsiteIds.Count < 5)
+            {
+                Console.WriteLine($"❌ Expected 5 campsites, found {campsiteIds.Count}. Skipping accommodation types seeding.");
+            }
+            else
+            {
 
         // Seed Accommodation Types for each campsite
         // Copenhagen Beach Camp (ID 1) - High attractiveness
@@ -148,6 +151,8 @@ public static class DatabaseSeeder
             );
             cabin1.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Water-Hookup", "Heating", "Kitchen", "Bathroom" });
             await context.AccommodationTypes.AddAsync(cabin1);
+            // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
+            context.Entry(cabin1).Property("_amenities").IsModified = true;
             await context.SaveChangesAsync();
             context.Entry(cabin1).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
@@ -162,6 +167,8 @@ public static class DatabaseSeeder
             );
             tent1.UpdateAmenities(new List<string> { "Electric-Hookup", "Fire-Pit", "Picnic-Table" });
             await context.AccommodationTypes.AddAsync(tent1);
+            // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
+            context.Entry(tent1).Property("_amenities").IsModified = true;
             await context.SaveChangesAsync();
             context.Entry(tent1).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
@@ -176,6 +183,8 @@ public static class DatabaseSeeder
             );
             glamping1.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Heating", "Bathroom", "Kitchen", "Air-Conditioning", "Linens-Provided" });
             await context.AccommodationTypes.AddAsync(glamping1);
+            // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
+            context.Entry(glamping1).Property("_amenities").IsModified = true;
             await context.SaveChangesAsync();
             context.Entry(glamping1).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
@@ -190,6 +199,8 @@ public static class DatabaseSeeder
             );
             rv1.UpdateAmenities(new List<string> { "Electric-Hookup", "Water-Hookup", "Sewer-Hookup", "WiFi" });
             await context.AccommodationTypes.AddAsync(rv1);
+            // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
+            context.Entry(rv1).Property("_amenities").IsModified = true;
             await context.SaveChangesAsync();
             context.Entry(rv1).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
@@ -205,6 +216,8 @@ public static class DatabaseSeeder
             );
             cabin2.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Water-Hookup", "Heating", "Kitchen", "Bathroom" });
             await context.AccommodationTypes.AddAsync(cabin2);
+            // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
+            context.Entry(cabin2).Property("_amenities").IsModified = true;
             await context.SaveChangesAsync();
             context.Entry(cabin2).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
@@ -219,6 +232,8 @@ public static class DatabaseSeeder
             );
             tent2.UpdateAmenities(new List<string> { "Electric-Hookup", "Fire-Pit", "Picnic-Table" });
             await context.AccommodationTypes.AddAsync(tent2);
+            // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
+            context.Entry(tent2).Property("_amenities").IsModified = true;
             await context.SaveChangesAsync();
             context.Entry(tent2).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
@@ -234,6 +249,8 @@ public static class DatabaseSeeder
             );
             cabin3.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Heating", "Kitchen", "Bathroom" });
             await context.AccommodationTypes.AddAsync(cabin3);
+            // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
+            context.Entry(cabin3).Property("_amenities").IsModified = true;
             await context.SaveChangesAsync();
             context.Entry(cabin3).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
@@ -248,6 +265,8 @@ public static class DatabaseSeeder
             );
             tent3.UpdateAmenities(new List<string> { "Fire-Pit", "Picnic-Table" });
             await context.AccommodationTypes.AddAsync(tent3);
+            // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
+            context.Entry(tent3).Property("_amenities").IsModified = true;
             await context.SaveChangesAsync();
             context.Entry(tent3).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
@@ -263,6 +282,8 @@ public static class DatabaseSeeder
             );
             cabin4.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Heating", "Kitchen", "Bathroom" });
             await context.AccommodationTypes.AddAsync(cabin4);
+            // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
+            context.Entry(cabin4).Property("_amenities").IsModified = true;
             await context.SaveChangesAsync();
             context.Entry(cabin4).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
@@ -277,6 +298,8 @@ public static class DatabaseSeeder
             );
             tent4.UpdateAmenities(new List<string> { "Electric-Hookup", "Fire-Pit", "Picnic-Table" });
             await context.AccommodationTypes.AddAsync(tent4);
+            // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
+            context.Entry(tent4).Property("_amenities").IsModified = true;
             await context.SaveChangesAsync();
             context.Entry(tent4).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
@@ -292,6 +315,8 @@ public static class DatabaseSeeder
             );
             cabin5.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Water-Hookup", "Heating", "Kitchen", "Bathroom" });
             await context.AccommodationTypes.AddAsync(cabin5);
+            // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
+            context.Entry(cabin5).Property("_amenities").IsModified = true;
             await context.SaveChangesAsync();
             context.Entry(cabin5).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
@@ -306,8 +331,14 @@ public static class DatabaseSeeder
             );
             tent5.UpdateAmenities(new List<string> { "Electric-Hookup", "Fire-Pit", "Picnic-Table" });
             await context.AccommodationTypes.AddAsync(tent5);
+            // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
+            context.Entry(tent5).Property("_amenities").IsModified = true;
             await context.SaveChangesAsync();
             context.Entry(tent5).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+
+                Console.WriteLine("✅ Seeded accommodation types for all 5 campsites");
+            } // End of accommodation types seeding
+        } // End of if/else for accommodation types existence check
 
         // Seed Accommodation Spots (needed for bookings)
         await SeedAccommodationSpots(context);
@@ -941,10 +972,13 @@ public static class DatabaseSeeder
 
     private static async Task SeedEvents(CampsiteBookingDbContext context)
     {
+        // Force re-seed events to ensure they have proper CampsiteId values
         if (await context.Events.AnyAsync())
         {
-            Console.WriteLine("⚠️ Events already exist, skipping seeding");
-            return;
+            Console.WriteLine("🔄 Events exist - clearing and re-seeding to ensure proper data...");
+            await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 0");
+            await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Events");
+            await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 1");
         }
 
         Console.WriteLine("🔵 Seeding events...");
