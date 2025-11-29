@@ -106,12 +106,25 @@
                     </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <div style="height: 300px; display: flex; align-items: center; justify-content: center; background: #f5f5f5; border-radius: 4px;">
-                        <MudText Typo="Typo.body1" Color="Color.Secondary">
-                            <MudIcon Icon="@Icons.Material.Filled.ShowChart" Class="mr-2" />
-                            Chart visualization will be added with backend integration
-                        </MudText>
-                    </div>
+                    @if (_bookingTrendsData.Any())
+                    {
+                        <MudChart ChartType="ChartType.Line"
+                                  ChartSeries="@_chartSeries"
+                                  XAxisLabels="@_xAxisLabels"
+                                  Width="100%"
+                                  Height="300px"
+                                  ChartOptions="@_chartOptions">
+                        </MudChart>
+                    }
+                    else
+                    {
+                        <div style="height: 300px; display: flex; align-items: center; justify-content: center; background: #f5f5f5; border-radius: 4px;">
+                            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                                <MudIcon Icon="@Icons.Material.Filled.ShowChart" Class="mr-2" />
+                                No booking data available for the last 6 months
+                            </MudText>
+                        </div>
+                    }
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -166,9 +179,23 @@
     private int _totalUsers = 0;
     private int _newUsers = 0;
 
+    // Booking trends chart data
+    private List<ChartSeries> _chartSeries = new();
+    private string[] _xAxisLabels = Array.Empty<string>();
+    private Dictionary<string, int> _bookingTrendsData = new();
+    private ChartOptions _chartOptions = new ChartOptions
+    {
+        YAxisTicks = 10,
+        MaxNumYAxisTicks = 10,
+        YAxisLines = true,
+        XAxisLines = false,
+        LineStrokeWidth = 3
+    };
+
     protected override async Task OnInitializedAsync()
     {
         await LoadDashboardMetrics();
+        await LoadBookingTrends();
         _isLoading = false;
     }
 
@@ -241,6 +268,66 @@
         {
             Console.WriteLine($"❌ Error loading dashboard metrics: {ex.Message}");
             Snackbar.Add($"Error loading dashboard metrics: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadBookingTrends()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Get bookings from the last 6 months
+            var sixMonthsAgo = DateTime.Now.AddMonths(-6);
+            var allBookings = await context.Bookings
+                .Where(b => b.CreatedDate >= sixMonthsAgo)
+                .ToListAsync();
+
+            // Group bookings by month and count them
+            _bookingTrendsData = allBookings
+                .GroupBy(b => new DateTime(b.CreatedDate.Year, b.CreatedDate.Month, 1))
+                .OrderBy(g => g.Key)
+                .ToDictionary(
+                    g => g.Key.ToString("MMM yyyy"),
+                    g => g.Count()
+                );
+
+            // Fill in missing months with 0 bookings
+            var currentMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var filledData = new Dictionary<string, int>();
+
+            for (int i = 5; i >= 0; i--)
+            {
+                var month = currentMonth.AddMonths(-i);
+                var monthKey = month.ToString("MMM yyyy");
+                filledData[monthKey] = _bookingTrendsData.ContainsKey(monthKey) ? _bookingTrendsData[monthKey] : 0;
+            }
+
+            _bookingTrendsData = filledData;
+
+            // Prepare chart data
+            _xAxisLabels = _bookingTrendsData.Keys.ToArray();
+            var bookingCounts = _bookingTrendsData.Values.Select(v => (double)v).ToArray();
+
+            _chartSeries = new List<ChartSeries>
+            {
+                new ChartSeries
+                {
+                    Name = "Bookings",
+                    Data = bookingCounts
+                }
+            };
+
+            Console.WriteLine($"✅ Booking trends loaded: {_bookingTrendsData.Count} months of data");
+            foreach (var kvp in _bookingTrendsData)
+            {
+                Console.WriteLine($"   {kvp.Key}: {kvp.Value} bookings");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading booking trends: {ex.Message}");
+            Snackbar.Add($"Error loading booking trends: {ex.Message}", Severity.Error);
         }
     }
 }

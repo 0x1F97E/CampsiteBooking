@@ -146,6 +146,7 @@ public static class DatabaseSeeder
                 "Cozy wooden cabins with modern amenities, perfect for families",
                 "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80"
             );
+            cabin1.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Water-Hookup", "Heating", "Kitchen", "Bathroom" });
             await context.AccommodationTypes.AddAsync(cabin1);
             await context.SaveChangesAsync();
             context.Entry(cabin1).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -159,6 +160,7 @@ public static class DatabaseSeeder
                 "Spacious tent sites with electricity hookup",
                 "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80"
             );
+            tent1.UpdateAmenities(new List<string> { "Electric-Hookup", "Fire-Pit", "Picnic-Table" });
             await context.AccommodationTypes.AddAsync(tent1);
             await context.SaveChangesAsync();
             context.Entry(tent1).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -172,6 +174,7 @@ public static class DatabaseSeeder
                 "Luxury glamping tents with premium furnishings",
                 "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80"
             );
+            glamping1.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Heating", "Bathroom", "Kitchen", "Air-Conditioning", "Linens-Provided" });
             await context.AccommodationTypes.AddAsync(glamping1);
             await context.SaveChangesAsync();
             context.Entry(glamping1).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -185,6 +188,7 @@ public static class DatabaseSeeder
                 "Full hookup RV spots with water, electricity, and sewage",
                 "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=800&q=80"
             );
+            rv1.UpdateAmenities(new List<string> { "Electric-Hookup", "Water-Hookup", "Sewer-Hookup", "WiFi" });
             await context.AccommodationTypes.AddAsync(rv1);
             await context.SaveChangesAsync();
             context.Entry(rv1).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -199,6 +203,7 @@ public static class DatabaseSeeder
                 "Modern cabins with sea views",
                 "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80"
             );
+            cabin2.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Water-Hookup", "Heating", "Kitchen", "Bathroom" });
             await context.AccommodationTypes.AddAsync(cabin2);
             await context.SaveChangesAsync();
             context.Entry(cabin2).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -212,6 +217,7 @@ public static class DatabaseSeeder
                 "Tent sites near the beach",
                 "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80"
             );
+            tent2.UpdateAmenities(new List<string> { "Electric-Hookup", "Fire-Pit", "Picnic-Table" });
             await context.AccommodationTypes.AddAsync(tent2);
             await context.SaveChangesAsync();
             context.Entry(tent2).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -226,6 +232,7 @@ public static class DatabaseSeeder
                 "Forest cabins surrounded by nature",
                 "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80"
             );
+            cabin3.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Heating", "Kitchen", "Bathroom" });
             await context.AccommodationTypes.AddAsync(cabin3);
             await context.SaveChangesAsync();
             context.Entry(cabin3).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -239,6 +246,7 @@ public static class DatabaseSeeder
                 "Peaceful forest tent sites",
                 "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80"
             );
+            tent3.UpdateAmenities(new List<string> { "Fire-Pit", "Picnic-Table" });
             await context.AccommodationTypes.AddAsync(tent3);
             await context.SaveChangesAsync();
             context.Entry(tent3).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -253,6 +261,7 @@ public static class DatabaseSeeder
                 "Family-friendly cabins near playground",
                 "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80"
             );
+            cabin4.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Heating", "Kitchen", "Bathroom" });
             await context.AccommodationTypes.AddAsync(cabin4);
             await context.SaveChangesAsync();
             context.Entry(cabin4).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -266,6 +275,7 @@ public static class DatabaseSeeder
                 "Large tent area for families",
                 "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80"
             );
+            tent4.UpdateAmenities(new List<string> { "Electric-Hookup", "Fire-Pit", "Picnic-Table" });
             await context.AccommodationTypes.AddAsync(tent4);
             await context.SaveChangesAsync();
             context.Entry(tent4).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -280,6 +290,7 @@ public static class DatabaseSeeder
                 "Island cabins with stunning views",
                 "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80"
             );
+            cabin5.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Water-Hookup", "Heating", "Kitchen", "Bathroom" });
             await context.AccommodationTypes.AddAsync(cabin5);
             await context.SaveChangesAsync();
             context.Entry(cabin5).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
@@ -293,6 +304,7 @@ public static class DatabaseSeeder
                 "Tent sites with island charm",
                 "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80"
             );
+            tent5.UpdateAmenities(new List<string> { "Electric-Hookup", "Fire-Pit", "Picnic-Table" });
             await context.AccommodationTypes.AddAsync(tent5);
             await context.SaveChangesAsync();
             context.Entry(tent5).State = Microsoft.EntityFrameworkCore.EntityState.Detached;

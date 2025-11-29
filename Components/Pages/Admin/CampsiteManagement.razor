@@ -167,21 +167,6 @@
                     </MudButton>
                 </MudItem>
 
-                <!-- Amenities Management Section -->
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Class="mr-1" />
-                        Amenities
-                    </MudText>
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Star"
-                               FullWidth="true"
-                               OnClick="@(() => OpenManageAmenitiesDialog(_selectedCampsite))">
-                        Manage Amenities
-                    </MudButton>
-                </MudItem>
-
                 <!-- Save Button -->
                 <MudItem xs="12" Class="d-flex justify-end">
                     <MudButton Variant="Variant.Filled"
@@ -787,31 +772,6 @@
         {
             campsite.GalleryImages = updatedGallery;
             Snackbar.Add("Photo gallery updated successfully!", Severity.Success);
-            StateHasChanged();
-        }
-    }
-
-    private async Task OpenManageAmenitiesDialog(CampsiteManagementDto campsite)
-    {
-        var parameters = new DialogParameters
-        {
-            ["CampsiteId"] = campsite.Id,
-            ["CampsiteName"] = campsite.Name
-        };
-
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Large,
-            FullWidth = true,
-            CloseButton = true
-        };
-
-        var dialog = await DialogService.ShowAsync<ManageAmenitiesDialog>("Manage Amenities", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
-        {
-            Snackbar.Add("Amenities updated successfully!", Severity.Success);
             StateHasChanged();
         }
     }
