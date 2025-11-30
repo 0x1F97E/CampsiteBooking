@@ -123,11 +123,9 @@
     {
         public int Id { get; set; }
         public string Name { get; set; } = "";
-        public string City { get; set; } = "";
         public string Description { get; set; } = "";
         public double Latitude { get; set; }
         public double Longitude { get; set; }
-        public int AvailableSpots { get; set; }
     }
 
     protected override async Task OnInitializedAsync()
@@ -143,11 +141,9 @@
                 {
                     Id = c.Id.Value,
                     Name = c.Name ?? "Unknown",
-                    City = c.City ?? "Denmark",
                     Description = c.Description ?? "Beautiful campsite location",
                     Latitude = c.Latitude != 0 ? c.Latitude : 56.2639,
-                    Longitude = c.Longitude != 0 ? c.Longitude : 10.4515,
-                    AvailableSpots = 30 // TODO: Calculate from actual accommodation availability
+                    Longitude = c.Longitude != 0 ? c.Longitude : 10.4515
                 }).ToList();
 
                 Console.WriteLine($"✅ Loaded {_campsites.Count} campsites for map");

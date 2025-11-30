@@ -29,7 +29,7 @@
         </MudText>
         <MudGrid>
             <MudItem xs="12" md="8">
-                <MudSelect T="int"
+                <MudSelect T="int?"
                           Value="_selectedCampsiteId"
                           ValueChanged="OnCampsiteChanged"
                           Label="Select Campsite"
@@ -39,14 +39,14 @@
                           OnClearButtonClick="ClearCampsiteSelection">
                     @foreach (var campsite in _campsites)
                     {
-                        <MudSelectItem T="int" Value="@campsite.Id">
+                        <MudSelectItem T="int?" Value="@campsite.Id">
                             @campsite.Name - @campsite.City
                         </MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="4" Class="d-flex align-center">
-                @if (_selectedCampsiteId > 0)
+                @if (_selectedCampsiteId.HasValue && _selectedCampsiteId.Value > 0)
                 {
                     <MudChip T="string" Icon="@Icons.Material.Filled.LocationOn" Color="Color.Primary">
                         @GetSelectedCampsiteName()
@@ -63,7 +63,7 @@
     </MudPaper>
 
     <!-- Contact Information Section -->
-    @if (_selectedCampsiteId > 0)
+    @if (_selectedCampsiteId.HasValue && _selectedCampsiteId.Value > 0)
     {
         var selectedCampsite = GetSelectedCampsite();
         @if (selectedCampsite != null)
@@ -136,7 +136,7 @@
     }
 
     <!-- Events Calendar Section -->
-    @if (_selectedCampsiteId > 0)
+    @if (_selectedCampsiteId.HasValue && _selectedCampsiteId.Value > 0)
     {
         <MudPaper Elevation="3" Class="pa-4 mb-6">
             <MudText Typo="Typo.h5" GutterBottom="true">
@@ -213,7 +213,7 @@
     <MudPaper Elevation="3" Class="pa-4 mb-6">
         <MudText Typo="Typo.h5" Class="mb-3">
             <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Class="mr-2" />
-            @if (_selectedCampsiteId > 0)
+            @if (_selectedCampsiteId.HasValue && _selectedCampsiteId.Value > 0)
             {
                 <text>Photo Gallery - @GetSelectedCampsiteName()</text>
             }
@@ -223,7 +223,7 @@
             }
         </MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-            @if (_selectedCampsiteId > 0)
+            @if (_selectedCampsiteId.HasValue && _selectedCampsiteId.Value > 0)
             {
                 <text>Explore photos from this campsite</text>
             }
@@ -296,7 +296,7 @@
 </MudContainer>
 
 @code {
-    private int _selectedCampsiteId = 0;
+    private int? _selectedCampsiteId = null;
     private List<CampsiteDto> _campsites = new();
     private List<EventDto> _events = new();
     private List<PhotoDto> _photos = new();
@@ -396,7 +396,7 @@
         Console.WriteLine(new string('=', 80) + "\n");
     }
 
-    private void OnCampsiteChanged(int newValue)
+    private void OnCampsiteChanged(int? newValue)
     {
         _selectedCampsiteId = newValue;
         StateHasChanged();
@@ -404,19 +404,23 @@
 
     private void ClearCampsiteSelection()
     {
-        _selectedCampsiteId = 0;
+        _selectedCampsiteId = null;
         StateHasChanged();
     }
 
     private string GetSelectedCampsiteName()
     {
-        var campsite = _campsites.FirstOrDefault(c => c.Id == _selectedCampsiteId);
+        if (!_selectedCampsiteId.HasValue)
+            return "All Campsites";
+        var campsite = _campsites.FirstOrDefault(c => c.Id == _selectedCampsiteId.Value);
         return campsite?.Name ?? "All Campsites";
     }
 
     private CampsiteDto? GetSelectedCampsite()
     {
-        return _campsites.FirstOrDefault(c => c.Id == _selectedCampsiteId);
+        if (!_selectedCampsiteId.HasValue)
+            return null;
+        return _campsites.FirstOrDefault(c => c.Id == _selectedCampsiteId.Value);
     }
 
     private string GetCampsiteNameById(int campsiteId)
@@ -430,11 +434,11 @@
 
     private List<EventDto> GetCampsiteEvents()
     {
-        if (_selectedCampsiteId == 0)
+        if (!_selectedCampsiteId.HasValue || _selectedCampsiteId.Value == 0)
             return new List<EventDto>();
 
         return _events
-            .Where(e => e.CampsiteId == _selectedCampsiteId)
+            .Where(e => e.CampsiteId == _selectedCampsiteId.Value)
             .OrderBy(e => e.EventDate)
             .ThenBy(e => e.EventTime)
             .ToList();
@@ -442,7 +446,7 @@
 
     private List<PhotoDto> GetCampsitePhotos()
     {
-        if (_selectedCampsiteId == 0)
+        if (!_selectedCampsiteId.HasValue)
         {
             // Return all photos for "All Campsites" (CampsiteId = 0)
             return _photos
@@ -452,7 +456,7 @@
 
         // Return photos for the selected campsite
         return _photos
-            .Where(p => p.CampsiteId == _selectedCampsiteId)
+            .Where(p => p.CampsiteId == _selectedCampsiteId.Value)
             .ToList();
     }
 

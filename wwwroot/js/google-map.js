@@ -41,34 +41,19 @@ window.initMapWithData = function(campsiteData) {
         const lat = campsite.lat || campsite.Latitude || 56.2639;
         const lng = campsite.lng || campsite.Longitude || 10.4515;
         const name = campsite.name || campsite.Name || "Campsite";
-        const region = campsite.region || campsite.Region || "Denmark";
         const description = campsite.description || campsite.Description || "Beautiful campsite";
-        const availableSpots = campsite.availableSpots || campsite.AvailableSpots || 0;
-        const id = campsite.id || campsite.Id || 1;
 
         const marker = new google.maps.Marker({
             position: { lat: lat, lng: lng },
             map: map,
-            title: name,
-            label: {
-                text: availableSpots.toString(),
-                color: 'white',
-                fontSize: '14px',
-                fontWeight: 'bold'
-            }
+            title: name
         });
 
-        // Create info window content
+        // Create info window content - only show name and description
         const infoContent = `
             <div style="padding: 10px; min-width: 200px;">
-                <h3 style="margin: 0 0 10px 0;">${name}</h3>
-                <p style="margin: 5px 0;"><strong>📍 Region:</strong> ${region}</p>
-                <p style="margin: 5px 0;">${description}</p>
-                <p style="margin: 5px 0;"><strong>✅ Available:</strong> ${availableSpots} spots</p>
-                <button onclick="window.location.href='/booking?campsiteId=${id}'"
-                        style="margin-top: 10px; padding: 8px 16px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    Book Now
-                </button>
+                <h3 style="margin: 0 0 10px 0; color: #1976d2;">${name}</h3>
+                <p style="margin: 0; color: #666;">${description}</p>
             </div>
         `;
 
