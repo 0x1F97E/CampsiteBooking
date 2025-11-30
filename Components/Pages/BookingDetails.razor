@@ -3,20 +3,22 @@
 @inject NavigationManager Navigation
 @inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
 @inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @using CampsiteBooking.Data
 @using CampsiteBooking.Models
 @using CampsiteBooking.Models.ValueObjects
 @using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
 
 <PageTitle>Booking Details - Campsite Booking</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
-    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" 
-               Variant="Variant.Text" 
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack"
+               Variant="Variant.Text"
                Color="Color.Primary"
-               OnClick="@(() => Navigation.NavigateTo("/bookings"))"
+               OnClick="@GoBack"
                Class="mb-4">
-        Back to My Bookings
+        @_backButtonText
     </MudButton>
     
     @if (_booking != null)
@@ -148,16 +150,42 @@
 @code {
     [Parameter]
     public string BookingId { get; set; } = string.Empty;
-    
+
     private BookingDetailsDto? _booking;
-    
-    private int _numberOfNights => _booking != null 
-        ? (_booking.CheckOutDate - _booking.CheckInDate).Days 
+    private bool _isAdmin = false;
+    private string _backButtonText = "Back to My Bookings";
+    private string _backUrl = "/bookings";
+
+    private int _numberOfNights => _booking != null
+        ? (_booking.CheckOutDate - _booking.CheckInDate).Days
         : 0;
 
     protected override async Task OnInitializedAsync()
     {
+        await CheckUserRole();
         await LoadBookingDetails();
+    }
+
+    private async Task CheckUserRole()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            _isAdmin = user.IsInRole("Admin") || user.IsInRole("Staff");
+
+            if (_isAdmin)
+            {
+                _backButtonText = "Back to Booking Management";
+                _backUrl = "/admin/bookings";
+            }
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo(_backUrl);
     }
 
     private async Task LoadBookingDetails()

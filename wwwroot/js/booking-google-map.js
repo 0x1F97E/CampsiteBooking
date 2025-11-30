@@ -5,22 +5,34 @@ let bookingPageMarkers = [];
 function initializeBookingMap(campsiteLat, campsiteLng, campsiteName, spotsJson) {
     console.log("initializeBookingMap called");
     console.log(`Campsite: ${campsiteName} at ${campsiteLat}, ${campsiteLng}`);
-    
+    console.log(`campsiteLat type: ${typeof campsiteLat}, campsiteLng type: ${typeof campsiteLng}`);
+
+    // Convert to numbers if they're strings
+    campsiteLat = parseFloat(campsiteLat);
+    campsiteLng = parseFloat(campsiteLng);
+
+    console.log(`After parsing - campsiteLat: ${campsiteLat}, campsiteLng: ${campsiteLng}`);
+
     // Check if Google Maps is loaded
     if (typeof google === 'undefined' || !google.maps) {
         console.error("Google Maps API is not loaded!");
         return;
     }
-    
+
     // Check if map container exists
     const mapContainer = document.getElementById('booking-map');
     if (!mapContainer) {
         console.error("Map container 'booking-map' not found in DOM!");
         return;
     }
-    
+
     const spots = JSON.parse(spotsJson);
     console.log(`Parsed ${spots.length} spots from JSON`);
+
+    // Debug first spot
+    if (spots.length > 0) {
+        console.log(`First spot - Latitude: ${spots[0].Latitude} (type: ${typeof spots[0].Latitude}), Longitude: ${spots[0].Longitude} (type: ${typeof spots[0].Longitude})`);
+    }
 
     // Clear existing markers
     bookingPageMarkers.forEach(marker => marker.setMap(null));
@@ -86,13 +98,20 @@ function initializeBookingMap(campsiteLat, campsiteLng, campsiteName, spotsJson)
     bounds.extend({ lat: campsiteLat, lng: campsiteLng });
     
     spots.forEach(spot => {
-        const isAvailable = spot.status === "Available";
+        // Parse coordinates as numbers (handle both uppercase and lowercase property names)
+        const lat = parseFloat(spot.Latitude || spot.latitude);
+        const lng = parseFloat(spot.Longitude || spot.longitude);
+        const spotId = spot.SpotId || spot.spotId;
+        const type = spot.Type || spot.type;
+        const status = spot.Status || spot.status;
+
+        const isAvailable = status === "Available";
         const markerColor = isAvailable ? '#4caf50' : '#f44336'; // Green for available, red for occupied
-        
+
         const marker = new google.maps.Marker({
-            position: { lat: spot.latitude, lng: spot.longitude },
+            position: { lat: lat, lng: lng },
             map: bookingMap,
-            title: `${spot.spotId} - ${spot.type}`,
+            title: `${spotId} - ${type}`,
             icon: {
                 path: google.maps.SymbolPath.CIRCLE,
                 scale: 10,
@@ -102,34 +121,36 @@ function initializeBookingMap(campsiteLat, campsiteLng, campsiteName, spotsJson)
                 strokeWeight: 2
             },
             label: {
-                text: spot.spotId,
+                text: spotId,
                 color: '#ffffff',
                 fontSize: '11px',
                 fontWeight: 'bold'
             }
         });
-        
+
         // Create info window content
-        const statusBadge = isAvailable 
+        const statusBadge = isAvailable
             ? '<span style="background: #4caf50; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">AVAILABLE</span>'
             : '<span style="background: #f44336; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">OCCUPIED</span>';
-        
-        const amenitiesList = spot.amenities && spot.amenities.length > 0
-            ? spot.amenities.map(a => `<span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 8px; font-size: 10px; margin-right: 4px; display: inline-block; margin-top: 2px;">${a}</span>`).join('')
+
+        const amenities = spot.Amenities || spot.amenities;
+        const amenitiesList = amenities && amenities.length > 0
+            ? amenities.map(a => `<span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 8px; font-size: 10px; margin-right: 4px; display: inline-block; margin-top: 2px;">${a}</span>`).join('')
             : '<span style="color: #999; font-size: 11px;">No amenities</span>';
-        
-        const priceModifierText = spot.priceModifier > 1.0
-            ? `<div style="margin-top: 8px; color: #ff9800; font-weight: bold; font-size: 12px;">Premium Spot +${((spot.priceModifier - 1) * 100).toFixed(0)}%</div>`
+
+        const priceModifier = parseFloat(spot.PriceModifier || spot.priceModifier || 1.0);
+        const priceModifierText = priceModifier > 1.0
+            ? `<div style="margin-top: 8px; color: #ff9800; font-weight: bold; font-size: 12px;">Premium Spot +${((priceModifier - 1) * 100).toFixed(0)}%</div>`
             : '';
-        
+
         const infoWindow = new google.maps.InfoWindow({
             content: `
                 <div style="padding: 8px; min-width: 220px;">
-                    <h3 style="margin: 0 0 8px 0; color: #333; font-size: 16px;">Spot ${spot.spotId}</h3>
+                    <h3 style="margin: 0 0 8px 0; color: #333; font-size: 16px;">Spot ${spotId}</h3>
                     <div style="margin-bottom: 8px;">${statusBadge}</div>
                     <div style="margin-bottom: 6px;">
-                        <strong style="font-size: 12px;">Type:</strong> 
-                        <span style="font-size: 12px;">${spot.type}</span>
+                        <strong style="font-size: 12px;">Type:</strong>
+                        <span style="font-size: 12px;">${type}</span>
                     </div>
                     <div style="margin-bottom: 6px;">
                         <strong style="font-size: 12px;">Amenities:</strong><br/>
@@ -139,13 +160,13 @@ function initializeBookingMap(campsiteLat, campsiteLng, campsiteName, spotsJson)
                 </div>
             `
         });
-        
+
         marker.addListener('click', () => {
             infoWindow.open(bookingMap, marker);
         });
 
         bookingPageMarkers.push(marker);
-        bounds.extend({ lat: spot.latitude, lng: spot.longitude });
+        bounds.extend({ lat: lat, lng: lng });
     });
     
     // Fit map to show all markers

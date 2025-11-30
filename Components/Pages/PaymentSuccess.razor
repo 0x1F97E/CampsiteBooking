@@ -1,6 +1,7 @@
 @page "/payment-success"
 @using CampsiteBooking.Services
 @using CampsiteBooking.Data
+@using CampsiteBooking.Models
 @using CampsiteBooking.Models.ValueObjects
 @using Microsoft.EntityFrameworkCore
 @inject MockPaymentService StripeService
@@ -138,8 +139,22 @@
                 // Confirm the booking
                 booking.Confirm();
 
-                // TODO: Add payment record to database
-                // This would require creating a Payment entity and adding it to the context
+                // Create payment record in database
+                if (!string.IsNullOrEmpty(paymentIntentId))
+                {
+                    var payment = Payment.Create(
+                        BookingId.Create(bookingId),
+                        booking.TotalPrice,
+                        "CreditCard", // Default to CreditCard for Stripe payments
+                        paymentIntentId
+                    );
+
+                    // Mark payment as completed since we're in the success page
+                    payment.MarkAsCompleted();
+
+                    await context.Payments.AddAsync(payment);
+                    Console.WriteLine($"✅ Created payment record for booking {bookingId} with transaction {paymentIntentId}");
+                }
 
                 await context.SaveChangesAsync();
                 Console.WriteLine($"✅ Booking {bookingId} confirmed with payment {paymentIntentId}");
@@ -148,6 +163,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Error updating booking status: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
         }
     }
 }

@@ -3,6 +3,7 @@
 @attribute [Authorize(Roles = "Admin,Staff")]
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 @inject IDbContextFactory<CampsiteBooking.Data.CampsiteBookingDbContext> DbContextFactory
 @using CampsiteBooking.Data
 @using CampsiteBooking.Models
@@ -92,6 +93,7 @@
                 <MudTh>Guests</MudTh>
                 <MudTh>Amount</MudTh>
                 <MudTh>Status</MudTh>
+                <MudTh>Payment</MudTh>
                 <MudTh>Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
@@ -118,6 +120,25 @@
                     <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">
                         @context.Status
                     </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Payment">
+                    @if (!string.IsNullOrEmpty(context.PaymentStatus))
+                    {
+                        <div>
+                            <MudChip T="string" Size="Size.Small" Color="@GetPaymentStatusColor(context.PaymentStatus)">
+                                @context.PaymentStatus
+                            </MudChip>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.PaymentMethod</MudText>
+                            @if (!string.IsNullOrEmpty(context.TransactionId))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.TransactionId</MudText>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">No payment</MudText>
+                    }
                 </MudTd>
                 <MudTd DataLabel="Actions">
                     <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
@@ -201,6 +222,10 @@
             var allAccommodationTypes = await context.AccommodationTypes.ToListAsync();
             Console.WriteLine($"   ✅ Loaded {allAccommodationTypes.Count} accommodation types from AccommodationTypes table");
 
+            // Load all payments to get payment information
+            var allPayments = await context.Payments.ToListAsync();
+            Console.WriteLine($"   ✅ Loaded {allPayments.Count} payments from Payments table");
+
             // Populate available campsites for filter dropdown
             _availableCampsites = allCampsites
                 .Where(c => !string.IsNullOrEmpty(c.Name))
@@ -215,6 +240,7 @@
                 var guest = allGuests.FirstOrDefault(g => g.Id?.Value == b.GuestId?.Value);
                 var campsite = allCampsites.FirstOrDefault(c => c.Id?.Value == b.CampsiteId?.Value);
                 var accommodationType = allAccommodationTypes.FirstOrDefault(a => a.Id?.Value == b.AccommodationTypeId?.Value);
+                var payment = allPayments.FirstOrDefault(p => p.BookingId?.Value == b.Id?.Value);
 
                 return new BookingManagementDto
                 {
@@ -227,7 +253,13 @@
                     CheckOut = b.Period?.EndDate ?? DateTime.Now,
                     NumberOfGuests = b.NumberOfAdults + b.NumberOfChildren,
                     TotalAmount = b.TotalPrice?.Amount ?? 0,
-                    Status = b.Status.ToString()
+                    Status = b.Status.ToString(),
+
+                    // Payment information
+                    PaymentMethod = payment?.Method,
+                    PaymentStatus = payment?.Status.ToString(),
+                    TransactionId = payment?.TransactionId,
+                    PaymentDate = payment?.PaymentDate
                 };
             }).ToList();
 
@@ -310,9 +342,19 @@
         _ => Color.Default
     };
 
+    private Color GetPaymentStatusColor(string? status) => status switch
+    {
+        "Completed" => Color.Success,
+        "Pending" => Color.Warning,
+        "Failed" => Color.Error,
+        "Refunded" => Color.Info,
+        _ => Color.Default
+    };
+
     private void ViewBookingDetails(BookingManagementDto booking)
     {
-        // Navigate to booking details page or show dialog
+        // Navigate to booking details page
+        Navigation.NavigateTo($"/booking-details/{booking.Id}");
     }
 
     private async Task ConfirmBooking(BookingManagementDto booking)
@@ -425,6 +467,12 @@
         public int NumberOfGuests { get; set; }
         public decimal TotalAmount { get; set; }
         public string Status { get; set; } = string.Empty;
+
+        // Payment information
+        public string? PaymentMethod { get; set; }
+        public string? PaymentStatus { get; set; }
+        public string? TransactionId { get; set; }
+        public DateTime? PaymentDate { get; set; }
     }
 }
 

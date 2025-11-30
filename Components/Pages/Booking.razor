@@ -22,8 +22,13 @@
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
     <MudText Typo="Typo.h4" GutterBottom="true">Complete Your Booking</MudText>
-    
-    @if (_accommodation != null)
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+        <MudText Typo="Typo.body1" Align="Align.Center" Class="my-8">Loading booking information...</MudText>
+    }
+    else if (_accommodation != null)
     {
         <MudGrid>
             <MudItem xs="12" md="5">
@@ -327,9 +332,15 @@
             </MudItem>
         </MudGrid>
     }
-    else
+    else if (!_isLoading)
     {
-        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        <MudAlert Severity="Severity.Error" Class="my-4">
+            <MudText Typo="Typo.h6">Accommodation Not Found</MudText>
+            <MudText Typo="Typo.body2">The requested accommodation could not be loaded. Please try again or select a different accommodation.</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/search" Class="mt-2">
+                Back to Search
+            </MudButton>
+        </MudAlert>
     }
 </MudContainer>
 
@@ -463,6 +474,7 @@
     public int? CampsiteIdParam { get; set; }
 
     private int _campsiteId;
+    private int? _accommodationId; // Specific accommodation type ID to load
     private CampsiteDto? _campsite;
 
     private MudForm? _form;
@@ -479,6 +491,9 @@
     // Authentication state
     private bool _isAuthenticated = false;
     private int _currentUserId = 0;
+
+    // Loading state
+    private bool _isLoading = true;
 
     private List<CampingSpot> _campingSpots = new();
     private CampingSpot? _selectedSpot = null;
@@ -530,41 +545,62 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Check authentication and load user data first
-        await CheckAuthenticationAndLoadUserData();
-
-        // Check if campsiteId comes from route parameter (old format: /booking/1)
-        if (CampsiteIdParam.HasValue)
+        try
         {
-            _campsiteId = CampsiteIdParam.Value;
-        }
-        else
-        {
-            // Get campsiteId from query parameter (new format: /booking?campsiteId=1)
-            var uri = new Uri(Navigation.Uri);
-            var queryParams = QueryHelpers.ParseQuery(uri.Query);
+            _isLoading = true;
 
-            if (queryParams.TryGetValue("campsiteId", out var campsiteIdStr) && int.TryParse(campsiteIdStr, out var campsiteId))
+            // Check authentication and load user data first
+            await CheckAuthenticationAndLoadUserData();
+
+            // Check if campsiteId comes from route parameter (old format: /booking/1)
+            if (CampsiteIdParam.HasValue)
             {
-                _campsiteId = campsiteId;
+                _campsiteId = CampsiteIdParam.Value;
             }
             else
             {
-                _campsiteId = 1; // Default to first campsite
+                // Get campsiteId from query parameter (new format: /booking?campsiteId=1)
+                var uri = new Uri(Navigation.Uri);
+                var queryParams = QueryHelpers.ParseQuery(uri.Query);
+
+                if (queryParams.TryGetValue("campsiteId", out var campsiteIdStr) && int.TryParse(campsiteIdStr, out var campsiteId))
+                {
+                    _campsiteId = campsiteId;
+                }
+                else
+                {
+                    _campsiteId = 1; // Default to first campsite
+                }
+
+                // Get accommodationId from query parameter (new format: /booking?campsiteId=1&accommodationId=4)
+                if (queryParams.TryGetValue("accommodationId", out var accommodationIdStr) && int.TryParse(accommodationIdStr, out var accommodationId))
+                {
+                    _accommodationId = accommodationId;
+                    Console.WriteLine($"📋 Booking page: Received accommodationId={_accommodationId} from URL");
+                }
             }
+
+            // Load campsite data from database
+            await LoadCampsiteData();
+
+            // Load accommodation data from database
+            await LoadAccommodationData();
+
+            // Load camping spots for this campsite
+            LoadCampingSpots();
+
+            // Load peripheral purchases
+            LoadPeripheralPurchases();
         }
-
-        // Load campsite data from database
-        await LoadCampsiteData();
-
-        // Load accommodation data from database
-        await LoadAccommodationData();
-
-        // Load camping spots for this campsite
-        LoadCampingSpots();
-
-        // Load peripheral purchases
-        LoadPeripheralPurchases();
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error initializing booking page: {ex.Message}");
+            Snackbar.Add("Error loading booking page. Please try again.", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -753,11 +789,41 @@
         {
             using var context = await DbContextFactory.CreateDbContextAsync();
 
-            // Load first accommodation type for this campsite
-            var campsiteId = CampsiteId.Create(_campsiteId);
-            var accommodationType = await context.AccommodationTypes
-                .Where(at => EF.Property<CampsiteId>(at, "_campsiteId") == campsiteId)
-                .FirstOrDefaultAsync();
+            AccommodationType? accommodationType = null;
+
+            // If accommodationId is provided, load that specific accommodation type
+            if (_accommodationId.HasValue)
+            {
+                // Load all accommodation types for this campsite and filter in memory
+                // (EF Core cannot translate value object comparisons in LINQ)
+                var campsiteId = CampsiteId.Create(_campsiteId);
+                var allAccommodationTypes = await context.AccommodationTypes
+                    .Where(at => EF.Property<CampsiteId>(at, "_campsiteId") == campsiteId)
+                    .ToListAsync();
+
+                accommodationType = allAccommodationTypes
+                    .FirstOrDefault(at => at.Id.Value == _accommodationId.Value);
+
+                if (accommodationType != null)
+                {
+                    Console.WriteLine($"✅ Found specific accommodation type: ID={_accommodationId}, Type={accommodationType.Type}");
+                }
+                else
+                {
+                    Console.WriteLine($"⚠️ Accommodation type with ID {_accommodationId} not found, falling back to first available");
+                    // Fall back to first accommodation type
+                    accommodationType = allAccommodationTypes.FirstOrDefault();
+                }
+            }
+
+            // If no specific accommodation was found or requested, load first accommodation type for this campsite
+            if (accommodationType == null)
+            {
+                var campsiteId = CampsiteId.Create(_campsiteId);
+                accommodationType = await context.AccommodationTypes
+                    .Where(at => EF.Property<CampsiteId>(at, "_campsiteId") == campsiteId)
+                    .FirstOrDefaultAsync();
+            }
 
             if (accommodationType != null)
             {
