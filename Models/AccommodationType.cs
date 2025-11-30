@@ -23,6 +23,8 @@ public class AccommodationType : Entity<AccommodationTypeId>
     private bool _isActive;
     private DateTime _createdDate;
     private string _amenities = string.Empty; // Comma-separated list of amenities
+    private string _unitNamingPrefix = string.Empty;
+    private string _unitNamingPattern = "Numbers"; // "Letters", "Numbers", "PrefixNumbers"
     
     // ============================================================================
     // PUBLIC PROPERTIES (Read-only)
@@ -38,6 +40,8 @@ public class AccommodationType : Entity<AccommodationTypeId>
     public bool IsActive => _isActive;
     public DateTime CreatedDate => _createdDate;
     public string Amenities => _amenities;
+    public string UnitNamingPrefix => _unitNamingPrefix;
+    public string UnitNamingPattern => _unitNamingPattern;
     
     // ============================================================================
     // LEGACY PROPERTIES (for EF Core backward compatibility)
@@ -172,6 +176,22 @@ public class AccommodationType : Entity<AccommodationTypeId>
             .Select(a => a.Trim())
             .Where(a => !string.IsNullOrWhiteSpace(a))
             .ToList();
+    }
+
+    public void UpdateUnitNaming(string prefix, string pattern)
+    {
+        _unitNamingPrefix = prefix?.Trim() ?? string.Empty;
+
+        // Validate pattern
+        if (!string.IsNullOrWhiteSpace(pattern) &&
+            (pattern == "Letters" || pattern == "Numbers" || pattern == "PrefixNumbers"))
+        {
+            _unitNamingPattern = pattern;
+        }
+        else
+        {
+            _unitNamingPattern = "Numbers"; // Default
+        }
     }
 }
 

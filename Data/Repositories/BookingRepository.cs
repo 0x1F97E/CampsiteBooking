@@ -79,30 +79,38 @@ public class BookingRepository : IBookingRepository
 
     public async Task<IEnumerable<Booking>> GetByAccommodationSpotIdAsync(AccommodationSpotId spotId, CancellationToken cancellationToken = default)
     {
-        return await _context.Bookings
-            .Where(b => b.AccommodationSpotId == spotId)
+        // Load all bookings into memory and filter in C# to avoid EF Core translation issues with value objects
+        var spotIdValue = spotId.Value;
+        var allBookings = await _context.Bookings.ToListAsync(cancellationToken);
+        return allBookings
+            .Where(b => b.AccommodationSpotId != null && b.AccommodationSpotId.Value == spotIdValue)
             .OrderByDescending(b => b.Period.StartDate)
-            .ToListAsync(cancellationToken);
+            .ToList();
     }
 
     public async Task<IEnumerable<Booking>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
     {
-        return await _context.Bookings
+        // Load all bookings into memory and filter in C# to avoid EF Core translation issues with value objects
+        var allBookings = await _context.Bookings.ToListAsync(cancellationToken);
+        return allBookings
             .Where(b => b.Period.StartDate >= startDate && b.Period.EndDate <= endDate)
             .OrderBy(b => b.Period.StartDate)
-            .ToListAsync(cancellationToken);
+            .ToList();
     }
 
     public async Task<bool> IsSpotAvailableAsync(AccommodationSpotId spotId, DateRange period, CancellationToken cancellationToken = default)
     {
-        // Check if there are any confirmed bookings that overlap with the requested period
-        var hasOverlap = await _context.Bookings
-            .Where(b => b.AccommodationSpotId == spotId)
+        // Load all bookings into memory and filter in C# to avoid EF Core translation issues with value objects
+        var spotIdValue = spotId.Value;
+        var allBookings = await _context.Bookings.ToListAsync(cancellationToken);
+
+        // Check if there are any confirmed/pending bookings that overlap with the requested period
+        var hasOverlap = allBookings
+            .Where(b => b.AccommodationSpotId != null && b.AccommodationSpotId.Value == spotIdValue)
             .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Pending)
-            .AnyAsync(b => 
+            .Any(b =>
                 // Overlap logic: booking overlaps if it starts before period ends AND ends after period starts
-                b.Period.StartDate < period.EndDate && b.Period.EndDate > period.StartDate,
-                cancellationToken);
+                b.Period.StartDate < period.EndDate && b.Period.EndDate > period.StartDate);
 
         return !hasOverlap; // Available if no overlap
     }

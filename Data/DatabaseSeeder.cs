@@ -782,19 +782,24 @@ public static class DatabaseSeeder
             var tent2 = allAccommodationTypes.FirstOrDefault(a => a.CampsiteId?.Value == 2 && a.Type == "Tent Site");
             if (guest2 != null && tent2 != null)
             {
-                var booking2 = Booking.Create(
-                    GuestId.Create(guest2.GuestId),
-                    CampsiteId.Create(campsiteIds[1]),
-                    tent2.Id,
-                    DateRange.Create(DateTime.Now.AddDays(15), DateTime.Now.AddDays(18)),
-                    Money.Create(55m, "DKK"),
-                    2,
-                    0,
-                    ""
-                );
-                await context.Bookings.AddAsync(booking2);
-                await context.SaveChangesAsync();
-                context.Entry(booking2).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                var spot2 = allAccommodationSpots.FirstOrDefault(s => s.AccommodationTypeId.Value == tent2.Id.Value);
+                if (spot2 != null)
+                {
+                    var booking2 = Booking.Create(
+                        GuestId.Create(guest2.GuestId),
+                        CampsiteId.Create(campsiteIds[1]),
+                        tent2.Id,
+                        DateRange.Create(DateTime.Now.AddDays(15), DateTime.Now.AddDays(18)),
+                        Money.Create(55m, "DKK"),
+                        2,
+                        0,
+                        ""
+                    );
+                    booking2.GetType().GetMethod("AssignAccommodationSpot")?.Invoke(booking2, new object[] { spot2.Id });
+                    await context.Bookings.AddAsync(booking2);
+                    await context.SaveChangesAsync();
+                    context.Entry(booking2).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
             }
 
             // Booking 3: Mike Johnson - Aarhus Forest Retreat - Cabin - Confirmed
@@ -858,20 +863,25 @@ public static class DatabaseSeeder
                 var cabin5 = allAccommodationTypes.FirstOrDefault(a => a.CampsiteId?.Value == 5 && a.Type == "Cabin");
                 if (cabin5 != null)
                 {
-                    var booking5 = Booking.Create(
-                        GuestId.Create(guest2.GuestId),
-                        CampsiteId.Create(campsiteIds[4]),
-                        cabin5.Id,
-                        DateRange.Create(DateTime.Now.AddDays(60), DateTime.Now.AddDays(67)),
-                        Money.Create(140m, "DKK"),
-                        2,
-                        1,
-                        ""
-                    );
-                    booking5.GetType().GetMethod("Cancel")?.Invoke(booking5, Array.Empty<object>());
-                    await context.Bookings.AddAsync(booking5);
-                    await context.SaveChangesAsync();
-                    context.Entry(booking5).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                    var spot5 = allAccommodationSpots.FirstOrDefault(s => s.AccommodationTypeId.Value == cabin5.Id.Value);
+                    if (spot5 != null)
+                    {
+                        var booking5 = Booking.Create(
+                            GuestId.Create(guest2.GuestId),
+                            CampsiteId.Create(campsiteIds[4]),
+                            cabin5.Id,
+                            DateRange.Create(DateTime.Now.AddDays(60), DateTime.Now.AddDays(67)),
+                            Money.Create(140m, "DKK"),
+                            2,
+                            1,
+                            ""
+                        );
+                        booking5.GetType().GetMethod("AssignAccommodationSpot")?.Invoke(booking5, new object[] { spot5.Id });
+                        booking5.GetType().GetMethod("Cancel")?.Invoke(booking5, Array.Empty<object>());
+                        await context.Bookings.AddAsync(booking5);
+                        await context.SaveChangesAsync();
+                        context.Entry(booking5).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                    }
                 }
             }
 

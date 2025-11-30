@@ -244,6 +244,8 @@ public class CampsiteBookingDbContext : DbContext
             entity.Ignore(a => a.CreatedDate);
             entity.Ignore(a => a.BasePrice_Legacy);
             entity.Ignore(a => a.Amenities);
+            entity.Ignore(a => a.UnitNamingPrefix);
+            entity.Ignore(a => a.UnitNamingPattern);
 
             // Map private fields to database columns
             entity.Property("_campsiteId").HasColumnName("CampsiteId")
@@ -257,6 +259,8 @@ public class CampsiteBookingDbContext : DbContext
             entity.Property("_isActive").HasColumnName("IsActive");
             entity.Property("_createdDate").HasColumnName("CreatedDate");
             entity.Property("_amenities").HasColumnName("Amenities");
+            entity.Property("_unitNamingPrefix").HasColumnName("UnitNamingPrefix").HasMaxLength(50);
+            entity.Property("_unitNamingPattern").HasColumnName("UnitNamingPattern").HasMaxLength(50);
         });
 
         // Configure AccommodationSpot entity to map private fields

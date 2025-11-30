@@ -683,6 +683,42 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"   Stack trace: {ex.StackTrace}");
     }
 
+    // Add UnitNamingPrefix and UnitNamingPattern columns to AccommodationTypes table
+    try
+    {
+        Console.WriteLine("🔧 Adding UnitNamingPrefix and UnitNamingPattern columns to AccommodationTypes table...");
+
+        var unitNamingPrefixExists = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='AccommodationTypes' AND COLUMN_NAME='UnitNamingPrefix'"
+        ).FirstOrDefaultAsync();
+
+        if (unitNamingPrefixExists == 0)
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE AccommodationTypes
+                ADD COLUMN UnitNamingPrefix VARCHAR(50) NULL,
+                ADD COLUMN UnitNamingPattern VARCHAR(50) NULL DEFAULT 'Numbers'
+            ");
+            Console.WriteLine("   ✅ UnitNamingPrefix and UnitNamingPattern columns added");
+
+            // Set default values for existing records
+            await db.Database.ExecuteSqlRawAsync(@"
+                UPDATE AccommodationTypes
+                SET UnitNamingPrefix = '', UnitNamingPattern = 'Numbers'
+                WHERE UnitNamingPrefix IS NULL OR UnitNamingPattern IS NULL
+            ");
+            Console.WriteLine("   ✅ Default values set for existing records");
+        }
+        else
+        {
+            Console.WriteLine("   ✅ UnitNamingPrefix and UnitNamingPattern columns already exist");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error adding UnitNaming columns: {ex.Message}");
+    }
+
     // Seed initial data
     await DatabaseSeeder.SeedAsync(db);
 

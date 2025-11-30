@@ -706,8 +706,8 @@
                 GalleryImages = new List<string>(),
                 IsActive = e.IsActive,
                 AvailableUnits = e.AvailableUnits,
-                UnitNamingPrefix = "",
-                UnitNamingPattern = "Numbers"
+                UnitNamingPrefix = e.UnitNamingPrefix ?? "",
+                UnitNamingPattern = e.UnitNamingPattern ?? "Numbers"
             }).ToList();
 
             Console.WriteLine($"✅ Loaded {_accommodationTypes.Count} accommodation types for campsite {campsiteId}");
@@ -901,14 +901,19 @@
                 entity.UpdateAmenities(dto.Amenities);
             }
 
+            // Set unit naming configuration
+            entity.UpdateUnitNaming(dto.UnitNamingPrefix, dto.UnitNamingPattern);
+
             context.AccommodationTypes.Add(entity);
 
-            // CRITICAL FIX: Explicitly mark the _amenities field as modified for new entities
-            // This ensures EF Core tracks the amenities field properly
+            // CRITICAL FIX: Explicitly mark the private fields as modified for new entities
+            // This ensures EF Core tracks these fields properly
             if (dto.Amenities != null && dto.Amenities.Any())
             {
                 context.Entry(entity).Property("_amenities").IsModified = true;
             }
+            context.Entry(entity).Property("_unitNamingPrefix").IsModified = true;
+            context.Entry(entity).Property("_unitNamingPattern").IsModified = true;
 
             await context.SaveChangesAsync();
 
@@ -980,9 +985,14 @@
             // IMPORTANT: Also update amenities from the DTO
             dbAccommodationType.UpdateAmenities(accType.Amenities);
 
-            // CRITICAL FIX: Explicitly mark the _amenities field as modified
+            // Update unit naming configuration
+            dbAccommodationType.UpdateUnitNaming(accType.UnitNamingPrefix, accType.UnitNamingPattern);
+
+            // CRITICAL FIX: Explicitly mark the private fields as modified
             // EF Core doesn't automatically detect changes to private fields
             context.Entry(dbAccommodationType).Property("_amenities").IsModified = true;
+            context.Entry(dbAccommodationType).Property("_unitNamingPrefix").IsModified = true;
+            context.Entry(dbAccommodationType).Property("_unitNamingPattern").IsModified = true;
 
             await context.SaveChangesAsync();
 

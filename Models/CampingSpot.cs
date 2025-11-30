@@ -2,6 +2,11 @@ namespace CampsiteBooking.Models;
 
 public class CampingSpot
 {
+    /// <summary>
+    /// Database ID of the AccommodationSpot entity (used for booking)
+    /// </summary>
+    public int DatabaseId { get; set; }
+
     public string SpotId { get; set; } = string.Empty;
     public int CampsiteId { get; set; }
     public string CampsiteName { get; set; } = string.Empty;

@@ -44,17 +44,17 @@
                         <MudStack Spacing="2">
                             <MudStack Row="true" Justify="Justify.SpaceBetween">
                                 <MudText Typo="Typo.body2">Base price per night:</MudText>
-                                <MudText Typo="Typo.body1"><b>$@_accommodation.PricePerNight</b></MudText>
+                                <MudText Typo="Typo.body1"><b>$@_accommodation.PricePerNight.ToString("N2")</b></MudText>
                             </MudStack>
                             @if (_selectedSpot != null && _selectedSpot.PriceModifier != 1.0m)
                             {
                                 <MudStack Row="true" Justify="Justify.SpaceBetween">
                                     <MudText Typo="Typo.body2">Spot modifier (@_selectedSpot.SpotId):</MudText>
-                                    <MudText Typo="Typo.body1" Color="Color.Warning"><b>×@_selectedSpot.PriceModifier</b></MudText>
+                                    <MudText Typo="Typo.body1" Color="Color.Warning"><b>×@_selectedSpot.PriceModifier.ToString("N2")</b></MudText>
                                 </MudStack>
                                 <MudStack Row="true" Justify="Justify.SpaceBetween">
                                     <MudText Typo="Typo.body2">Adjusted price per night:</MudText>
-                                    <MudText Typo="Typo.body1" Color="Color.Primary"><b>$@_spotPrice</b></MudText>
+                                    <MudText Typo="Typo.body1" Color="Color.Primary"><b>$@_spotPrice.ToString("N2")</b></MudText>
                                 </MudStack>
                             }
                             <MudStack Row="true" Justify="Justify.SpaceBetween">
@@ -63,7 +63,7 @@
                             </MudStack>
                             <MudStack Row="true" Justify="Justify.SpaceBetween">
                                 <MudText Typo="Typo.body2">Accommodation subtotal:</MudText>
-                                <MudText Typo="Typo.body1"><b>$@(_spotPrice * _numberOfNights)</b></MudText>
+                                <MudText Typo="Typo.body1"><b>$@((_spotPrice * _numberOfNights).ToString("N2"))</b></MudText>
                             </MudStack>
                             @if (_selectedServices.Any())
                             {
@@ -133,8 +133,9 @@
                     <MudForm @ref="_form" @bind-IsValid="@_formValid">
                         <MudText Typo="Typo.h6" GutterBottom="true">Booking Details</MudText>
                         
-                        <MudDateRangePicker Label="Check-in / Check-out" 
-                                           @bind-DateRange="_dateRange"
+                        <MudDateRangePicker Label="Check-in / Check-out"
+                                           DateRange="_dateRange"
+                                           DateRangeChanged="OnDateRangeChanged"
                                            MinDate="DateTime.Today"
                                            Required="true"
                                            RequiredError="Please select dates"
@@ -586,8 +587,8 @@
             // Load accommodation data from database
             await LoadAccommodationData();
 
-            // Load camping spots for this campsite
-            LoadCampingSpots();
+            // Load camping spots for this campsite (with availability based on selected dates)
+            await LoadCampingSpotsAsync();
 
             // Load peripheral purchases
             LoadPeripheralPurchases();
@@ -866,89 +867,151 @@
         }
     }
 
-    private void LoadCampingSpots()
+    private async Task LoadCampingSpotsAsync()
     {
-        // Generate sample camping spots based on campsite ID
-        // In a real app, this would come from a database
-
-        var spots = new List<CampingSpot>();
-        var random = new Random(_campsiteId); // Seed with ID for consistency
-
-        // Section A - Tent pitches (A1-A10) - arranged in 2 rows of 5
-        for (int i = 1; i <= 10; i++)
+        try
         {
-            int row = (i - 1) / 5;
-            int col = (i - 1) % 5;
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load the accommodation type to get configuration
+            AccommodationType? accommodationType = null;
+
+            if (_accommodationId.HasValue)
+            {
+                var campsiteId = CampsiteId.Create(_campsiteId);
+                var allAccommodationTypes = await context.AccommodationTypes
+                    .Where(at => EF.Property<CampsiteId>(at, "_campsiteId") == campsiteId)
+                    .ToListAsync();
+
+                accommodationType = allAccommodationTypes
+                    .FirstOrDefault(at => at.Id.Value == _accommodationId.Value);
+            }
+
+            if (accommodationType == null)
+            {
+                Console.WriteLine("⚠️ No accommodation type found for loading spots");
+                _campingSpots = new List<CampingSpot>();
+                return;
+            }
+
+            var amenities = accommodationType.GetAmenitiesList();
+            var accommodationTypeIdValue = _accommodationId!.Value;
+
+            // Load AccommodationSpots from database using raw SQL to avoid value converter issues
+            // The EF Core value converter for AccommodationTypeId causes issues with LINQ queries
+            var dbSpots = await context.AccommodationSpots
+                .FromSqlRaw("SELECT * FROM AccommodationSpots WHERE AccommodationTypeId = {0}", accommodationTypeIdValue)
+                .ToListAsync();
+
+            Console.WriteLine($"📍 Found {dbSpots.Count} spots in database for accommodation type {_accommodationId}");
+
+            // If no spots exist in the database, generate them dynamically (fallback)
+            if (dbSpots.Count == 0)
+            {
+                Console.WriteLine("⚠️ No spots in database, generating dynamically");
+                _campingSpots = GenerateDynamicSpots(accommodationType, amenities);
+                return;
+            }
+
+            // Get the selected date range for availability checking
+            DateTime startDate = _dateRange?.Start ?? DateTime.Today.AddDays(1);
+            DateTime endDate = _dateRange?.End ?? DateTime.Today.AddDays(3);
+
+            // Find all spot IDs that have overlapping bookings (Confirmed or Pending)
+            // Load all bookings and filter in memory to avoid EF Core translation issues with value objects
+            var allBookings = await context.Bookings.ToListAsync();
+            var bookedSpotIds = allBookings
+                .Where(b => b.AccommodationSpotId != null)
+                .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Pending)
+                .Where(b => b.Period.StartDate < endDate && b.Period.EndDate > startDate)
+                .Select(b => b.AccommodationSpotId!.Value)
+                .Distinct()
+                .ToList();
+
+            Console.WriteLine($"📅 Found {bookedSpotIds.Count} booked spots for date range {startDate:d} - {endDate:d} (checked {allBookings.Count} total bookings)");
+
+            // Convert database spots to CampingSpot DTOs with availability status
+            var spots = new List<CampingSpot>();
+            foreach (var dbSpot in dbSpots)
+            {
+                bool isBooked = bookedSpotIds.Contains(dbSpot.Id.Value);
+                bool isUnderMaintenance = dbSpot.Status == SpotStatus.Maintenance;
+
+                spots.Add(new CampingSpot
+                {
+                    DatabaseId = dbSpot.Id.Value,
+                    SpotId = dbSpot.SpotIdentifier,
+                    CampsiteId = dbSpot.CampsiteId.Value,
+                    CampsiteName = dbSpot.CampsiteName,
+                    Latitude = dbSpot.Latitude,
+                    Longitude = dbSpot.Longitude,
+                    Type = dbSpot.Type,
+                    Amenities = amenities,
+                    Status = isUnderMaintenance ? "Maintenance" : (isBooked ? "Occupied" : "Available"),
+                    PriceModifier = dbSpot.PriceModifier
+                });
+            }
+
+            _campingSpots = spots;
+            _selectedSpot = null; // Reset selection when spots are reloaded
+            Console.WriteLine($"✅ Loaded {spots.Count} camping spots ({spots.Count(s => s.Status == "Available")} available) for {accommodationType.Type}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading camping spots: {ex.Message}");
+            _campingSpots = new List<CampingSpot>();
+        }
+    }
+
+    private List<CampingSpot> GenerateDynamicSpots(AccommodationType accommodationType, List<string> amenities)
+    {
+        var spots = new List<CampingSpot>();
+        var availableUnits = accommodationType.AvailableUnits;
+        var unitNamingPrefix = accommodationType.UnitNamingPrefix ?? "";
+        var unitNamingPattern = accommodationType.UnitNamingPattern ?? "Numbers";
+
+        for (int i = 0; i < availableUnits; i++)
+        {
+            string spotName = unitNamingPattern switch
+            {
+                "Letters" => $"{(char)('A' + i)}",
+                "Numbers" => $"{i + 1}",
+                "PrefixNumbers" => $"{unitNamingPrefix}{i + 1}",
+                _ => $"{i + 1}"
+            };
+
+            int row = i / 5;
+            int col = i % 5;
 
             spots.Add(new CampingSpot
             {
-                SpotId = $"A{i}",
+                DatabaseId = 0, // No database record
+                SpotId = spotName,
                 CampsiteId = _campsiteId,
                 CampsiteName = _campsite?.Name ?? "",
                 Latitude = _baseLat + (row * 0.0005),
                 Longitude = _baseLng + (col * 0.0008),
-                Type = "Tent",
-                Amenities = new List<string> { "Picnic-Table" },
-                Status = random.Next(100) < 70 ? "Available" : "Occupied",
+                Type = accommodationType.Type,
+                Amenities = amenities,
+                Status = "Available", // All dynamically generated spots are available
                 PriceModifier = 1.0m
             });
         }
 
-        // Section B - Caravan pitches (B1-B8) - arranged in 2 rows of 4
-        for (int i = 1; i <= 8; i++)
+        return spots;
+    }
+
+    private async Task OnDateRangeChanged(MudBlazor.DateRange? newDateRange)
+    {
+        _dateRange = newDateRange;
+
+        // Reload spots with new availability based on selected dates
+        if (_accommodationId.HasValue && newDateRange?.Start != null && newDateRange?.End != null)
         {
-            int row = (i - 1) / 4;
-            int col = (i - 1) % 4;
-
-            spots.Add(new CampingSpot
-            {
-                SpotId = $"B{i}",
-                CampsiteId = _campsiteId,
-                CampsiteName = _campsite?.Name ?? "",
-                Latitude = _baseLat + 0.0012 + (row * 0.0006),
-                Longitude = _baseLng + (col * 0.001),
-                Type = "Caravan",
-                Amenities = new List<string> { "Electric-Hookup", "Water-Access" },
-                Status = random.Next(100) < 60 ? "Available" : "Occupied",
-                PriceModifier = 1.2m
-            });
+            Console.WriteLine($"📅 Date range changed to {newDateRange.Start:d} - {newDateRange.End:d}, reloading spots...");
+            await LoadCampingSpotsAsync();
+            StateHasChanged();
         }
-
-        // Section C - Cabins (C1-C5) - arranged in a single row
-        for (int i = 1; i <= 5; i++)
-        {
-            spots.Add(new CampingSpot
-            {
-                SpotId = $"C{i}",
-                CampsiteId = _campsiteId,
-                CampsiteName = _campsite?.Name ?? "",
-                Latitude = _baseLat + 0.0025,
-                Longitude = _baseLng + ((i - 1) * 0.0008),
-                Type = "Cabin",
-                Amenities = new List<string> { "Electric-Hookup", "Water-Access", "WiFi" },
-                Status = random.Next(100) < 50 ? "Available" : "Occupied",
-                PriceModifier = 1.5m
-            });
-        }
-
-        // Section D - Premium spots (D1-D3) - arranged near the beach
-        for (int i = 1; i <= 3; i++)
-        {
-            spots.Add(new CampingSpot
-            {
-                SpotId = $"D{i}",
-                CampsiteId = _campsiteId,
-                CampsiteName = _campsite?.Name ?? "",
-                Latitude = _baseLat - 0.0005,
-                Longitude = _baseLng + ((i - 1) * 0.0012),
-                Type = "Premium",
-                Amenities = new List<string> { "Electric-Hookup", "Water-Access", "WiFi", "Near-Beach" },
-                Status = random.Next(100) < 40 ? "Available" : "Occupied",
-                PriceModifier = 2.0m
-            });
-        }
-
-        _campingSpots = spots;
     }
 
     private void LoadPeripheralPurchases()
@@ -1026,6 +1089,28 @@
             var period = CampsiteBooking.Models.ValueObjects.DateRange.Create(_dateRange.Start.Value, _dateRange.End.Value);
             var basePrice = Money.Create(_accommodation.PricePerNight, "DKK");
 
+            // Validate spot availability before creating booking (prevent double-booking)
+            if (_selectedSpot.DatabaseId > 0)
+            {
+                var spotIdValue = _selectedSpot.DatabaseId;
+
+                // Load all bookings into memory and filter in C# to avoid EF Core translation issues with value objects
+                var allBookings = await context.Bookings.ToListAsync();
+                var hasOverlap = allBookings
+                    .Where(b => b.AccommodationSpotId != null && b.AccommodationSpotId.Value == spotIdValue)
+                    .Where(b => b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Pending)
+                    .Any(b => b.Period.StartDate < period.EndDate && b.Period.EndDate > period.StartDate);
+
+                if (hasOverlap)
+                {
+                    Snackbar.Add("Sorry, this spot has already been booked for the selected dates. Please select a different spot or dates.", Severity.Warning);
+                    // Refresh the spot list to show updated availability
+                    await LoadCampingSpotsAsync();
+                    StateHasChanged();
+                    return;
+                }
+            }
+
             var booking = CampsiteBooking.Models.Booking.Create(
                 guestId,
                 campsiteId,
@@ -1036,6 +1121,14 @@
                 0, // numberOfChildren
                 _specialRequests ?? string.Empty
             );
+
+            // Assign the selected accommodation spot to the booking
+            if (_selectedSpot.DatabaseId > 0)
+            {
+                var spotId = AccommodationSpotId.Create(_selectedSpot.DatabaseId);
+                booking.AssignAccommodationSpot(spotId);
+                Console.WriteLine($"📍 Assigned spot {_selectedSpot.SpotId} (ID: {_selectedSpot.DatabaseId}) to booking");
+            }
 
             // Save booking to database
             await context.Bookings.AddAsync(booking);

@@ -88,6 +88,7 @@
                 <MudTh>Guest</MudTh>
                 <MudTh>Campsite</MudTh>
                 <MudTh>Accommodation</MudTh>
+                <MudTh>Spot Number</MudTh>
                 <MudTh>Check-in</MudTh>
                 <MudTh>Check-out</MudTh>
                 <MudTh>Guests</MudTh>
@@ -109,6 +110,16 @@
                 <MudTd DataLabel="Campsite">@context.CampsiteName</MudTd>
                 <MudTd DataLabel="Accommodation">
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.AccommodationType</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Spot Number">
+                    @if (!string.IsNullOrEmpty(context.SpotNumber))
+                    {
+                        <MudText Typo="Typo.body2">@context.SpotNumber</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                    }
                 </MudTd>
                 <MudTd DataLabel="Check-in">@context.CheckIn.ToString("MMM dd, yyyy")</MudTd>
                 <MudTd DataLabel="Check-out">@context.CheckOut.ToString("MMM dd, yyyy")</MudTd>
@@ -222,6 +233,10 @@
             var allAccommodationTypes = await context.AccommodationTypes.ToListAsync();
             Console.WriteLine($"   ✅ Loaded {allAccommodationTypes.Count} accommodation types from AccommodationTypes table");
 
+            // Load all accommodation spots to get spot identifiers
+            var allAccommodationSpots = await context.AccommodationSpots.ToListAsync();
+            Console.WriteLine($"   ✅ Loaded {allAccommodationSpots.Count} accommodation spots from AccommodationSpots table");
+
             // Load all payments to get payment information
             var allPayments = await context.Payments.ToListAsync();
             Console.WriteLine($"   ✅ Loaded {allPayments.Count} payments from Payments table");
@@ -240,7 +255,24 @@
                 var guest = allGuests.FirstOrDefault(g => g.Id?.Value == b.GuestId?.Value);
                 var campsite = allCampsites.FirstOrDefault(c => c.Id?.Value == b.CampsiteId?.Value);
                 var accommodationType = allAccommodationTypes.FirstOrDefault(a => a.Id?.Value == b.AccommodationTypeId?.Value);
+                var accommodationSpot = b.AccommodationSpotId != null
+                    ? allAccommodationSpots.FirstOrDefault(s => s.Id?.Value == b.AccommodationSpotId.Value)
+                    : null;
                 var payment = allPayments.FirstOrDefault(p => p.BookingId?.Value == b.Id?.Value);
+
+                // Debug logging for spot assignment
+                var bookingId = b.Id?.Value ?? 0;
+                var guestName = guest != null ? $"{guest.FirstName} {guest.LastName}" : "Unknown";
+                if (b.AccommodationSpotId == null)
+                {
+                    Console.WriteLine($"   ⚠️ Booking #{bookingId} ({guestName}): AccommodationSpotId is NULL - no spot assigned");
+                }
+                else
+                {
+                    var spotIdValue = b.AccommodationSpotId.Value;
+                    var foundSpot = accommodationSpot != null ? accommodationSpot.SpotIdentifier : "NOT FOUND";
+                    Console.WriteLine($"   ✅ Booking #{bookingId} ({guestName}): AccommodationSpotId = {spotIdValue}, SpotIdentifier = {foundSpot}");
+                }
 
                 return new BookingManagementDto
                 {
@@ -249,6 +281,7 @@
                     GuestEmail = guest?.Email?.Value ?? "unknown@example.com",
                     CampsiteName = campsite?.Name ?? "Unknown Campsite",
                     AccommodationType = accommodationType?.Type ?? "Unknown Type",
+                    SpotIdentifier = accommodationSpot?.SpotIdentifier,
                     CheckIn = b.Period?.StartDate ?? DateTime.Now,
                     CheckOut = b.Period?.EndDate ?? DateTime.Now,
                     NumberOfGuests = b.NumberOfAdults + b.NumberOfChildren,
@@ -462,6 +495,7 @@
         public string GuestEmail { get; set; } = string.Empty;
         public string CampsiteName { get; set; } = string.Empty;
         public string AccommodationType { get; set; } = string.Empty;
+        public string? SpotIdentifier { get; set; }
         public DateTime CheckIn { get; set; }
         public DateTime CheckOut { get; set; }
         public int NumberOfGuests { get; set; }
@@ -473,6 +507,29 @@
         public string? PaymentStatus { get; set; }
         public string? TransactionId { get; set; }
         public DateTime? PaymentDate { get; set; }
+
+        /// <summary>
+        /// Extracts just the number/identifier portion from SpotIdentifier.
+        /// For example: "Glamping-1" becomes "1", "Cabin-3" becomes "3".
+        /// </summary>
+        public string? SpotNumber
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(SpotIdentifier))
+                    return null;
+
+                // Try to extract just the number part after the last hyphen
+                var lastHyphenIndex = SpotIdentifier.LastIndexOf('-');
+                if (lastHyphenIndex >= 0 && lastHyphenIndex < SpotIdentifier.Length - 1)
+                {
+                    return SpotIdentifier.Substring(lastHyphenIndex + 1);
+                }
+
+                // If no hyphen, return the full identifier
+                return SpotIdentifier;
+            }
+        }
     }
 }
 
