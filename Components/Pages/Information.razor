@@ -315,18 +315,20 @@
         // Load events and photos from database using DbContextFactory
         await using var context = await DbContextFactory.CreateDbContextAsync();
 
-        // Load campsites from database
+        // Load campsites from database - only include campsites with valid IDs (non-null, non-zero)
         var dbCampsites = await context.Campsites.ToListAsync();
-        _campsites = dbCampsites.Select(c => new CampsiteDto
-        {
-            Id = c.Id?.Value ?? 0,
-            Name = c.Name ?? "",
-            StreetAddress = c.StreetAddress ?? "",
-            City = c.City ?? "",
-            PostalCode = c.PostalCode ?? "",
-            PhoneNumber = c.PhoneNumber ?? "",
-            Email = c.Email?.Value ?? ""
-        }).ToList();
+        _campsites = dbCampsites
+            .Where(c => c.Id != null && c.Id.Value > 0)
+            .Select(c => new CampsiteDto
+            {
+                Id = c.Id!.Value,
+                Name = c.Name ?? "",
+                StreetAddress = c.StreetAddress ?? "",
+                City = c.City ?? "",
+                PostalCode = c.PostalCode ?? "",
+                PhoneNumber = c.PhoneNumber ?? "",
+                Email = c.Email?.Value ?? ""
+            }).ToList();
 
         Console.WriteLine($"   ✅ Loaded {_campsites.Count} campsites for Information page");
 
