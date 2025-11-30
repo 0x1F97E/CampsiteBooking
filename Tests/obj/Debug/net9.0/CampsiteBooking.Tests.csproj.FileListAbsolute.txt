@@ -20,6 +20,7 @@
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Microsoft.AspNetCore.Components.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Microsoft.AspNetCore.Components.Forms.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Microsoft.AspNetCore.Components.Web.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Microsoft.AspNetCore.Identity.EntityFrameworkCore.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Microsoft.AspNetCore.Metadata.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Microsoft.EntityFrameworkCore.dll
@@ -53,10 +54,13 @@
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Newtonsoft.Json.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/OneOf.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Pomelo.EntityFrameworkCore.MySql.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Stripe.net.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Swashbuckle.AspNetCore.Swagger.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Swashbuckle.AspNetCore.SwaggerGen.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Swashbuckle.AspNetCore.SwaggerUI.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/System.Configuration.ConfigurationManager.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/System.IdentityModel.Tokens.Jwt.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/System.Security.Cryptography.ProtectedData.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/xunit.assert.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/xunit.core.dll
 /Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/xunit.execution.dotnet.dll
@@ -164,7 +168,3 @@
 /Users/pc/CampsiteBooking-1/Tests/obj/Debug/net9.0/CampsiteBooking.Tests.pdb
 /Users/pc/CampsiteBooking-1/Tests/obj/Debug/net9.0/CampsiteBooking.Tests.genruntimeconfig.cache
 /Users/pc/CampsiteBooking-1/Tests/obj/Debug/net9.0/ref/CampsiteBooking.Tests.dll
-/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Stripe.net.dll
-/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/System.Configuration.ConfigurationManager.dll
-/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/System.Security.Cryptography.ProtectedData.dll
-/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/Microsoft.AspNetCore.Identity.EntityFrameworkCore.dll

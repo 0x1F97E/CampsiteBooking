@@ -23,26 +23,6 @@
                                    Editable="true" />
             </MudItem>
 
-            <MudItem xs="6" md="2">
-                <MudNumericField @bind-Value="_adults"
-                                Label="Adults"
-                                Variant="Variant.Outlined"
-                                Min="1"
-                                Max="20"
-                                Adornment="Adornment.Start"
-                                AdornmentIcon="@Icons.Material.Filled.Person" />
-            </MudItem>
-
-            <MudItem xs="6" md="2">
-                <MudNumericField @bind-Value="_children"
-                                Label="Children"
-                                Variant="Variant.Outlined"
-                                Min="0"
-                                Max="20"
-                                Adornment="Adornment.Start"
-                                AdornmentIcon="@Icons.Material.Filled.ChildCare" />
-            </MudItem>
-
             <MudItem xs="12" md="3">
                 <MudSelect T="string"
                            Label="Campsites"
@@ -71,7 +51,7 @@
                 </MudSelect>
             </MudItem>
 
-            <MudItem xs="12" md="3">
+            <MudItem xs="12" md="2">
                 <MudSelect T="string"
                            Label="Amenities"
                            Variant="Variant.Outlined"
@@ -186,8 +166,6 @@
 
 @code {
     private MudBlazor.DateRange? _dateRange = new MudBlazor.DateRange(DateTime.Today.AddDays(1), DateTime.Today.AddDays(3));
-    private int _adults = 2;
-    private int _children = 0;
     private string _accommodationType = "All";
     private IEnumerable<string> _selectedAmenities = new HashSet<string>();
     private IEnumerable<string> _selectedCampsiteIds = new HashSet<string>();

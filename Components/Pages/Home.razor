@@ -18,34 +18,14 @@
     <!-- Filters Bar -->
     <MudPaper Elevation="3" Class="pa-4 mb-4">
         <MudGrid>
-            <MudItem xs="12" md="3">
+            <MudItem xs="12" md="4">
                 <MudTextField Label="Check-in / Check-out"
                              Variant="Variant.Outlined"
                              ReadOnly="true"
                              Value="@(_dateRange?.Start?.ToString("dd/MM/yyyy") + " - " + _dateRange?.End?.ToString("dd/MM/yyyy"))" />
             </MudItem>
 
-            <MudItem xs="6" md="2">
-                <MudNumericField @bind-Value="_adults"
-                                Label="Adults"
-                                Variant="Variant.Outlined"
-                                Min="1"
-                                Max="20"
-                                Adornment="Adornment.Start"
-                                AdornmentIcon="@Icons.Material.Filled.Person" />
-            </MudItem>
-
-            <MudItem xs="6" md="2">
-                <MudNumericField @bind-Value="_children"
-                                Label="Children"
-                                Variant="Variant.Outlined"
-                                Min="0"
-                                Max="20"
-                                Adornment="Adornment.Start"
-                                AdornmentIcon="@Icons.Material.Filled.ChildCare" />
-            </MudItem>
-
-            <MudItem xs="12" md="3">
+            <MudItem xs="12" md="4">
                 <MudSelect T="string"
                           Label="Amenities"
                           Variant="Variant.Outlined"
@@ -60,7 +40,7 @@
                 </MudSelect>
             </MudItem>
 
-            <MudItem xs="12" md="2">
+            <MudItem xs="12" md="4">
                 <MudButton Variant="Variant.Filled"
                           Color="Color.Primary"
                           FullWidth="true"
@@ -77,8 +57,6 @@
 
 @code {
     private DateRange? _dateRange = new DateRange(DateTime.Today.AddDays(1), DateTime.Today.AddDays(3));
-    private int _adults = 2;
-    private int _children = 0;
 
     private IEnumerable<string> _selectedAmenities = new HashSet<string>();
     private List<string> _availableAmenities = new();
@@ -119,9 +97,7 @@
         var queryParams = new Dictionary<string, string>
         {
             ["checkIn"] = _dateRange?.Start?.ToString("yyyy-MM-dd") ?? "",
-            ["checkOut"] = _dateRange?.End?.ToString("yyyy-MM-dd") ?? "",
-            ["adults"] = _adults.ToString(),
-            ["children"] = _children.ToString()
+            ["checkOut"] = _dateRange?.End?.ToString("yyyy-MM-dd") ?? ""
         };
 
         if (_selectedAmenities.Any())

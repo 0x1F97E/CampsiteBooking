@@ -15,6 +15,7 @@
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Microsoft.AspNetCore.Components.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Microsoft.AspNetCore.Components.Forms.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Microsoft.AspNetCore.Components.Web.dll
+/Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Microsoft.AspNetCore.Identity.EntityFrameworkCore.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Microsoft.AspNetCore.Metadata.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Microsoft.Bcl.AsyncInterfaces.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Microsoft.CodeAnalysis.dll
@@ -44,8 +45,10 @@
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Mono.TextTemplating.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/MudBlazor.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/MySqlConnector.dll
+/Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Newtonsoft.Json.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/OneOf.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Pomelo.EntityFrameworkCore.MySql.dll
+/Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Stripe.net.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Swashbuckle.AspNetCore.Swagger.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Swashbuckle.AspNetCore.SwaggerGen.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Swashbuckle.AspNetCore.SwaggerUI.dll
@@ -55,7 +58,9 @@
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/System.Composition.Hosting.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/System.Composition.Runtime.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/System.Composition.TypedParts.dll
+/Users/pc/CampsiteBooking-1/bin/Debug/net9.0/System.Configuration.ConfigurationManager.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/System.IdentityModel.Tokens.Jwt.dll
+/Users/pc/CampsiteBooking-1/bin/Debug/net9.0/System.Security.Cryptography.ProtectedData.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/cs/Microsoft.CodeAnalysis.resources.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/de/Microsoft.CodeAnalysis.resources.dll
 /Users/pc/CampsiteBooking-1/bin/Debug/net9.0/es/Microsoft.CodeAnalysis.resources.dll
@@ -153,6 +158,10 @@
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/0wz98yz2xy-tjzqk7tnel.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/hnmgrfpfgm-3852rn77ci.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/g8n8dwhloy-laf9iglwpr.gz
+/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/r15crycqs5-m7akf9ayvn.gz
+/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/d627t1rjdm-o110ymo73p.gz
+/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/8cce8728dm-m7ssn5ry3o.gz
+/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/e425yznsag-oakuqyaquy.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/e6vk8diy4o-bqjiyaj88i.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/945byykpc2-c2jlpeoesf.gz
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/efyoqiqpiu-erw9l3u2r3.gz
@@ -209,12 +218,3 @@
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/CampsiteBooking.pdb
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/CampsiteBooking.genruntimeconfig.cache
 /Users/pc/CampsiteBooking-1/obj/Debug/net9.0/ref/CampsiteBooking.dll
-/Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Newtonsoft.Json.dll
-/Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Stripe.net.dll
-/Users/pc/CampsiteBooking-1/bin/Debug/net9.0/System.Configuration.ConfigurationManager.dll
-/Users/pc/CampsiteBooking-1/bin/Debug/net9.0/System.Security.Cryptography.ProtectedData.dll
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/e425yznsag-oakuqyaquy.gz
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/r15crycqs5-m7akf9ayvn.gz
-/Users/pc/CampsiteBooking-1/bin/Debug/net9.0/Microsoft.AspNetCore.Identity.EntityFrameworkCore.dll
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/d627t1rjdm-o110ymo73p.gz
-/Users/pc/CampsiteBooking-1/obj/Debug/net9.0/compressed/8cce8728dm-m7ssn5ry3o.gz
