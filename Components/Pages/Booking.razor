@@ -373,7 +373,7 @@
                     <MudTextField @bind-Value="_cardNumber"
                                  Label="Card Number"
                                  Variant="Variant.Outlined"
-                                 Placeholder="1234 5678 9012 3456"
+                                 Placeholder="4242 4242 4242 4242"
                                  Required="true"
                                  RequiredError="Card number is required"
                                  Validation="@(new Func<string, string>(ValidateCardNumber))"
@@ -1186,7 +1186,8 @@
         }
 
         // Pre-populate payment form fields with test values for easy testing
-        _cardNumber = "1234 5678";
+        // Using Stripe's standard test card number
+        _cardNumber = "4242 4242 4242 4242";
         _cardholderName = "JOHN DOE";
         _expirationDate = "12/30";
         _cvv = "123";
