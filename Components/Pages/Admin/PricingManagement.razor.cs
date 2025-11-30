@@ -65,7 +65,7 @@ public class PricingManagementBase : ComponentBase
                 {
                     Id = c.Id?.Value ?? 0,
                     Name = c.Name ?? "Unknown",
-                    Region = c.Region ?? "Unknown",
+                    City = c.City ?? "Unknown",
                     Attractiveness = c.Attractiveness ?? "Unknown",
                     Pricing = campsiteAccommodationTypes.Select(a => new BasePricingDto
                     {

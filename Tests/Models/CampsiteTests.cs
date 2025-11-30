@@ -9,14 +9,15 @@ public class CampsiteTests
 {
     private Campsite CreateValidCampsite(
         string name = "Sunset Campsite",
-        string region = "North",
+        string streetAddress = "Campingvej 1",
+        string city = "Copenhagen",
+        string postalCode = "2100",
         double latitude = 56.0,
         double longitude = 10.0,
-        decimal totalArea = 1000.0m,
         int establishedYear = 2000,
         string attractiveness = "Medium")
     {
-        return Campsite.Create(name, region, latitude, longitude, totalArea, establishedYear, attractiveness: attractiveness);
+        return Campsite.Create(name, streetAddress, city, postalCode, latitude, longitude, establishedYear, attractiveness: attractiveness);
     }
 
     [Fact]
@@ -48,12 +49,6 @@ public class CampsiteTests
     public void Campsite_Create_ThrowsException_WhenLongitudeIsInvalid(double invalidLongitude)
     {
         Assert.Throws<DomainException>(() => CreateValidCampsite(longitude: invalidLongitude));
-    }
-
-    [Fact]
-    public void Campsite_Create_ThrowsException_WhenTotalAreaIsNegative()
-    {
-        Assert.Throws<DomainException>(() => CreateValidCampsite(totalArea: 0));
     }
 
     [Fact]
@@ -116,9 +111,9 @@ public class CampsiteTests
     {
         var campsite = CreateValidCampsite();
         var email = Email.Create("new@campsite.com");
-        campsite.UpdateInformation("New Name", "South", "New description", "High", "12345678", email, "http://new.com");
+        campsite.UpdateInformation("New Name", "New Street 123", "Aarhus", "8000", "New description", "High", "12345678", email, "http://new.com");
         Assert.Equal("New Name", campsite.Name);
-        Assert.Equal("South", campsite.Region);
+        Assert.Equal("Aarhus", campsite.City);
     }
 
     [Fact]
@@ -130,12 +125,5 @@ public class CampsiteTests
         Assert.Equal(11.0, campsite.Longitude);
     }
 
-    [Fact]
-    public void Campsite_UpdateTotalArea_UpdatesArea()
-    {
-        var campsite = CreateValidCampsite();
-        campsite.UpdateTotalArea(2000.0m);
-        Assert.Equal(2000.0m, campsite.TotalArea);
-    }
 }
 

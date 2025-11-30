@@ -1,0 +1,147 @@
+@using MudBlazor
+@using CampsiteBooking.Models.DTOs
+@rendermode InteractiveServer
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Style="max-height: 70vh; overflow-y: auto;">
+            <MudForm @ref="_form" @bind-IsValid="@_isValid">
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            @if (IsEdit)
+                            {
+                                <span>Editing campsite: <strong>@Campsite.Name</strong></span>
+                            }
+                            else
+                            {
+                                <span>Create a new campsite with all required information</span>
+                            }
+                        </MudAlert>
+                    </MudItem>
+
+                    <!-- Basic Information -->
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle1" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                            Basic Information
+                        </MudText>
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="Campsite.Name" Label="Campsite Name" Variant="Variant.Outlined"
+                                      Required="true" RequiredError="Name is required"
+                                      Placeholder="e.g., Copenhagen Beach Camp" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="Campsite.Description" Label="Description" Variant="Variant.Outlined"
+                                      Lines="4" Required="true" RequiredError="Description is required"
+                                      Placeholder="Describe this campsite, its features, and what makes it special..." />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="Campsite.EstablishedYear" Label="Established Year" Variant="Variant.Outlined"
+                                        Required="true" RequiredError="Established year is required"
+                                        Min="1900" Max="@DateTime.Now.Year"
+                                        Placeholder="e.g., 2010"
+                                        HelperText="Year the campsite was established" />
+                    </MudItem>
+
+                    <!-- Address -->
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle1" Class="mb-2 mt-2">
+                            <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
+                            Address
+                        </MudText>
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="Campsite.StreetAddress" Label="Street Address" Variant="Variant.Outlined"
+                                      Required="true" RequiredError="Street address is required"
+                                      Placeholder="e.g., Strandvejen 123" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="Campsite.City" Label="City" Variant="Variant.Outlined"
+                                      Required="true" RequiredError="City is required"
+                                      Placeholder="e.g., Copenhagen" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="Campsite.PostalCode" Label="Postal Code" Variant="Variant.Outlined"
+                                      Required="true" RequiredError="Postal code is required"
+                                      Placeholder="e.g., 2100" />
+                    </MudItem>
+
+                    <!-- GPS Coordinates -->
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle1" Class="mb-2 mt-2">
+                            <MudIcon Icon="@Icons.Material.Filled.GpsFixed" Size="Size.Small" Class="mr-1" />
+                            GPS Coordinates
+                        </MudText>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="Campsite.Latitude" Label="Latitude" Variant="Variant.Outlined"
+                                        Required="true" RequiredError="Latitude is required"
+                                        Min="-90" Max="90" Step="0.0001"
+                                        Placeholder="e.g., 55.6761"
+                                        HelperText="Latitude coordinate (-90 to 90)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="Campsite.Longitude" Label="Longitude" Variant="Variant.Outlined"
+                                        Required="true" RequiredError="Longitude is required"
+                                        Min="-180" Max="180" Step="0.0001"
+                                        Placeholder="e.g., 12.5683"
+                                        HelperText="Longitude coordinate (-180 to 180)" />
+                    </MudItem>
+
+                    <!-- Contact Information -->
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle1" Class="mb-2 mt-2">
+                            <MudIcon Icon="@Icons.Material.Filled.ContactPhone" Size="Size.Small" Class="mr-1" />
+                            Contact Information
+                        </MudText>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="Campsite.PhoneNumber" Label="Phone Number" Variant="Variant.Outlined"
+                                      Placeholder="e.g., +45 12 34 56 78" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="Campsite.Email" Label="Email" Variant="Variant.Outlined"
+                                      InputType="InputType.Email"
+                                      Placeholder="e.g., info@campsite.dk" />
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!_isValid)">
+            @(IsEdit ? "Update" : "Create") Campsite
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public CampsiteFormDto Campsite { get; set; } = new();
+    [Parameter] public bool IsEdit { get; set; }
+
+    private MudForm _form = null!;
+    private bool _isValid;
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(Campsite));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}
+

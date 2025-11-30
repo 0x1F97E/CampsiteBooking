@@ -64,10 +64,10 @@
             <MudItem xs="12" md="2">
                 <MudSelect T="string" Label="Accommodation" @bind-Value="_accommodationType" Variant="Variant.Outlined">
                     <MudSelectItem Value="@("All")">All Types</MudSelectItem>
-                    <MudSelectItem Value="@("Cabin")">Cabin</MudSelectItem>
-                    <MudSelectItem Value="@("Tent Site")">Tent Site</MudSelectItem>
-                    <MudSelectItem Value="@("Glamping")">Glamping</MudSelectItem>
-                    <MudSelectItem Value="@("RV Spot")">RV Spot</MudSelectItem>
+                    @foreach (var accType in _availableAccommodationTypes)
+                    {
+                        <MudSelectItem Value="@accType">@accType</MudSelectItem>
+                    }
                 </MudSelect>
             </MudItem>
 
@@ -195,11 +195,13 @@
     private List<AccommodationDto> _accommodations = new();
     private List<CampsiteFilterDto> _availableCampsites = new();
     private List<AmenityFilterDto> _availableAmenities = new();
+    private List<string> _availableAccommodationTypes = new();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadCampsites();
         await LoadAmenities();
+        await LoadAccommodationTypes();
         await SearchAvailability();
     }
 
@@ -209,19 +211,26 @@
         {
             using var context = await DbContextFactory.CreateDbContextAsync();
 
-            var campsites = await context.Campsites.ToListAsync();
+            // Load all campsites from the database
+            var allCampsites = await context.Campsites.ToListAsync();
 
-            _availableCampsites = campsites.Select(c => new CampsiteFilterDto
-            {
-                Id = c.Id?.Value ?? 0,
-                Name = c.Name ?? "",
-                Region = c.Region ?? ""
-            }).ToList();
+            // Filter for active campsites in memory (EF Core can't translate IsActive property directly)
+            // and order by name for better user experience
+            _availableCampsites = allCampsites
+                .Where(c => c.IsActive)
+                .OrderBy(c => c.Name)
+                .Select(c => new CampsiteFilterDto
+                {
+                    Id = c.Id?.Value ?? 0,
+                    Name = c.Name ?? "",
+                    City = c.City ?? ""
+                })
+                .ToList();
 
-            Console.WriteLine($"✅ Loaded {_availableCampsites.Count} campsites for search filter");
+            Console.WriteLine($"✅ Loaded {_availableCampsites.Count} active campsites for search filter");
             foreach (var campsite in _availableCampsites)
             {
-                Console.WriteLine($"   Campsite: ID={campsite.Id}, Name={campsite.Name}, ToString={campsite.Id.ToString()}");
+                Console.WriteLine($"   Campsite: ID={campsite.Id}, Name={campsite.Name}");
             }
         }
         catch (Exception ex)
@@ -259,6 +268,38 @@
             Console.WriteLine($"❌ Error loading amenities: {ex.Message}");
             Snackbar.Add($"Error loading amenities: {ex.Message}", Severity.Error);
             _availableAmenities = new List<AmenityFilterDto>();
+        }
+    }
+
+    private async Task LoadAccommodationTypes()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load all accommodation types from database first (EF Core can't translate IsActive property)
+            var allAccommodationTypes = await context.AccommodationTypes.ToListAsync();
+
+            // Filter active types in memory and get distinct type names, ordered alphabetically
+            _availableAccommodationTypes = allAccommodationTypes
+                .Where(a => a.IsActive)
+                .Select(a => a.Type)
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Distinct()
+                .OrderBy(t => t)
+                .ToList();
+
+            Console.WriteLine($"✅ Loaded {_availableAccommodationTypes.Count} accommodation types for search filter");
+            foreach (var accType in _availableAccommodationTypes)
+            {
+                Console.WriteLine($"   Accommodation Type: {accType}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading accommodation types: {ex.Message}");
+            Snackbar.Add($"Error loading accommodation types: {ex.Message}", Severity.Error);
+            _availableAccommodationTypes = new List<string>();
         }
     }
 
@@ -441,7 +482,7 @@
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string Region { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
     }
 
     public class StringEqualityComparer : IEqualityComparer<string>

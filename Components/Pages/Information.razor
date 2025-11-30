@@ -40,7 +40,7 @@
                     @foreach (var campsite in _campsites)
                     {
                         <MudSelectItem T="int" Value="@campsite.Id">
-                            @campsite.Name - @campsite.Region
+                            @campsite.Name - @campsite.City
                         </MudSelectItem>
                     }
                 </MudSelect>
@@ -61,6 +61,79 @@
             </MudItem>
         </MudGrid>
     </MudPaper>
+
+    <!-- Contact Information Section -->
+    @if (_selectedCampsiteId > 0)
+    {
+        var selectedCampsite = GetSelectedCampsite();
+        @if (selectedCampsite != null)
+        {
+            <MudPaper Elevation="3" Class="pa-4 mb-6">
+                <MudText Typo="Typo.h5" GutterBottom="true">
+                    <MudIcon Icon="@Icons.Material.Filled.ContactPhone" Class="mr-2" />
+                    Contact Information - @selectedCampsite.Name
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    Get in touch with this campsite
+                </MudText>
+
+                <MudGrid>
+                    <MudItem xs="12" md="4">
+                        <MudCard Elevation="2">
+                            <MudCardContent>
+                                <div class="d-flex align-center mb-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.LocationOn" Color="Color.Primary" Class="mr-2" />
+                                    <MudText Typo="Typo.subtitle1"><strong>Address</strong></MudText>
+                                </div>
+                                <MudText Typo="Typo.body2">@selectedCampsite.StreetAddress</MudText>
+                                <MudText Typo="Typo.body2">@selectedCampsite.PostalCode @selectedCampsite.City</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudCard Elevation="2">
+                            <MudCardContent>
+                                <div class="d-flex align-center mb-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Phone" Color="Color.Primary" Class="mr-2" />
+                                    <MudText Typo="Typo.subtitle1"><strong>Phone</strong></MudText>
+                                </div>
+                                <MudText Typo="Typo.body2">
+                                    @if (!string.IsNullOrEmpty(selectedCampsite.PhoneNumber))
+                                    {
+                                        <MudLink Href="@($"tel:{selectedCampsite.PhoneNumber}")">@selectedCampsite.PhoneNumber</MudLink>
+                                    }
+                                    else
+                                    {
+                                        <text>Not available</text>
+                                    }
+                                </MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudCard Elevation="2">
+                            <MudCardContent>
+                                <div class="d-flex align-center mb-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Email" Color="Color.Primary" Class="mr-2" />
+                                    <MudText Typo="Typo.subtitle1"><strong>Email</strong></MudText>
+                                </div>
+                                <MudText Typo="Typo.body2">
+                                    @if (!string.IsNullOrEmpty(selectedCampsite.Email))
+                                    {
+                                        <MudLink Href="@($"mailto:{selectedCampsite.Email}")">@selectedCampsite.Email</MudLink>
+                                    }
+                                    else
+                                    {
+                                        <text>Not available</text>
+                                    }
+                                </MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        }
+    }
 
     <!-- Events Calendar Section -->
     @if (_selectedCampsiteId > 0)
@@ -248,7 +321,11 @@
         {
             Id = c.Id?.Value ?? 0,
             Name = c.Name ?? "",
-            Region = c.Region ?? ""
+            StreetAddress = c.StreetAddress ?? "",
+            City = c.City ?? "",
+            PostalCode = c.PostalCode ?? "",
+            PhoneNumber = c.PhoneNumber ?? "",
+            Email = c.Email?.Value ?? ""
         }).ToList();
 
         Console.WriteLine($"   ✅ Loaded {_campsites.Count} campsites for Information page");
@@ -335,6 +412,11 @@
         return campsite?.Name ?? "All Campsites";
     }
 
+    private CampsiteDto? GetSelectedCampsite()
+    {
+        return _campsites.FirstOrDefault(c => c.Id == _selectedCampsiteId);
+    }
+
     private string GetCampsiteNameById(int campsiteId)
     {
         if (campsiteId == 0)
@@ -404,7 +486,11 @@
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string Region { get; set; } = string.Empty;
+        public string StreetAddress { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string PostalCode { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
     }
 
     private class EventDto

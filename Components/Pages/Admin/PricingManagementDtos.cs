@@ -4,7 +4,7 @@ public class CampsitePricingDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string Region { get; set; } = string.Empty;
+    public string City { get; set; } = string.Empty;
     public string Attractiveness { get; set; } = string.Empty;
     public List<BasePricingDto> Pricing { get; set; } = new();
     public List<PeripheralPurchaseDto> PeripheralPurchases { get; set; } = new();

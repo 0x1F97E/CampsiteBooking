@@ -28,10 +28,11 @@ public static class DatabaseSeeder
 
         var campsite1 = Campsite.Create(
                 name: "Copenhagen Beach Camp",
-                region: "Zealand",
+                streetAddress: "Strandvejen 152",
+                city: "Charlottenlund",
+                postalCode: "2920",
                 latitude: 55.6761,
                 longitude: 12.5683,
-                totalArea: 50000m,
                 establishedYear: 2010,
                 description: "Beautiful beachfront camping with stunning views of the Øresund strait. Our campsite offers direct beach access, modern facilities, and a variety of accommodation options for families and solo travelers alike.",
                 attractiveness: "High",
@@ -45,10 +46,11 @@ public static class DatabaseSeeder
 
             var campsite2 = Campsite.Create(
                 name: "Skagen North Point",
-                region: "North Jutland",
+                streetAddress: "Fyrvej 45",
+                city: "Skagen",
+                postalCode: "9990",
                 latitude: 57.7209,
                 longitude: 10.5882,
-                totalArea: 40000m,
                 establishedYear: 2005,
                 description: "Denmark's northernmost campsite with breathtaking views where two seas meet. Experience unique natural phenomena and pristine beaches.",
                 attractiveness: "Very High",
@@ -62,10 +64,11 @@ public static class DatabaseSeeder
 
             var campsite3 = Campsite.Create(
                 name: "Aarhus Forest Retreat",
-                region: "East Jutland",
+                streetAddress: "Skovvej 78",
+                city: "Aarhus",
+                postalCode: "8000",
                 latitude: 56.1629,
                 longitude: 10.2039,
-                totalArea: 35000m,
                 establishedYear: 2012,
                 description: "Peaceful forest camping surrounded by ancient Danish woodlands. Perfect for nature lovers seeking tranquility and outdoor adventures.",
                 attractiveness: "High",
@@ -79,10 +82,11 @@ public static class DatabaseSeeder
 
             var campsite4 = Campsite.Create(
                 name: "Odense Family Camp",
-                region: "Funen",
+                streetAddress: "Campingvej 23",
+                city: "Odense",
+                postalCode: "5000",
                 latitude: 55.4038,
                 longitude: 10.4024,
-                totalArea: 60000m,
                 establishedYear: 2008,
                 description: "Family-friendly campsite with playgrounds, activities, and spacious facilities. Close to Hans Christian Andersen's birthplace and other attractions.",
                 attractiveness: "Medium",
@@ -96,10 +100,11 @@ public static class DatabaseSeeder
 
             var campsite5 = Campsite.Create(
                 name: "Bornholm Island Camp",
-                region: "Bornholm",
+                streetAddress: "Havnevej 12",
+                city: "Rønne",
+                postalCode: "3700",
                 latitude: 55.1367,
                 longitude: 14.9155,
-                totalArea: 30000m,
                 establishedYear: 2015,
                 description: "Island paradise camping on the beautiful Baltic island of Bornholm. Enjoy rocky coastlines, sandy beaches, and charming fishing villages.",
                 attractiveness: "Very High",

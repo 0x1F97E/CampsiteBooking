@@ -16,14 +16,22 @@
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <!-- Header -->
-    <div class="mb-6">
-        <MudText Typo="Typo.h3" GutterBottom="true">
-            <MudIcon Icon="@Icons.Material.Filled.Terrain" Class="mr-2" />
-            Campsite Management
-        </MudText>
-        <MudText Typo="Typo.body1" Color="Color.Secondary">
-            Search for a campsite and manage its accommodation types
-        </MudText>
+    <div class="d-flex justify-space-between align-center mb-6">
+        <div>
+            <MudText Typo="Typo.h3" GutterBottom="true">
+                <MudIcon Icon="@Icons.Material.Filled.Terrain" Class="mr-2" />
+                Campsite Management
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Manage campsites and their accommodation types
+            </MudText>
+        </div>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenAddCampsiteDialog">
+            Add New Campsite
+        </MudButton>
     </div>
 
     <!-- Campsite Search/Selector -->
@@ -49,7 +57,7 @@
                             <MudIcon Icon="@Icons.Material.Filled.Landscape" Class="mr-2" Color="Color.Primary" Size="Size.Small" />
                             <div>
                                 <MudText Typo="Typo.body2"><strong>@campsite.Name</strong></MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@campsite.Region - @campsite.Description</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@campsite.City - @campsite.Description</MudText>
                             </div>
                         </div>
                     </ItemTemplate>
@@ -610,7 +618,9 @@
             {
                 Id = c.Id.Value,
                 Name = c.Name ?? "Unknown",
-                Region = c.Region ?? "Denmark",
+                StreetAddress = c.StreetAddress ?? "",
+                City = c.City ?? "",
+                PostalCode = c.PostalCode ?? "",
                 Description = c.Description ?? "",
                 Attractiveness = c.Attractiveness ?? "",
                 PhoneNumber = c.PhoneNumber ?? "",
@@ -669,7 +679,7 @@
 
         return _campsites.Where(c =>
             c.Name.Contains(value, StringComparison.OrdinalIgnoreCase) ||
-            c.Region.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+            c.City.Contains(value, StringComparison.OrdinalIgnoreCase) ||
             c.Description.Contains(value, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -776,7 +786,9 @@
             // Use domain method to update campsite information
             dbCampsite.UpdateInformation(
                 campsite.Name,
-                campsite.Region,
+                campsite.StreetAddress,
+                campsite.City,
+                campsite.PostalCode,
                 campsite.Description,
                 campsite.Attractiveness,
                 campsite.PhoneNumber ?? string.Empty,
@@ -824,6 +836,126 @@
             campsite.GalleryImages = updatedGallery;
             Snackbar.Add("Photo gallery updated successfully!", Severity.Success);
             StateHasChanged();
+        }
+    }
+
+    private async Task OpenAddCampsiteDialog()
+    {
+        try
+        {
+            var parameters = new DialogParameters
+            {
+                ["Campsite"] = new CampsiteFormDto
+                {
+                    Attractiveness = "Medium",
+                    IsActive = true,
+                    EstablishedYear = DateTime.Now.Year
+                },
+                ["IsEdit"] = false
+            };
+
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true
+            };
+
+            var dialog = await DialogService.ShowAsync<AddCampsiteDialog>("Add New Campsite", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled && result.Data is CampsiteFormDto newCampsite)
+            {
+                // Save to database
+                await SaveCampsiteToDatabase(newCampsite);
+
+                // Reload campsites list
+                await LoadCampsites();
+
+                // Auto-select the newly created campsite
+                var createdCampsite = _campsites.FirstOrDefault(c => c.Name == newCampsite.Name);
+                if (createdCampsite != null)
+                {
+                    _selectedCampsite = createdCampsite;
+                    await LoadAccommodationTypes(createdCampsite.Id);
+                }
+
+                Snackbar.Add($"Campsite '{newCampsite.Name}' created successfully!", Severity.Success);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error adding campsite: {ex.Message}");
+            Snackbar.Add($"Error adding campsite: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveCampsiteToDatabase(CampsiteFormDto dto)
+    {
+        try
+        {
+            Console.WriteLine($"💾 Saving campsite to database:");
+            Console.WriteLine($"   - Name: {dto.Name}");
+            Console.WriteLine($"   - Address: {dto.StreetAddress}, {dto.City} {dto.PostalCode}");
+            Console.WriteLine($"   - Latitude: {dto.Latitude}");
+            Console.WriteLine($"   - Longitude: {dto.Longitude}");
+
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Parse email if provided
+            Email? email = null;
+            if (!string.IsNullOrWhiteSpace(dto.Email))
+            {
+                try
+                {
+                    email = Email.Create(dto.Email);
+                }
+                catch
+                {
+                    throw new ArgumentException("Invalid email format");
+                }
+            }
+
+            // Create the campsite using the domain factory method
+            var campsite = Campsite.Create(
+                name: dto.Name,
+                streetAddress: dto.StreetAddress,
+                city: dto.City,
+                postalCode: dto.PostalCode,
+                latitude: dto.Latitude,
+                longitude: dto.Longitude,
+                establishedYear: dto.EstablishedYear,
+                description: dto.Description,
+                attractiveness: dto.Attractiveness,
+                phoneNumber: dto.PhoneNumber ?? string.Empty,
+                email: email,
+                websiteUrl: dto.WebsiteUrl ?? string.Empty
+            );
+
+            // Set active status
+            if (!dto.IsActive)
+            {
+                campsite.Deactivate();
+            }
+
+            context.Campsites.Add(campsite);
+            await context.SaveChangesAsync();
+
+            // Update DTO with the generated ID
+            dto.Id = campsite.Id.Value;
+
+            Console.WriteLine($"✅ Successfully saved campsite with ID: {dto.Id}");
+        }
+        catch (DomainException ex)
+        {
+            Console.WriteLine($"❌ Domain error saving campsite: {ex.Message}");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error saving campsite: {ex.Message}");
+            throw;
         }
     }
 
@@ -1241,7 +1373,9 @@
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string Region { get; set; } = string.Empty;
+        public string StreetAddress { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string PostalCode { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string Attractiveness { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }

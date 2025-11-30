@@ -746,7 +746,7 @@
                 {
                     Id = campsite.Id?.Value ?? 0,
                     Name = campsite.Name ?? "",
-                    Region = campsite.Region ?? "",
+                    City = campsite.City ?? "",
                     Latitude = campsite.Latitude,
                     Longitude = campsite.Longitude,
                     Description = campsite.Description ?? ""
@@ -768,7 +768,7 @@
                     {
                         Id = firstCampsite.Id?.Value ?? 0,
                         Name = firstCampsite.Name ?? "",
-                        Region = firstCampsite.Region ?? "",
+                        City = firstCampsite.City ?? "",
                         Latitude = firstCampsite.Latitude,
                         Longitude = firstCampsite.Longitude,
                         Description = firstCampsite.Description ?? ""
@@ -1383,7 +1383,7 @@
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string Region { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
         public double Latitude { get; set; }
         public double Longitude { get; set; }
         public string Description { get; set; } = string.Empty;

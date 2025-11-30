@@ -34,7 +34,7 @@
                             @foreach (var campsite in _campsites)
                             {
                                 <MudSelectItem T="int" Value="@campsite.Id">
-                                    @campsite.Name (@campsite.Region)
+                                    @campsite.Name (@campsite.City)
                                 </MudSelectItem>
                             }
                         </MudSelect>
@@ -327,8 +327,8 @@
                             <MudTd DataLabel="Campsite">
                                 <MudText Typo="Typo.body2"><strong>@context.Name</strong></MudText>
                             </MudTd>
-                            <MudTd DataLabel="Region">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.Region</MudChip>
+                            <MudTd DataLabel="City">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.City</MudChip>
                             </MudTd>
                             <MudTd DataLabel="Attractiveness">
                                 <MudChip T="string" Size="Size.Small" Color="@GetAttractivenessColor(context.Attractiveness)">

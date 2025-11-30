@@ -95,7 +95,7 @@
                 <MudTh>Amount</MudTh>
                 <MudTh>Status</MudTh>
                 <MudTh>Payment</MudTh>
-                <MudTh>Actions</MudTh>
+                <MudTh>Date of Purchase</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Booking ID">
@@ -151,27 +151,15 @@
                         <MudText Typo="Typo.caption" Color="Color.Secondary">No payment</MudText>
                     }
                 </MudTd>
-                <MudTd DataLabel="Actions">
-                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
-                        <MudMenuItem Icon="@Icons.Material.Filled.Visibility" OnAction="@(() => ViewBookingDetails(context))">
-                            View Details
-                        </MudMenuItem>
-                        @if (context.Status == "Pending")
-                        {
-                            <MudMenuItem Icon="@Icons.Material.Filled.CheckCircle" OnAction="@(() => ConfirmBooking(context))">
-                                Confirm
-                            </MudMenuItem>
-                        }
-                        @if (context.Status != "Cancelled" && context.Status != "Completed")
-                        {
-                            <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnAction="@(() => EditBooking(context))">
-                                Edit
-                            </MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Filled.Cancel" OnAction="@(() => CancelBooking(context))">
-                                Cancel
-                            </MudMenuItem>
-                        }
-                    </MudMenu>
+                <MudTd DataLabel="Date of Purchase">
+                    @if (context.PaymentDate.HasValue)
+                    {
+                        <MudText Typo="Typo.body2">@context.PaymentDate.Value.ToString("MMM dd, yyyy")</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                    }
                 </MudTd>
             </RowTemplate>
             <PagerContent>

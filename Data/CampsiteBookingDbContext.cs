@@ -190,7 +190,9 @@ public class CampsiteBookingDbContext : DbContext
 
             // Ignore public properties that are backed by private fields
             entity.Ignore(c => c.Name);
-            entity.Ignore(c => c.Region);
+            entity.Ignore(c => c.StreetAddress);
+            entity.Ignore(c => c.City);
+            entity.Ignore(c => c.PostalCode);
             entity.Ignore(c => c.Description);
             entity.Ignore(c => c.Latitude);
             entity.Ignore(c => c.Longitude);
@@ -200,13 +202,14 @@ public class CampsiteBookingDbContext : DbContext
             entity.Ignore(c => c.WebsiteUrl);
             entity.Ignore(c => c.EstablishedYear);
             entity.Ignore(c => c.IsActive);
-            entity.Ignore(c => c.TotalArea);
             entity.Ignore(c => c.CreatedDate);
             entity.Ignore(c => c.UpdatedDate);
 
             // Map private fields to database columns
             entity.Property("_name").HasColumnName("Name").IsRequired();
-            entity.Property("_region").HasColumnName("Region").IsRequired();
+            entity.Property("_streetAddress").HasColumnName("StreetAddress").IsRequired();
+            entity.Property("_city").HasColumnName("City").IsRequired();
+            entity.Property("_postalCode").HasColumnName("PostalCode").IsRequired();
             entity.Property("_description").HasColumnName("Description");
             entity.Property("_latitude").HasColumnName("Latitude");
             entity.Property("_longitude").HasColumnName("Longitude");
@@ -216,7 +219,6 @@ public class CampsiteBookingDbContext : DbContext
             entity.Property("_websiteUrl").HasColumnName("WebsiteUrl");
             entity.Property("_establishedYear").HasColumnName("EstablishedYear");
             entity.Property("_isActive").HasColumnName("IsActive");
-            entity.Property("_totalArea").HasColumnName("TotalArea");
             entity.Property("_createdDate").HasColumnName("CreatedDate");
             entity.Property("_updatedDate").HasColumnName("UpdatedDate");
         });

@@ -11,9 +11,11 @@ public class Campsite : AggregateRoot<CampsiteId>
     // ============================================================================
     // PRIVATE FIELDS
     // ============================================================================
-    
+
     private string _name = string.Empty;
-    private string _region = string.Empty;
+    private string _streetAddress = string.Empty;
+    private string _city = string.Empty;
+    private string _postalCode = string.Empty;
     private string _description = string.Empty;
     private double _latitude;
     private double _longitude;
@@ -23,16 +25,17 @@ public class Campsite : AggregateRoot<CampsiteId>
     private string _websiteUrl = string.Empty;
     private int _establishedYear;
     private bool _isActive;
-    private decimal _totalArea;
     private DateTime _createdDate;
     private DateTime _updatedDate;
-    
+
     // ============================================================================
     // PUBLIC PROPERTIES (Read-only)
     // ============================================================================
-    
+
     public string Name => _name;
-    public string Region => _region;
+    public string StreetAddress => _streetAddress;
+    public string City => _city;
+    public string PostalCode => _postalCode;
     public string Description => _description;
     public double Latitude => _latitude;
     public double Longitude => _longitude;
@@ -42,7 +45,6 @@ public class Campsite : AggregateRoot<CampsiteId>
     public string WebsiteUrl => _websiteUrl;
     public int EstablishedYear => _establishedYear;
     public bool IsActive => _isActive;
-    public decimal TotalArea => _totalArea;
     public DateTime CreatedDate => _createdDate;
     public DateTime UpdatedDate => _updatedDate;
     
@@ -62,10 +64,11 @@ public class Campsite : AggregateRoot<CampsiteId>
     
     public static Campsite Create(
         string name,
-        string region,
+        string streetAddress,
+        string city,
+        string postalCode,
         double latitude,
         double longitude,
-        decimal totalArea,
         int establishedYear,
         string description = "",
         string attractiveness = "Medium",
@@ -76,31 +79,30 @@ public class Campsite : AggregateRoot<CampsiteId>
         // Validate business rules
         if (string.IsNullOrWhiteSpace(name))
             throw new DomainException("Campsite name cannot be empty");
-        
+
         if (name.Length > 200)
             throw new DomainException("Campsite name cannot exceed 200 characters");
-        
+
         if (latitude < -90 || latitude > 90)
             throw new DomainException("Latitude must be between -90 and 90");
-        
+
         if (longitude < -180 || longitude > 180)
             throw new DomainException("Longitude must be between -180 and 180");
-        
-        if (totalArea <= 0)
-            throw new DomainException("Total area must be positive");
-        
+
         if (establishedYear > DateTime.UtcNow.Year)
             throw new DomainException("Established year cannot be in the future");
-        
+
         var validAttractivenessLevels = new[] { "Low", "Medium", "High", "Very High" };
         if (!validAttractivenessLevels.Contains(attractiveness))
             throw new DomainException("Attractiveness must be Low, Medium, High, or Very High");
-        
+
         var campsite = new Campsite
         {
             Id = ValueObjects.CampsiteId.CreateNew(),
             _name = name.Trim(),
-            _region = region?.Trim() ?? string.Empty,
+            _streetAddress = streetAddress?.Trim() ?? string.Empty,
+            _city = city?.Trim() ?? string.Empty,
+            _postalCode = postalCode?.Trim() ?? string.Empty,
             _description = description?.Trim() ?? string.Empty,
             _latitude = latitude,
             _longitude = longitude,
@@ -109,12 +111,11 @@ public class Campsite : AggregateRoot<CampsiteId>
             _email = email,
             _websiteUrl = websiteUrl?.Trim() ?? string.Empty,
             _establishedYear = establishedYear,
-            _totalArea = totalArea,
             _isActive = true,
             _createdDate = DateTime.UtcNow,
             _updatedDate = DateTime.UtcNow
         };
-        
+
         return campsite;
     }
     
@@ -153,7 +154,9 @@ public class Campsite : AggregateRoot<CampsiteId>
 
     public void UpdateInformation(
         string name,
-        string region,
+        string streetAddress,
+        string city,
+        string postalCode,
         string description,
         string attractiveness,
         string phoneNumber,
@@ -171,7 +174,9 @@ public class Campsite : AggregateRoot<CampsiteId>
             throw new DomainException("Attractiveness must be Low, Medium, High, or Very High");
 
         _name = name.Trim();
-        _region = region?.Trim() ?? string.Empty;
+        _streetAddress = streetAddress?.Trim() ?? string.Empty;
+        _city = city?.Trim() ?? string.Empty;
+        _postalCode = postalCode?.Trim() ?? string.Empty;
         _description = description?.Trim() ?? string.Empty;
         _attractiveness = attractiveness;
         _phoneNumber = phoneNumber?.Trim() ?? string.Empty;
@@ -190,15 +195,6 @@ public class Campsite : AggregateRoot<CampsiteId>
 
         _latitude = latitude;
         _longitude = longitude;
-        _updatedDate = DateTime.UtcNow;
-    }
-
-    public void UpdateTotalArea(decimal totalArea)
-    {
-        if (totalArea <= 0)
-            throw new DomainException("Total area must be positive");
-
-        _totalArea = totalArea;
         _updatedDate = DateTime.UtcNow;
     }
 }

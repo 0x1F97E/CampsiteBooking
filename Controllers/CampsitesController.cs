@@ -67,7 +67,9 @@ public class CampsitesController : ControllerBase
         {
             CampsiteId = campsite.Id.Value,
             Name = campsite.Name,
-            Region = campsite.Region,
+            StreetAddress = campsite.StreetAddress,
+            City = campsite.City,
+            PostalCode = campsite.PostalCode,
             Description = campsite.Description,
             Latitude = campsite.Latitude,
             Longitude = campsite.Longitude,

@@ -34,7 +34,7 @@ public class CampsiteRepository : ICampsiteRepository
     public async Task<IEnumerable<Campsite>> GetByLocationAsync(string location, CancellationToken cancellationToken = default)
     {
         return await _context.Campsites
-            .Where(c => c.Region.Contains(location))
+            .Where(c => c.City.Contains(location) || c.PostalCode.Contains(location))
             .OrderBy(c => c.Name)
             .ToListAsync(cancellationToken);
     }
@@ -89,10 +89,10 @@ public class CampsiteRepository : ICampsiteRepository
     // Additional Domain-Specific Queries
     // ============================================================================
 
-    public async Task<IEnumerable<Campsite>> GetByRegionAsync(string region, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<Campsite>> GetByCityAsync(string city, CancellationToken cancellationToken = default)
     {
         return await _context.Campsites
-            .Where(c => c.Region == region)
+            .Where(c => c.City == city)
             .OrderBy(c => c.Name)
             .ToListAsync(cancellationToken);
     }
