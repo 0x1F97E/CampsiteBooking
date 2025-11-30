@@ -101,4 +101,30 @@ public class Event : Entity<ValueObjects.EventId>
             throw new DomainException("Cannot activate past events");
         _isActive = true;
     }
+
+    public void Update(string title, string description, DateTime eventDate, int maxParticipants)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            throw new DomainException("Title cannot be empty");
+
+        if (title.Length > 200)
+            throw new DomainException("Title cannot exceed 200 characters");
+
+        if (eventDate < DateTime.UtcNow.Date)
+            throw new DomainException("Event date cannot be in the past");
+
+        if (maxParticipants <= 0)
+            throw new DomainException("Max participants must be greater than 0");
+
+        if (maxParticipants > 1000)
+            throw new DomainException("Max participants cannot exceed 1000");
+
+        if (maxParticipants < _currentParticipants)
+            throw new DomainException($"Cannot reduce max participants below current registrations ({_currentParticipants})");
+
+        _title = title.Trim();
+        _description = description?.Trim() ?? string.Empty;
+        _eventDate = eventDate;
+        _maxParticipants = maxParticipants;
+    }
 }

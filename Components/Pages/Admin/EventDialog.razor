@@ -1,4 +1,11 @@
 @rendermode InteractiveServer
+@using CampsiteBooking.Data
+@using CampsiteBooking.Models
+@using CampsiteBooking.Models.Common
+@using CampsiteBooking.Models.ValueObjects
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject ISnackbar Snackbar
 
 <MudDialog>
     <DialogContent>
@@ -19,16 +26,15 @@
             </MudItem>
 
             <MudItem xs="12" md="6">
-                <MudSelect T="string" 
-                          @bind-Value="_campsiteName" 
-                          Label="Campsite" 
+                <MudSelect T="int"
+                          @bind-Value="_selectedCampsiteId"
+                          Label="Campsite"
                           Variant="Variant.Outlined"
                           Required="true">
-                    <MudSelectItem T="string" Value="@("Copenhagen Beach Camp")">Copenhagen Beach Camp</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Skagen North Point")">Skagen North Point</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Aarhus Forest Retreat")">Aarhus Forest Retreat</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Odense Family Camp")">Odense Family Camp</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Bornholm Island Camp")">Bornholm Island Camp</MudSelectItem>
+                    @foreach (var campsite in _campsites)
+                    {
+                        <MudSelectItem T="int" Value="@campsite.Id">@campsite.Name</MudSelectItem>
+                    }
                 </MudSelect>
             </MudItem>
 
@@ -111,7 +117,7 @@
 
     private string _name = "";
     private string _description = "";
-    private string _campsiteName = "Copenhagen Beach Camp";
+    private int _selectedCampsiteId = 0;
     private string _category = "Sports";
     private DateTime? _eventDate = DateTime.Today.AddDays(1);
     private TimeSpan? _eventTime = new TimeSpan(10, 0, 0);
@@ -120,25 +126,170 @@
     private string _location = "";
     private string _notes = "";
 
-    protected override void OnInitialized()
+    private List<CampsiteDto> _campsites = new();
+    private int? _editingEventId = null;
+
+    protected override async Task OnInitializedAsync()
     {
-        if (Event != null)
+        await LoadCampsites();
+
+        if (Event != null && Event is EventDto eventDto)
         {
             // Load existing event data for editing
-            // This will be implemented when we have the actual DTO
+            _editingEventId = eventDto.Id;
+            _name = eventDto.Name;
+            _description = eventDto.Description;
+            _selectedCampsiteId = eventDto.CampsiteId;
+            _category = eventDto.Category;
+            _eventDate = eventDto.EventDate.Date;
+            _eventTime = eventDto.EventDate.TimeOfDay;
+            _maxCapacity = eventDto.MaxCapacity;
+            _status = eventDto.Status;
+        }
+        else if (_campsites.Any())
+        {
+            // Set default campsite for new events
+            _selectedCampsiteId = _campsites.First().Id;
         }
     }
 
-    private void Submit()
+    private async Task LoadCampsites()
     {
-        // Validate and save
-        // TODO: Create event object and return to parent
-        MudDialog.Close(DialogResult.Ok(true));
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            var dbCampsites = await context.Campsites.ToListAsync();
+            _campsites = dbCampsites.Select(c => new CampsiteDto
+            {
+                Id = c.Id?.Value ?? 0,
+                Name = c.Name ?? ""
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading campsites: {ex.Message}");
+            Snackbar.Add("Error loading campsites", Severity.Error);
+        }
+    }
+
+    private async Task Submit()
+    {
+        // Validate
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            Snackbar.Add("Event name is required", Severity.Warning);
+            return;
+        }
+
+        if (_selectedCampsiteId == 0)
+        {
+            Snackbar.Add("Please select a campsite", Severity.Warning);
+            return;
+        }
+
+        if (!_eventDate.HasValue || !_eventTime.HasValue)
+        {
+            Snackbar.Add("Event date and time are required", Severity.Warning);
+            return;
+        }
+
+        if (_maxCapacity <= 0)
+        {
+            Snackbar.Add("Max capacity must be greater than 0", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var eventDateTime = _eventDate.Value.Date + _eventTime.Value;
+            var campsiteId = CampsiteId.Create(_selectedCampsiteId);
+
+            if (_editingEventId.HasValue)
+            {
+                // Update existing event
+                var eventId = EventId.Create(_editingEventId.Value);
+                var existingEvent = await context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+
+                if (existingEvent == null)
+                {
+                    Snackbar.Add("Event not found", Severity.Error);
+                    return;
+                }
+
+                existingEvent.Update(_name, _description, eventDateTime, _maxCapacity);
+
+                // Handle status changes
+                if (_status == "Cancelled" || _status == "Closed")
+                {
+                    existingEvent.Deactivate();
+                }
+                else if (_status == "Open" && !existingEvent.IsActive)
+                {
+                    existingEvent.Activate();
+                }
+
+                context.Events.Update(existingEvent);
+                await context.SaveChangesAsync();
+
+                Console.WriteLine($"✅ Event '{_name}' updated successfully");
+                Snackbar.Add("Event updated successfully", Severity.Success);
+            }
+            else
+            {
+                // Create new event
+                var newEvent = Models.Event.Create(
+                    campsiteId,
+                    _name,
+                    _description,
+                    eventDateTime,
+                    _maxCapacity,
+                    Money.Create(0m, "DKK") // Free event by default
+                );
+
+                context.Events.Add(newEvent);
+                await context.SaveChangesAsync();
+
+                Console.WriteLine($"✅ Event '{_name}' created successfully");
+                Snackbar.Add("Event created successfully", Severity.Success);
+            }
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (DomainException ex)
+        {
+            Console.WriteLine($"❌ Domain validation error: {ex.Message}");
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error saving event: {ex.Message}");
+            Snackbar.Add($"Error saving event: {ex.Message}", Severity.Error);
+        }
     }
 
     private void Cancel()
     {
         MudDialog.Cancel();
+    }
+
+    private class CampsiteDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private class EventDto
+    {
+        public int Id { get; set; }
+        public int CampsiteId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime EventDate { get; set; }
+        public string Category { get; set; } = string.Empty;
+        public int MaxCapacity { get; set; }
+        public string Status { get; set; } = string.Empty;
     }
 }
 

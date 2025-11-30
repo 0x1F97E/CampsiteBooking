@@ -474,6 +474,7 @@
             _events = dbEvents.Select(e => new EventDto
             {
                 Id = e.EventId,
+                CampsiteId = e.CampsiteId?.Value ?? 0,
                 Name = e.Title ?? string.Empty,
                 Description = e.Description ?? string.Empty,
                 CampsiteName = GetCampsiteName(e.CampsiteId?.Value ?? 0),
@@ -898,6 +899,7 @@
     private class EventDto
     {
         public int Id { get; set; }
+        public int CampsiteId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string CampsiteName { get; set; } = string.Empty;
