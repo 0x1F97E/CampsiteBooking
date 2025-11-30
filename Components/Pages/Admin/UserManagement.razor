@@ -180,17 +180,17 @@
                 </MudTd>
                 <MudTd DataLabel="Actions">
                     <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
-                        <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="@(() => EditUser(context))">Edit</MudMenuItem>
-                        <MudMenuItem Icon="@Icons.Material.Filled.Security" OnClick="@(() => ChangeRole(context))">Change Role</MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnAction="@(() => EditUser(context))">Edit</MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Security" OnAction="@(() => ChangeRole(context))">Change Role</MudMenuItem>
                         @if (context.IsActive)
                         {
-                            <MudMenuItem Icon="@Icons.Material.Filled.Block" OnClick="@(() => DeactivateUser(context))">Deactivate</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Block" OnAction="@(() => DeactivateUser(context))">Deactivate</MudMenuItem>
                         }
                         else
                         {
-                            <MudMenuItem Icon="@Icons.Material.Filled.CheckCircle" OnClick="@(() => ActivateUser(context))">Activate</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.CheckCircle" OnAction="@(() => ActivateUser(context))">Activate</MudMenuItem>
                         }
-                        <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnClick="@(() => DeleteUser(context))">Delete</MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnAction="@(() => DeleteUser(context))">Delete</MudMenuItem>
                     </MudMenu>
                 </MudTd>
             </RowTemplate>
