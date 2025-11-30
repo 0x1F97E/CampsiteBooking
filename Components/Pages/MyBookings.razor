@@ -90,20 +90,13 @@
                                                     </MudText>
                                                 </MudPaper>
                                             </div>
-                                            <MudStack Row="true" Spacing="1" Class="mt-2">
-                                                <MudButton Variant="Variant.Outlined"
-                                                          Color="Color.Primary"
-                                                          Size="Size.Small"
-                                                          Href="@($"/booking-details/{booking.Id}")">
-                                                    View
-                                                </MudButton>
-                                                <MudButton Variant="Variant.Outlined"
-                                                          Color="Color.Error"
-                                                          Size="Size.Small"
-                                                          OnClick="@(() => CancelBooking(booking.Id))">
-                                                    Cancel
-                                                </MudButton>
-                                            </MudStack>
+                                            <MudButton Variant="Variant.Outlined"
+                                                      Color="Color.Error"
+                                                      Size="Size.Small"
+                                                      OnClick="@(() => CancelBooking(booking.Id))"
+                                                      Class="mt-2">
+                                                Cancel
+                                            </MudButton>
                                         </MudItem>
                                     </MudGrid>
                                 </MudCardContent>
@@ -183,13 +176,7 @@
                                                     </MudText>
                                                 </MudPaper>
                                             </div>
-                                            <MudButton Variant="Variant.Outlined"
-                                                      Color="Color.Primary"
-                                                      Size="Size.Small"
-                                                      Href="@($"/booking-details/{booking.Id}")"
-                                                      Class="mt-2">
-                                                View Details
-                                            </MudButton>
+
                                         </MudItem>
                                     </MudGrid>
                                 </MudCardContent>
