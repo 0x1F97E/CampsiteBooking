@@ -285,6 +285,7 @@ public class CampsiteBookingDbContext : DbContext
             entity.Ignore(a => a.Longitude);
             entity.Ignore(a => a.Type);
             entity.Ignore(a => a.Status);
+            entity.Ignore(a => a.IsUnderMaintenance);
             entity.Ignore(a => a.PriceModifier);
             entity.Ignore(a => a.CreatedDate);
             entity.Ignore(a => a.SpotId);
@@ -302,6 +303,8 @@ public class CampsiteBookingDbContext : DbContext
             entity.Property("_type").HasColumnName("Type").HasMaxLength(50).IsRequired();
             entity.Property("_status").HasColumnName("Status")
                 .HasConversion<string>();
+            entity.Property("_isUnderMaintenance").HasColumnName("IsUnderMaintenance")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
             entity.Property("_priceModifier").HasColumnName("PriceModifier");
             entity.Property("_createdDate").HasColumnName("CreatedDate");
         });

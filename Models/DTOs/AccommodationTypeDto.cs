@@ -28,6 +28,6 @@ public class AccommodationSpotDto
     public bool IsAvailable { get; set; } = true;
     public double Latitude { get; set; }
     public double Longitude { get; set; }
-    public string Status { get; set; } = "Available"; // Available, Occupied, Maintenance
+    public bool IsUnderMaintenance { get; set; } = false; // When true, spot is hidden from search results
 }
 

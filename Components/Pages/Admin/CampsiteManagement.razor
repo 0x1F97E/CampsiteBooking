@@ -483,15 +483,21 @@
                                                                                          Step="0.0001"
                                                                                          Format="F4"
                                                                                          Class="mt-2" />
-                                                                        <MudSelect @bind-Value="spot.Status"
-                                                                                   Label="Status"
-                                                                                   Variant="Variant.Outlined"
-                                                                                   Margin="Margin.Dense"
-                                                                                   Class="mt-2">
-                                                                            <MudSelectItem Value="@("Available")">Available</MudSelectItem>
-                                                                            <MudSelectItem Value="@("Occupied")">Occupied</MudSelectItem>
-                                                                            <MudSelectItem Value="@("Maintenance")">Maintenance</MudSelectItem>
-                                                                        </MudSelect>
+                                                                        <MudPaper Elevation="0" Class="pa-2 mt-2" Style="@($"background-color: {(spot.IsUnderMaintenance ? "#fff3e0" : "#e8f5e9")};")">
+                                                                            <div class="d-flex align-center justify-space-between">
+                                                                                <MudText Typo="Typo.caption">
+                                                                                    <MudIcon Icon="@(spot.IsUnderMaintenance ? Icons.Material.Filled.Build : Icons.Material.Filled.CheckCircle)"
+                                                                                             Color="@(spot.IsUnderMaintenance ? Color.Warning : Color.Success)"
+                                                                                             Size="Size.Small" Class="mr-1" />
+                                                                                    @(spot.IsUnderMaintenance ? "Under Maintenance" : "Available")
+                                                                                </MudText>
+                                                                                <MudSwitch @bind-Value="spot.IsUnderMaintenance"
+                                                                                           Color="Color.Warning"
+                                                                                           UnCheckedColor="Color.Success"
+                                                                                           Size="Size.Small"
+                                                                                           T="bool" />
+                                                                            </div>
+                                                                        </MudPaper>
                                                                     </MudPaper>
                                                                 </MudItem>
                                                             }
@@ -771,25 +777,58 @@
 
             Console.WriteLine($"📊 Found {entities.Count} accommodation types for campsite {campsiteId}");
 
-            // Convert entities to DTOs with null-safe access
-            _accommodationTypes = entities.Select(e => new AccommodationTypeDto
+            // Load all accommodation spots for this campsite
+            var allSpots = await context.AccommodationSpots.ToListAsync();
+            Console.WriteLine($"📊 Loaded {allSpots.Count} total accommodation spots from database");
+            foreach (var spot in allSpots.Take(10))
             {
-                Id = e.Id?.Value ?? 0,
-                CampsiteId = e.CampsiteId?.Value ?? 0,
-                Type = e.Type ?? "",
-                Description = e.Description ?? "",
-                MaxCapacity = e.MaxCapacity,
-                PricePerNight = e.BasePrice?.Amount ?? 0m,
-                ImageUrl = e.ImageUrl ?? "",
-                Icon = "", // Default icon, can be customized later
-                Amenities = e.GetAmenitiesList(), // Load from database
-                Spots = new List<AccommodationSpotDto>(), // TODO: Load spots from database
-                GalleryImages = new List<string>(),
-                IsActive = e.IsActive,
-                AvailableUnits = e.AvailableUnits,
-                UnitNamingPrefix = e.UnitNamingPrefix ?? "",
-                UnitNamingPattern = e.UnitNamingPattern ?? "Numbers",
-                AreaSquareMeters = e.AreaSquareMeters
+                Console.WriteLine($"   - Spot '{spot.SpotIdentifier}' (Id={spot.Id?.Value}): AccTypeId={spot.AccommodationTypeId?.Value}, IsUnderMaintenance={spot.IsUnderMaintenance}");
+            }
+            if (allSpots.Count > 10)
+            {
+                Console.WriteLine($"   ... and {allSpots.Count - 10} more spots");
+            }
+
+            // Convert entities to DTOs with null-safe access
+            _accommodationTypes = entities.Select(e => {
+                // Get spots for this accommodation type
+                var typeSpots = allSpots
+                    .Where(s => s.AccommodationTypeId?.Value == e.Id?.Value)
+                    .Select(s => {
+                        var dto = new AccommodationSpotDto
+                        {
+                            Id = s.Id?.Value ?? 0,
+                            SpotNumber = s.SpotIdentifier,
+                            Latitude = s.Latitude,
+                            Longitude = s.Longitude,
+                            IsUnderMaintenance = s.IsUnderMaintenance
+                        };
+                        Console.WriteLine($"      🔧 Created DTO for '{dto.SpotNumber}': IsUnderMaintenance={dto.IsUnderMaintenance} (from entity: {s.IsUnderMaintenance})");
+                        return dto;
+                    })
+                    .ToList();
+
+                Console.WriteLine($"   📦 {e.Type}: {typeSpots.Count} spots loaded, maintenance count: {typeSpots.Count(s => s.IsUnderMaintenance)}");
+
+                return new AccommodationTypeDto
+                {
+                    Id = e.Id?.Value ?? 0,
+                    CampsiteId = e.CampsiteId?.Value ?? 0,
+                    Type = e.Type ?? "",
+                    Description = e.Description ?? "",
+                    MaxCapacity = e.MaxCapacity,
+                    PricePerNight = e.BasePrice?.Amount ?? 0m,
+                    ImageUrl = e.ImageUrl ?? "",
+                    Icon = "", // Default icon, can be customized later
+                    Amenities = e.GetAmenitiesList(), // Load from database
+                    Spots = typeSpots,
+                    GalleryImages = new List<string>(),
+                    IsActive = e.IsActive,
+                    AvailableUnits = e.AvailableUnits,
+                    UnitNamingPrefix = e.UnitNamingPrefix ?? "",
+                    UnitNamingPattern = e.UnitNamingPattern ?? "Numbers",
+                    AreaSquareMeters = e.AreaSquareMeters
+                };
             }).ToList();
 
             Console.WriteLine($"✅ Loaded {_accommodationTypes.Count} accommodation types for campsite {campsiteId}");
@@ -1226,7 +1265,51 @@
             context.Entry(dbAccommodationType).Property("_areaSquareMeters").IsModified = true;
             context.Entry(dbAccommodationType).Property("_isActive").IsModified = true;
 
-            await context.SaveChangesAsync();
+            // Save spots with their maintenance status
+            Console.WriteLine($"🔧 Saving {accType.Spots.Count} spots for {accType.Type}:");
+            foreach (var spotDto in accType.Spots)
+            {
+                Console.WriteLine($"   - Spot '{spotDto.SpotNumber}' (Id={spotDto.Id}): IsUnderMaintenance={spotDto.IsUnderMaintenance}");
+                if (spotDto.Id > 0)
+                {
+                    // Update existing spot
+                    var spotId = AccommodationSpotId.Create(spotDto.Id);
+                    var dbSpot = await context.AccommodationSpots.FirstOrDefaultAsync(s => s.Id == spotId);
+                    if (dbSpot != null)
+                    {
+                        Console.WriteLine($"     Found in DB: Current IsUnderMaintenance={dbSpot.IsUnderMaintenance}");
+                        dbSpot.SetMaintenanceStatus(spotDto.IsUnderMaintenance);
+                        Console.WriteLine($"     After SetMaintenanceStatus: IsUnderMaintenance={dbSpot.IsUnderMaintenance}");
+                        context.Entry(dbSpot).Property("_isUnderMaintenance").IsModified = true;
+                        context.Entry(dbSpot).Property("_latitude").IsModified = true;
+                        context.Entry(dbSpot).Property("_longitude").IsModified = true;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"     ⚠️ Spot not found in database!");
+                    }
+                }
+                else
+                {
+                    // Create new spot
+                    Console.WriteLine($"     Creating new spot in database");
+                    var newSpot = AccommodationSpot.Create(
+                        spotDto.SpotNumber,
+                        CampsiteId.Create(accType.CampsiteId),
+                        _selectedCampsite?.Name ?? "",
+                        accommodationTypeId,
+                        accType.Type,
+                        spotDto.Latitude,
+                        spotDto.Longitude
+                    );
+                    newSpot.SetMaintenanceStatus(spotDto.IsUnderMaintenance);
+                    context.AccommodationSpots.Add(newSpot);
+                }
+            }
+
+            Console.WriteLine($"💾 Calling SaveChangesAsync...");
+            var savedCount = await context.SaveChangesAsync();
+            Console.WriteLine($"✅ SaveChangesAsync completed - {savedCount} entities saved");
 
             Console.WriteLine($"🔍 SaveAccommodationType - After update:");
             Console.WriteLine($"   DB Amenities: [{string.Join(", ", dbAccommodationType.GetAmenitiesList())}]");
@@ -1381,7 +1464,7 @@
             SpotNumber = nextNumber.ToString(),
             Latitude = baseLatitude + offset,
             Longitude = baseLongitude + offset,
-            Status = "Available"
+            IsUnderMaintenance = false
         };
 
         accType.Spots.Add(newSpot);
@@ -1442,7 +1525,7 @@
                 SpotNumber = i.ToString(),
                 Latitude = baseLatitude + baseOffset + (row * 0.0001),
                 Longitude = baseLongitude + baseOffset + (col * 0.0001),
-                Status = "Available"
+                IsUnderMaintenance = false
             });
         }
         return spots;

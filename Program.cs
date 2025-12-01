@@ -773,6 +773,41 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"❌ Error adding SeasonOpeningDate column: {ex.Message}");
     }
 
+    // Add IsUnderMaintenance column to AccommodationSpots table
+    try
+    {
+        Console.WriteLine("🔧 Adding IsUnderMaintenance column to AccommodationSpots table...");
+
+        var isUnderMaintenanceExists = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='AccommodationSpots' AND COLUMN_NAME='IsUnderMaintenance'"
+        ).FirstOrDefaultAsync();
+
+        if (isUnderMaintenanceExists == 0)
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE AccommodationSpots
+                ADD COLUMN IsUnderMaintenance TINYINT(1) NOT NULL DEFAULT 0
+            ");
+            Console.WriteLine("   ✅ IsUnderMaintenance column added");
+
+            // Migrate existing spots with Status = 'Maintenance' to IsUnderMaintenance = 1
+            await db.Database.ExecuteSqlRawAsync(@"
+                UPDATE AccommodationSpots
+                SET IsUnderMaintenance = 1
+                WHERE Status = 'Maintenance' OR Status = '3'
+            ");
+            Console.WriteLine("   ✅ Migrated existing maintenance spots");
+        }
+        else
+        {
+            Console.WriteLine("   ✅ IsUnderMaintenance column already exists");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error adding IsUnderMaintenance column: {ex.Message}");
+    }
+
     // Seed initial data
     await DatabaseSeeder.SeedAsync(db);
 

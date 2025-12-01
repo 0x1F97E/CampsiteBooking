@@ -931,11 +931,21 @@
             Console.WriteLine($"📅 Found {bookedSpotIds.Count} booked spots for date range {startDate:d} - {endDate:d} (checked {allBookings.Count} total bookings)");
 
             // Convert database spots to CampingSpot DTOs with availability status
+            // Filter out spots that are under maintenance - they should not appear in the booking dropdown
             var spots = new List<CampingSpot>();
             foreach (var dbSpot in dbSpots)
             {
+                // Check both IsUnderMaintenance flag and SpotStatus.Maintenance enum
+                bool isUnderMaintenance = dbSpot.IsUnderMaintenance || dbSpot.Status == SpotStatus.Maintenance;
+
+                // Skip spots under maintenance - they should not be available for booking
+                if (isUnderMaintenance)
+                {
+                    Console.WriteLine($"⚠️ Skipping spot {dbSpot.SpotIdentifier} - under maintenance");
+                    continue;
+                }
+
                 bool isBooked = bookedSpotIds.Contains(dbSpot.Id.Value);
-                bool isUnderMaintenance = dbSpot.Status == SpotStatus.Maintenance;
 
                 spots.Add(new CampingSpot
                 {
@@ -947,7 +957,7 @@
                     Longitude = dbSpot.Longitude,
                     Type = dbSpot.Type,
                     Amenities = amenities,
-                    Status = isUnderMaintenance ? "Maintenance" : (isBooked ? "Occupied" : "Available"),
+                    Status = isBooked ? "Occupied" : "Available",
                     PriceModifier = dbSpot.PriceModifier
                 });
             }

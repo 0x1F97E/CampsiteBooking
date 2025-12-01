@@ -21,6 +21,7 @@ public class AccommodationSpot : Entity<AccommodationSpotId>
     private double _longitude;
     private string _type = string.Empty;
     private SpotStatus _status = SpotStatus.Available;
+    private bool _isUnderMaintenance = false;
     private decimal _priceModifier = 1.0m;
     private DateTime _createdDate;
     
@@ -36,6 +37,7 @@ public class AccommodationSpot : Entity<AccommodationSpotId>
     public double Longitude => _longitude;
     public string Type => _type;
     public SpotStatus Status => _status;
+    public bool IsUnderMaintenance => _isUnderMaintenance;
     public decimal PriceModifier => _priceModifier;
     public DateTime CreatedDate => _createdDate;
     
@@ -147,12 +149,22 @@ public class AccommodationSpot : Entity<AccommodationSpotId>
     {
         _status = SpotStatus.Maintenance;
     }
-    
+
+    /// <summary>
+    /// Sets the maintenance status of the spot.
+    /// When a spot is under maintenance, it will not appear in search results.
+    /// </summary>
+    public void SetMaintenanceStatus(bool isUnderMaintenance)
+    {
+        _isUnderMaintenance = isUnderMaintenance;
+    }
+
     public bool IsAvailableForBooking()
     {
-        return _status == SpotStatus.Available;
+        // A spot is not available for booking if it's under maintenance or not in Available status
+        return _status == SpotStatus.Available && !_isUnderMaintenance;
     }
-    
+
     public void UpdatePriceModifier(decimal priceModifier)
     {
         if (priceModifier <= 0)
