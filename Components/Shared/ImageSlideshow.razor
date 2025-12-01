@@ -1,0 +1,182 @@
+@using MudBlazor
+@implements IDisposable
+
+<div class="slideshow-container" style="position: relative; width: 100%; height: @(Height)px; overflow: hidden;">
+    @if (_images.Any())
+    {
+        <!-- Current Image -->
+        <MudImage Src="@_images[_currentIndex]" 
+                  Alt="@($"Image {_currentIndex + 1} of {_images.Count}")"
+                  ObjectFit="ObjectFit.Cover"
+                  Style="width: 100%; height: 100%; object-fit: cover;" />
+
+        @if (ShowControls && _images.Count > 1)
+        {
+            <!-- Previous Button -->
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                           Color="Color.Default"
+                           Size="Size.Medium"
+                           OnClick="PreviousImage"
+                           Style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background-color: rgba(255,255,255,0.7); border-radius: 50%;"
+                           aria-label="Previous image" />
+
+            <!-- Next Button -->
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                           Color="Color.Default"
+                           Size="Size.Medium"
+                           OnClick="NextImage"
+                           Style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background-color: rgba(255,255,255,0.7); border-radius: 50%;"
+                           aria-label="Next image" />
+
+            <!-- Play/Pause Button -->
+            @if (AutoPlay)
+            {
+                <MudIconButton Icon="@(_isPlaying ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               OnClick="TogglePlayPause"
+                               Style="position: absolute; right: 8px; top: 8px; background-color: rgba(255,255,255,0.7); border-radius: 50%;"
+                               aria-label="@(_isPlaying ? "Pause slideshow" : "Play slideshow")" />
+            }
+
+            <!-- Position Indicators (Dots) -->
+            <div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px;">
+                @for (int i = 0; i < _images.Count; i++)
+                {
+                    var index = i;
+                    <div @onclick="@(() => GoToImage(index))"
+                         style="width: 10px; height: 10px; border-radius: 50%; cursor: pointer;
+                                background-color: @(i == _currentIndex ? "white" : "rgba(255,255,255,0.5)");
+                                border: 1px solid rgba(0,0,0,0.3);
+                                transition: background-color 0.3s ease;" />
+                }
+            </div>
+        }
+
+        <!-- Image Counter -->
+        @if (_images.Count > 1)
+        {
+            <div style="position: absolute; top: 8px; left: 8px; background-color: rgba(0,0,0,0.5); 
+                        color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem;">
+                @(_currentIndex + 1) / @_images.Count
+            </div>
+        }
+    }
+    else
+    {
+        <!-- Placeholder when no images -->
+        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; 
+                    background-color: #f5f5f5;">
+            <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Large" Color="Color.Default" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<string> GalleryImages { get; set; } = new();
+    [Parameter] public string? FallbackImageUrl { get; set; }
+    [Parameter] public string PlaceholderUrl { get; set; } = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400";
+    [Parameter] public bool AutoPlay { get; set; } = false;
+    [Parameter] public int IntervalSeconds { get; set; } = 5;
+    [Parameter] public bool ShowControls { get; set; } = true;
+    [Parameter] public int Height { get; set; } = 200;
+
+    private List<string> _images = new();
+    private int _currentIndex = 0;
+    private System.Timers.Timer? _timer;
+    private bool _isPlaying = false;
+
+    protected override void OnInitialized()
+    {
+        BuildImageList();
+        if (AutoPlay && _images.Count > 1)
+        {
+            StartSlideshow();
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        var previousCount = _images.Count;
+        BuildImageList();
+        
+        // Reset index if images changed significantly
+        if (_images.Count != previousCount)
+        {
+            _currentIndex = 0;
+        }
+    }
+
+    private void BuildImageList()
+    {
+        _images = new List<string>();
+
+        // Priority 1: Use gallery images if available
+        if (GalleryImages?.Any() == true)
+        {
+            _images.AddRange(GalleryImages.Where(url => !string.IsNullOrWhiteSpace(url)));
+        }
+
+        // Priority 2: Fall back to single image URL
+        if (!_images.Any() && !string.IsNullOrWhiteSpace(FallbackImageUrl))
+        {
+            _images.Add(FallbackImageUrl);
+        }
+
+        // Priority 3: Use placeholder
+        if (!_images.Any() && !string.IsNullOrWhiteSpace(PlaceholderUrl))
+        {
+            _images.Add(PlaceholderUrl);
+        }
+    }
+
+    private void StartSlideshow()
+    {
+        _timer = new System.Timers.Timer(IntervalSeconds * 1000);
+        _timer.Elapsed += async (s, e) => await InvokeAsync(() =>
+        {
+            _currentIndex = (_currentIndex + 1) % _images.Count;
+            StateHasChanged();
+        });
+        _timer.AutoReset = true;
+        _timer.Start();
+        _isPlaying = true;
+    }
+
+    private void StopSlideshow()
+    {
+        _timer?.Stop();
+        _isPlaying = false;
+    }
+
+    private void TogglePlayPause()
+    {
+        if (_isPlaying)
+            StopSlideshow();
+        else
+            StartSlideshow();
+    }
+
+    private void NextImage()
+    {
+        _currentIndex = (_currentIndex + 1) % _images.Count;
+    }
+
+    private void PreviousImage()
+    {
+        _currentIndex = (_currentIndex - 1 + _images.Count) % _images.Count;
+    }
+
+    private void GoToImage(int index)
+    {
+        if (index >= 0 && index < _images.Count)
+            _currentIndex = index;
+    }
+
+    public void Dispose()
+    {
+        _timer?.Stop();
+        _timer?.Dispose();
+    }
+}
+

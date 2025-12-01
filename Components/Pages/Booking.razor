@@ -33,7 +33,11 @@
         <MudGrid>
             <MudItem xs="12" md="5">
                 <MudCard Elevation="3">
-                    <MudCardMedia Image="@_accommodation.ImageUrl" Height="200" />
+                    <ImageSlideshow GalleryImages="@_accommodation.GalleryImages"
+                                    FallbackImageUrl="@_accommodation.ImageUrl"
+                                    AutoPlay="true"
+                                    ShowControls="true"
+                                    Height="250" />
                     <MudCardContent>
                         <MudText Typo="Typo.h6">@_accommodation.Name</MudText>
                         <MudChip T="string" Size="Size.Small" Color="Color.Info">@_accommodation.Type</MudChip>
@@ -828,6 +832,21 @@
 
             if (accommodationType != null)
             {
+                // Load all photos first (client-side evaluation needed due to EF mapping)
+                var allPhotos = await context.Photos.ToListAsync();
+
+                // Filter for this accommodation type in memory
+                var accommodationGalleryImages = allPhotos
+                    .Where(p => p.AccommodationTypeId != null && p.AccommodationTypeId.Value == accommodationType.Id?.Value)
+                    .OrderBy(p => p.DisplayOrder)
+                    .Select(p => p.Url)
+                    .ToList();
+
+                // Use first gallery image as main image if no ImageUrl is set
+                var mainImageUrl = !string.IsNullOrWhiteSpace(accommodationType.ImageUrl)
+                    ? accommodationType.ImageUrl
+                    : (accommodationGalleryImages.FirstOrDefault() ?? "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400");
+
                 _accommodation = new AccommodationDto
                 {
                     Id = accommodationType.Id?.Value ?? 0,
@@ -836,12 +855,13 @@
                     Description = accommodationType.Description ?? "Various accommodation types available",
                     Capacity = accommodationType.MaxCapacity,
                     PricePerNight = accommodationType.BasePrice?.Amount ?? 100m,
-                    ImageUrl = accommodationType.ImageUrl ?? "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400",
+                    ImageUrl = mainImageUrl,
                     CampsiteId = _campsiteId,
-                    CampsiteName = _campsite?.Name ?? "Campsite"
+                    CampsiteName = _campsite?.Name ?? "Campsite",
+                    GalleryImages = accommodationGalleryImages
                 };
 
-                Console.WriteLine($"✅ Loaded accommodation: {_accommodation.Name}");
+                Console.WriteLine($"✅ Loaded accommodation: {_accommodation.Name} with {accommodationGalleryImages.Count} gallery images");
             }
             else
             {
@@ -856,7 +876,8 @@
                     PricePerNight = 100,
                     ImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400",
                     CampsiteId = _campsiteId,
-                    CampsiteName = _campsite?.Name ?? "Campsite"
+                    CampsiteName = _campsite?.Name ?? "Campsite",
+                    GalleryImages = new List<string>()
                 };
                 Console.WriteLine($"⚠️ No accommodation types found for campsite {_campsiteId}, using fallback");
             }
@@ -1378,6 +1399,7 @@
         public string ImageUrl { get; set; } = string.Empty;
         public int CampsiteId { get; set; }
         public string CampsiteName { get; set; } = string.Empty;
+        public List<string> GalleryImages { get; set; } = new(); // Images from Photos table
     }
 
     public class PeripheralPurchaseDto

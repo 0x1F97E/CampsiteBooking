@@ -203,6 +203,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9Sb3V0ZXMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/pc/CampsiteBooking-1/Components/Shared/ImageSlideshow.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9TaGFyZWQvSW1hZ2VTbGlkZXNob3cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/pc/CampsiteBooking-1/Components/_Imports.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9fSW1wb3J0cy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 

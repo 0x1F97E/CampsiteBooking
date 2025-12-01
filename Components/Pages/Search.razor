@@ -112,7 +112,11 @@
             {
                 <MudItem xs="12" md="6" lg="4">
                     <MudCard Elevation="3">
-                        <MudCardMedia Image="@accommodation.ImageUrl" Height="200" />
+                        <ImageSlideshow GalleryImages="@accommodation.GalleryImages"
+                                        FallbackImageUrl="@accommodation.ImageUrl"
+                                        AutoPlay="false"
+                                        ShowControls="false"
+                                        Height="200" />
                         <MudCardContent>
                             <MudText Typo="Typo.h6">@accommodation.Name</MudText>
                             <MudStack Row="true" Spacing="1" Class="mb-2">
@@ -332,6 +336,9 @@
             // Load all accommodation spots to check maintenance status
             var allSpots = await context.AccommodationSpots.ToListAsync();
 
+            // Load all photos for gallery images
+            var allPhotos = await context.Photos.ToListAsync();
+
             Console.WriteLine($"📊 Loaded {allAccommodationTypes.Count} accommodation types from database, {activeAccommodationTypes.Count} are active");
 
             // Convert to DTOs with campsite information and amenities
@@ -374,6 +381,18 @@
                     Console.WriteLine($"   ⚠️  NO AMENITIES FOUND FOR THIS ACCOMMODATION TYPE!");
                 }
 
+                // Get gallery images for this accommodation type
+                var galleryImages = allPhotos
+                    .Where(p => p.AccommodationTypeId?.Value == accType.Id?.Value)
+                    .OrderBy(p => p.DisplayOrder)
+                    .Select(p => p.Url)
+                    .ToList();
+
+                // Use first gallery image as main image if no ImageUrl is set
+                var mainImageUrl = !string.IsNullOrWhiteSpace(accType.ImageUrl)
+                    ? accType.ImageUrl
+                    : (galleryImages.FirstOrDefault() ?? "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400");
+
                 allAccommodations.Add(new AccommodationDto
                 {
                     Id = accType.Id?.Value ?? 0,
@@ -384,10 +403,11 @@
                     Description = accType.Description ?? "",
                     Capacity = accType.MaxCapacity,
                     PricePerNight = accType.BasePrice?.Amount ?? 0m,
-                    ImageUrl = accType.ImageUrl ?? "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400",
+                    ImageUrl = mainImageUrl,
                     Amenities = accommodationAmenities,
                     AreaSquareMeters = accType.AreaSquareMeters,
-                    AvailableSpotCount = availableSpots.Count
+                    AvailableSpotCount = availableSpots.Count,
+                    GalleryImages = galleryImages
                 });
             }
 
@@ -495,6 +515,7 @@
         public List<string> Amenities { get; set; } = new();
         public decimal? AreaSquareMeters { get; set; }
         public int AvailableSpotCount { get; set; } // Number of spots not under maintenance
+        public List<string> GalleryImages { get; set; } = new(); // Images from Photos table
     }
 
     public class CampsiteFilterDto
