@@ -40,8 +40,23 @@
                                     Height="250" />
                     <MudCardContent>
                         <MudText Typo="Typo.h6">@_accommodation.Name</MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info">@_accommodation.Type</MudChip>
+                        <MudStack Row="true" Spacing="1" Class="mb-2">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@_accommodation.Type</MudChip>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Icon="@Icons.Material.Filled.LocationOn">@_accommodation.CampsiteName</MudChip>
+                        </MudStack>
                         <MudText Typo="Typo.body2" Class="mt-2">@_accommodation.Description</MudText>
+
+                        @if (_accommodation.Amenities.Any())
+                        {
+                            <MudStack Row="true" Spacing="1" Class="mt-2" Wrap="Wrap.Wrap">
+                                @foreach (var amenity in _accommodation.Amenities)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Icon="@GetAmenityIcon(amenity)">
+                                        @amenity
+                                    </MudChip>
+                                }
+                            </MudStack>
+                        }
 
                         <MudDivider Class="my-3" />
 
@@ -733,6 +748,25 @@
         }
     }
 
+    private string GetAmenityIcon(string amenityName)
+    {
+        return amenityName.ToLower() switch
+        {
+            var name when name.Contains("pool") => Icons.Material.Filled.Pool,
+            var name when name.Contains("dog") || name.Contains("pet") => Icons.Material.Filled.Pets,
+            var name when name.Contains("wifi") => Icons.Material.Filled.Wifi,
+            var name when name.Contains("beach") => Icons.Material.Filled.BeachAccess,
+            var name when name.Contains("electric") => Icons.Material.Filled.ElectricBolt,
+            var name when name.Contains("water") => Icons.Material.Filled.Water,
+            var name when name.Contains("playground") || name.Contains("child") => Icons.Material.Filled.ChildFriendly,
+            var name when name.Contains("restaurant") || name.Contains("food") => Icons.Material.Filled.Restaurant,
+            var name when name.Contains("fire") => Icons.Material.Filled.LocalFireDepartment,
+            var name when name.Contains("picnic") || name.Contains("table") => Icons.Material.Filled.TableRestaurant,
+            var name when name.Contains("rv") || name.Contains("campingvan") => Icons.Material.Filled.RvHookup,
+            _ => Icons.Material.Filled.CheckCircle
+        };
+    }
+
     private async Task LoadCampsiteData()
     {
         try
@@ -847,6 +881,9 @@
                     ? accommodationType.ImageUrl
                     : (accommodationGalleryImages.FirstOrDefault() ?? "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400");
 
+                // Load amenities from the accommodation type
+                var accommodationAmenities = accommodationType.GetAmenitiesList();
+
                 _accommodation = new AccommodationDto
                 {
                     Id = accommodationType.Id?.Value ?? 0,
@@ -858,10 +895,11 @@
                     ImageUrl = mainImageUrl,
                     CampsiteId = _campsiteId,
                     CampsiteName = _campsite?.Name ?? "Campsite",
-                    GalleryImages = accommodationGalleryImages
+                    GalleryImages = accommodationGalleryImages,
+                    Amenities = accommodationAmenities
                 };
 
-                Console.WriteLine($"✅ Loaded accommodation: {_accommodation.Name} with {accommodationGalleryImages.Count} gallery images");
+                Console.WriteLine($"✅ Loaded accommodation: {_accommodation.Name} with {accommodationGalleryImages.Count} gallery images and {accommodationAmenities.Count} amenities");
             }
             else
             {
@@ -877,7 +915,8 @@
                     ImageUrl = "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=400",
                     CampsiteId = _campsiteId,
                     CampsiteName = _campsite?.Name ?? "Campsite",
-                    GalleryImages = new List<string>()
+                    GalleryImages = new List<string>(),
+                    Amenities = new List<string>()
                 };
                 Console.WriteLine($"⚠️ No accommodation types found for campsite {_campsiteId}, using fallback");
             }
@@ -1400,6 +1439,7 @@
         public int CampsiteId { get; set; }
         public string CampsiteName { get; set; } = string.Empty;
         public List<string> GalleryImages { get; set; } = new(); // Images from Photos table
+        public List<string> Amenities { get; set; } = new(); // Amenities from AccommodationType
     }
 
     public class PeripheralPurchaseDto
