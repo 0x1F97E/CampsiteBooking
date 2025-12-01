@@ -17,6 +17,7 @@ public class AccommodationTypeDto
     public int AvailableUnits { get; set; }
     public string UnitNamingPrefix { get; set; } = string.Empty;
     public string UnitNamingPattern { get; set; } = "Numbers"; // "Letters", "Numbers", "PrefixNumbers"
+    public decimal? AreaSquareMeters { get; set; } // Optional area in square meters
 }
 
 public class AccommodationSpotDto

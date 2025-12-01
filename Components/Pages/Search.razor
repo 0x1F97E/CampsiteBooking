@@ -23,7 +23,7 @@
                                    Editable="true" />
             </MudItem>
 
-            <MudItem xs="12" md="3">
+            <MudItem xs="12" md="2">
                 <MudSelect T="string"
                            Label="Campsites"
                            Variant="Variant.Outlined"
@@ -139,6 +139,13 @@
                                 <div>
                                     <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" />
                                     <MudText Typo="Typo.body2" Inline="true">Up to @accommodation.Capacity guests</MudText>
+                                    @if (accommodation.AreaSquareMeters.HasValue)
+                                    {
+                                        <MudText Typo="Typo.body2" Inline="true" Class="ml-3">
+                                            <MudIcon Icon="@Icons.Material.Filled.SquareFoot" Size="Size.Small" />
+                                            @accommodation.AreaSquareMeters.Value.ToString("N1") m²
+                                        </MudText>
+                                    }
                                 </div>
                                 <MudText Typo="Typo.h6" Color="Color.Primary">$@accommodation.PricePerNight/night</MudText>
                             </MudStack>
@@ -255,19 +262,27 @@
         {
             using var context = await DbContextFactory.CreateDbContextAsync();
 
-            // Load all accommodation types from database first (EF Core can't translate IsActive property)
+            // Load all accommodation types and campsites from database first (EF Core can't translate IsActive property)
             var allAccommodationTypes = await context.AccommodationTypes.ToListAsync();
+            var allCampsites = await context.Campsites.ToListAsync();
+
+            // Create a set of active campsite IDs for efficient lookup
+            var activeCampsiteIds = allCampsites
+                .Where(c => c.IsActive)
+                .Select(c => c.Id?.Value ?? 0)
+                .ToHashSet();
 
             // Filter active types in memory and get distinct type names, ordered alphabetically
+            // IMPORTANT: Also filter out accommodation types whose campsites are inactive
             _availableAccommodationTypes = allAccommodationTypes
-                .Where(a => a.IsActive)
+                .Where(a => a.IsActive && activeCampsiteIds.Contains(a.CampsiteId?.Value ?? 0))
                 .Select(a => a.Type)
                 .Where(t => !string.IsNullOrWhiteSpace(t))
                 .Distinct()
                 .OrderBy(t => t)
                 .ToList();
 
-            Console.WriteLine($"✅ Loaded {_availableAccommodationTypes.Count} accommodation types for search filter");
+            Console.WriteLine($"✅ Loaded {_availableAccommodationTypes.Count} accommodation types for search filter (from active campsites only)");
             foreach (var accType in _availableAccommodationTypes)
             {
                 Console.WriteLine($"   Accommodation Type: {accType}");
@@ -311,45 +326,53 @@
             // Load all accommodation types from database
             var allAccommodationTypes = await context.AccommodationTypes.ToListAsync();
 
-            Console.WriteLine($"📊 Loaded {allAccommodationTypes.Count} accommodation types from database");
+            // Filter to only include active accommodation types
+            var activeAccommodationTypes = allAccommodationTypes.Where(a => a.IsActive).ToList();
+
+            Console.WriteLine($"📊 Loaded {allAccommodationTypes.Count} accommodation types from database, {activeAccommodationTypes.Count} are active");
 
             // Convert to DTOs with campsite information and amenities
             var allAccommodations = new List<AccommodationDto>();
 
-            foreach (var accType in allAccommodationTypes)
+            foreach (var accType in activeAccommodationTypes)
             {
-                // Get campsite name
+                // Get campsite - only include if campsite is active
                 var campsite = await context.Campsites
                     .FirstOrDefaultAsync(c => c.Id == accType.CampsiteId);
 
-                if (campsite != null)
+                // Skip if campsite doesn't exist or is inactive
+                if (campsite == null || !campsite.IsActive)
                 {
-                    // Get amenities directly from the accommodation type
-                    var accommodationAmenities = accType.GetAmenitiesList();
-
-                    // DEBUG: Log amenities for each accommodation type
-                    Console.WriteLine($"🏠 Homepage - Loading {accType.Type} (ID: {accType.Id?.Value})");
-                    Console.WriteLine($"   Campsite: {campsite.Name}");
-                    Console.WriteLine($"   Amenities ({accommodationAmenities.Count}): [{string.Join(", ", accommodationAmenities)}]");
-                    if (accommodationAmenities.Count == 0)
-                    {
-                        Console.WriteLine($"   ⚠️  NO AMENITIES FOUND FOR THIS ACCOMMODATION TYPE!");
-                    }
-
-                    allAccommodations.Add(new AccommodationDto
-                    {
-                        Id = accType.Id?.Value ?? 0,
-                        CampsiteId = accType.CampsiteId?.Value ?? 0,
-                        CampsiteName = campsite.Name ?? "",
-                        Name = accType.Type ?? "",
-                        Type = accType.Type ?? "",
-                        Description = accType.Description ?? "",
-                        Capacity = accType.MaxCapacity,
-                        PricePerNight = accType.BasePrice?.Amount ?? 0m,
-                        ImageUrl = accType.ImageUrl ?? "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400",
-                        Amenities = accommodationAmenities
-                    });
+                    Console.WriteLine($"⏭️ Skipping {accType.Type} - campsite is null or inactive");
+                    continue;
                 }
+
+                // Get amenities directly from the accommodation type
+                var accommodationAmenities = accType.GetAmenitiesList();
+
+                // DEBUG: Log amenities for each accommodation type
+                Console.WriteLine($"🏠 Search - Loading {accType.Type} (ID: {accType.Id?.Value})");
+                Console.WriteLine($"   Campsite: {campsite.Name} (Active: {campsite.IsActive})");
+                Console.WriteLine($"   Amenities ({accommodationAmenities.Count}): [{string.Join(", ", accommodationAmenities)}]");
+                if (accommodationAmenities.Count == 0)
+                {
+                    Console.WriteLine($"   ⚠️  NO AMENITIES FOUND FOR THIS ACCOMMODATION TYPE!");
+                }
+
+                allAccommodations.Add(new AccommodationDto
+                {
+                    Id = accType.Id?.Value ?? 0,
+                    CampsiteId = accType.CampsiteId?.Value ?? 0,
+                    CampsiteName = campsite.Name ?? "",
+                    Name = accType.Type ?? "",
+                    Type = accType.Type ?? "",
+                    Description = accType.Description ?? "",
+                    Capacity = accType.MaxCapacity,
+                    PricePerNight = accType.BasePrice?.Amount ?? 0m,
+                    ImageUrl = accType.ImageUrl ?? "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400",
+                    Amenities = accommodationAmenities,
+                    AreaSquareMeters = accType.AreaSquareMeters
+                });
             }
 
             _accommodations = allAccommodations;
@@ -454,6 +477,7 @@
         public decimal PricePerNight { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
         public List<string> Amenities { get; set; } = new();
+        public decimal? AreaSquareMeters { get; set; }
     }
 
     public class CampsiteFilterDto

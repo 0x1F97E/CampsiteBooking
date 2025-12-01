@@ -155,6 +155,7 @@ public static class DatabaseSeeder
                 "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80"
             );
             cabin1.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Water-Hookup", "Heating", "Kitchen", "Bathroom" });
+            cabin1.UpdateAreaSquareMeters(35m); // Cabin: 35 m²
             await context.AccommodationTypes.AddAsync(cabin1);
             // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
             context.Entry(cabin1).Property("_amenities").IsModified = true;
@@ -171,6 +172,7 @@ public static class DatabaseSeeder
                 "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80"
             );
             tent1.UpdateAmenities(new List<string> { "Electric-Hookup", "Fire-Pit", "Picnic-Table" });
+            tent1.UpdateAreaSquareMeters(20m); // Tent Site: 20 m²
             await context.AccommodationTypes.AddAsync(tent1);
             // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
             context.Entry(tent1).Property("_amenities").IsModified = true;
@@ -187,6 +189,7 @@ public static class DatabaseSeeder
                 "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80"
             );
             glamping1.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Heating", "Bathroom", "Kitchen", "Air-Conditioning", "Linens-Provided" });
+            glamping1.UpdateAreaSquareMeters(45m); // Glamping: 45 m²
             await context.AccommodationTypes.AddAsync(glamping1);
             // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
             context.Entry(glamping1).Property("_amenities").IsModified = true;
@@ -203,6 +206,7 @@ public static class DatabaseSeeder
                 "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=800&q=80"
             );
             rv1.UpdateAmenities(new List<string> { "Electric-Hookup", "Water-Hookup", "Sewer-Hookup", "WiFi" });
+            rv1.UpdateAreaSquareMeters(40m); // RV Spot: 40 m²
             await context.AccommodationTypes.AddAsync(rv1);
             // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
             context.Entry(rv1).Property("_amenities").IsModified = true;
@@ -220,6 +224,7 @@ public static class DatabaseSeeder
                 "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80"
             );
             cabin2.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Water-Hookup", "Heating", "Kitchen", "Bathroom" });
+            cabin2.UpdateAreaSquareMeters(38m); // Cabin: 38 m²
             await context.AccommodationTypes.AddAsync(cabin2);
             // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
             context.Entry(cabin2).Property("_amenities").IsModified = true;
@@ -236,6 +241,7 @@ public static class DatabaseSeeder
                 "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80"
             );
             tent2.UpdateAmenities(new List<string> { "Electric-Hookup", "Fire-Pit", "Picnic-Table" });
+            tent2.UpdateAreaSquareMeters(18m); // Tent Site: 18 m²
             await context.AccommodationTypes.AddAsync(tent2);
             // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
             context.Entry(tent2).Property("_amenities").IsModified = true;
@@ -253,6 +259,7 @@ public static class DatabaseSeeder
                 "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80"
             );
             cabin3.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Heating", "Kitchen", "Bathroom" });
+            cabin3.UpdateAreaSquareMeters(30m); // Cabin: 30 m²
             await context.AccommodationTypes.AddAsync(cabin3);
             // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
             context.Entry(cabin3).Property("_amenities").IsModified = true;
@@ -269,6 +276,7 @@ public static class DatabaseSeeder
                 "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80"
             );
             tent3.UpdateAmenities(new List<string> { "Fire-Pit", "Picnic-Table" });
+            tent3.UpdateAreaSquareMeters(22m); // Tent Site: 22 m²
             await context.AccommodationTypes.AddAsync(tent3);
             // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
             context.Entry(tent3).Property("_amenities").IsModified = true;
@@ -286,6 +294,7 @@ public static class DatabaseSeeder
                 "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80"
             );
             cabin4.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Heating", "Kitchen", "Bathroom" });
+            cabin4.UpdateAreaSquareMeters(28m); // Cabin: 28 m²
             await context.AccommodationTypes.AddAsync(cabin4);
             // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
             context.Entry(cabin4).Property("_amenities").IsModified = true;
@@ -302,6 +311,7 @@ public static class DatabaseSeeder
                 "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80"
             );
             tent4.UpdateAmenities(new List<string> { "Electric-Hookup", "Fire-Pit", "Picnic-Table" });
+            tent4.UpdateAreaSquareMeters(25m); // Tent Site: 25 m²
             await context.AccommodationTypes.AddAsync(tent4);
             // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
             context.Entry(tent4).Property("_amenities").IsModified = true;
@@ -319,6 +329,7 @@ public static class DatabaseSeeder
                 "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=800&q=80"
             );
             cabin5.UpdateAmenities(new List<string> { "WiFi", "Electric-Hookup", "Water-Hookup", "Heating", "Kitchen", "Bathroom" });
+            cabin5.UpdateAreaSquareMeters(40m); // Cabin: 40 m²
             await context.AccommodationTypes.AddAsync(cabin5);
             // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
             context.Entry(cabin5).Property("_amenities").IsModified = true;
@@ -335,6 +346,7 @@ public static class DatabaseSeeder
                 "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80"
             );
             tent5.UpdateAmenities(new List<string> { "Electric-Hookup", "Fire-Pit", "Picnic-Table" });
+            tent5.UpdateAreaSquareMeters(15m); // Tent Site: 15 m²
             await context.AccommodationTypes.AddAsync(tent5);
             // CRITICAL FIX: Mark _amenities as modified for EF Core change tracking
             context.Entry(tent5).Property("_amenities").IsModified = true;

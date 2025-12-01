@@ -44,15 +44,22 @@
                                       Placeholder="Describe this accommodation type, its features, and what makes it special..." />
                     </MudItem>
 
-                    <MudItem xs="12" md="6">
+                    <MudItem xs="12" md="4">
                         <MudNumericField @bind-Value="AccommodationType.MaxCapacity" Label="Maximum Capacity (persons)" Variant="Variant.Outlined"
                                         Required="true" RequiredError="Capacity is required" Min="1"
                                         HideSpinButtons="false" />
                     </MudItem>
 
-                    <MudItem xs="12" md="6">
+                    <MudItem xs="12" md="4">
                         <MudNumericField @bind-Value="AccommodationType.PricePerNight" Label="Price Per Night ($)" Variant="Variant.Outlined"
                                         Required="true" RequiredError="Price is required" Min="0" Format="N2"
+                                        HideSpinButtons="false" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudNumericField @bind-Value="AccommodationType.AreaSquareMeters" Label="Area (m²)" Variant="Variant.Outlined"
+                                        Min="0" Step="0.1m" Format="N1" Clearable="true"
+                                        HelperText="Optional - size in square meters"
                                         HideSpinButtons="false" />
                     </MudItem>
 

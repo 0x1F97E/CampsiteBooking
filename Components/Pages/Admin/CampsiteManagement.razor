@@ -184,6 +184,66 @@
                     </MudButton>
                 </MudItem>
 
+                <!-- Active Status Section -->
+                <MudItem xs="12">
+                    <MudDivider Class="my-4" />
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.ToggleOn" Size="Size.Small" Class="mr-1" />
+                        Campsite Status
+                    </MudText>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="1" Class="pa-4" Style="@($"background-color: {(_selectedCampsite.IsActive ? "#e8f5e9" : "#fff3e0")};")">
+                        <div class="d-flex align-center justify-space-between">
+                            <div>
+                                <MudText Typo="Typo.subtitle1">
+                                    <MudIcon Icon="@(_selectedCampsite.IsActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                             Color="@(_selectedCampsite.IsActive ? Color.Success : Color.Warning)"
+                                             Size="Size.Small" Class="mr-1" />
+                                    @(_selectedCampsite.IsActive ? "Active" : "Inactive (Off Season)")
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @(_selectedCampsite.IsActive
+                                        ? "Campsite is visible in search results and available for booking"
+                                        : "Campsite is hidden from search and shown as 'Off Season' on information page")
+                                </MudText>
+                            </div>
+                            <MudSwitch @bind-Value="_selectedCampsite.IsActive"
+                                       Color="Color.Success"
+                                       UnCheckedColor="Color.Warning"
+                                       Label="@(_selectedCampsite.IsActive ? "Active" : "Inactive")" />
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    @if (!_selectedCampsite.IsActive)
+                    {
+                        <MudPaper Elevation="1" Class="pa-4" Style="background-color: #e3f2fd;">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Class="mr-1" />
+                                Season Opening Date
+                            </MudText>
+                            <MudDatePicker @bind-Date="_selectedCampsite.SeasonOpeningDate"
+                                           Label="Expected Opening Date"
+                                           Variant="Variant.Outlined"
+                                           Placeholder="Select opening date"
+                                           MinDate="DateTime.Today"
+                                           HelperText="When will this campsite open for the new season?" />
+                        </MudPaper>
+                    }
+                    else
+                    {
+                        <MudPaper Elevation="1" Class="pa-4" Style="background-color: #f5f5f5;">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                                Season opening date is only applicable when the campsite is set to inactive/off-season.
+                            </MudText>
+                        </MudPaper>
+                    }
+                </MudItem>
+
                 <!-- Save Button -->
                 <MudItem xs="12" Class="d-flex justify-end">
                     <MudButton Variant="Variant.Filled"
@@ -246,9 +306,14 @@
                                                 </div>
                                             </div>
                                             <div class="d-flex align-center gap-2">
-                                                <MudChip T="string" Size="Size.Small" Color="@(accType.IsActive ? Color.Success : Color.Default)">
-                                                    @(accType.IsActive ? "Active" : "Inactive")
-                                                </MudChip>
+                                                <MudTooltip Text="@(accType.IsActive ? "Click to deactivate - will hide from search results" : "Click to activate - will show in search results")">
+                                                    <MudSwitch @bind-Value="accType.IsActive"
+                                                               Color="Color.Success"
+                                                               UnCheckedColor="Color.Default"
+                                                               Size="Size.Small"
+                                                               Label="@(accType.IsActive ? "Active" : "Inactive")"
+                                                               LabelPosition="LabelPosition.Start" />
+                                                </MudTooltip>
                                                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
                                                                OnClick="@(() => DeleteAccommodationType(accType))" />
                                             </div>
@@ -448,18 +513,28 @@
                                                     Pricing & Capacity
                                                 </MudText>
                                                 <MudGrid>
-                                                    <MudItem xs="12" sm="6">
+                                                    <MudItem xs="12" sm="4">
                                                         <MudNumericField @bind-Value="accType.PricePerNight"
                                                                          Label="Price per Night"
                                                                          Variant="Variant.Outlined"
                                                                          Min="0"
                                                                          Format="C2" />
                                                     </MudItem>
-                                                    <MudItem xs="12" sm="6">
+                                                    <MudItem xs="12" sm="4">
                                                         <MudNumericField @bind-Value="accType.MaxCapacity"
                                                                          Label="Max Guests"
                                                                          Variant="Variant.Outlined"
                                                                          Min="1" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="4">
+                                                        <MudNumericField T="decimal?" @bind-Value="accType.AreaSquareMeters"
+                                                                         Label="Area (m²)"
+                                                                         Variant="Variant.Outlined"
+                                                                         Min="0m"
+                                                                         Step="0.1m"
+                                                                         Format="N1"
+                                                                         Clearable="true"
+                                                                         HelperText="Optional - size in square meters" />
                                                     </MudItem>
                                                 </MudGrid>
                                             </MudItem>
@@ -510,11 +585,6 @@
                                                         </MudItem>
                                                     }
                                                 </MudGrid>
-                                            </MudItem>
-
-                                            <!-- Status -->
-                                            <MudItem xs="12">
-                                                <MudSwitch @bind-Value="accType.IsActive" Color="Color.Success" Label="Active" />
                                             </MudItem>
 
                                             <!-- Save Button -->
@@ -633,6 +703,7 @@
                 AccommodationTypes = new List<string>(), // TODO: Load from accommodation types
                 Amenities = new List<string>(), // TODO: Parse from campsite amenities
                 IsActive = c.IsActive,
+                SeasonOpeningDate = c.SeasonOpeningDate,
                 MapImageUrl = "", // TODO: Get from campsite photos
                 GalleryImages = new List<string>(), // TODO: Load from campsite photos
                 InactivePeriods = new List<InactivePeriodDto>()
@@ -717,7 +788,8 @@
                 IsActive = e.IsActive,
                 AvailableUnits = e.AvailableUnits,
                 UnitNamingPrefix = e.UnitNamingPrefix ?? "",
-                UnitNamingPattern = e.UnitNamingPattern ?? "Numbers"
+                UnitNamingPattern = e.UnitNamingPattern ?? "Numbers",
+                AreaSquareMeters = e.AreaSquareMeters
             }).ToList();
 
             Console.WriteLine($"✅ Loaded {_accommodationTypes.Count} accommodation types for campsite {campsiteId}");
@@ -795,6 +867,9 @@
                 email,
                 campsite.WebsiteUrl ?? string.Empty
             );
+
+            // Update active status and season opening date
+            dbCampsite.SetActiveStatus(campsite.IsActive, campsite.SeasonOpeningDate);
 
             await context.SaveChangesAsync();
 
@@ -1036,6 +1111,12 @@
             // Set unit naming configuration
             entity.UpdateUnitNaming(dto.UnitNamingPrefix, dto.UnitNamingPattern);
 
+            // Set area in square meters if provided
+            if (dto.AreaSquareMeters.HasValue)
+            {
+                entity.UpdateAreaSquareMeters(dto.AreaSquareMeters);
+            }
+
             context.AccommodationTypes.Add(entity);
 
             // CRITICAL FIX: Explicitly mark the private fields as modified for new entities
@@ -1046,6 +1127,10 @@
             }
             context.Entry(entity).Property("_unitNamingPrefix").IsModified = true;
             context.Entry(entity).Property("_unitNamingPattern").IsModified = true;
+            if (dto.AreaSquareMeters.HasValue)
+            {
+                context.Entry(entity).Property("_areaSquareMeters").IsModified = true;
+            }
 
             await context.SaveChangesAsync();
 
@@ -1120,11 +1205,26 @@
             // Update unit naming configuration
             dbAccommodationType.UpdateUnitNaming(accType.UnitNamingPrefix, accType.UnitNamingPattern);
 
+            // Update area in square meters (optional field)
+            dbAccommodationType.UpdateAreaSquareMeters(accType.AreaSquareMeters);
+
+            // Update active status - handle the exception for already active/inactive
+            if (accType.IsActive && !dbAccommodationType.IsActive)
+            {
+                dbAccommodationType.Activate();
+            }
+            else if (!accType.IsActive && dbAccommodationType.IsActive)
+            {
+                dbAccommodationType.Deactivate();
+            }
+
             // CRITICAL FIX: Explicitly mark the private fields as modified
             // EF Core doesn't automatically detect changes to private fields
             context.Entry(dbAccommodationType).Property("_amenities").IsModified = true;
             context.Entry(dbAccommodationType).Property("_unitNamingPrefix").IsModified = true;
             context.Entry(dbAccommodationType).Property("_unitNamingPattern").IsModified = true;
+            context.Entry(dbAccommodationType).Property("_areaSquareMeters").IsModified = true;
+            context.Entry(dbAccommodationType).Property("_isActive").IsModified = true;
 
             await context.SaveChangesAsync();
 
@@ -1388,6 +1488,7 @@
         public List<string> AccommodationTypes { get; set; } = new();
         public List<string> Amenities { get; set; } = new();
         public bool IsActive { get; set; }
+        public DateTime? SeasonOpeningDate { get; set; }
         public string MapImageUrl { get; set; } = string.Empty;
         public List<string> GalleryImages { get; set; } = new();
         public List<InactivePeriodDto> InactivePeriods { get; set; } = new();

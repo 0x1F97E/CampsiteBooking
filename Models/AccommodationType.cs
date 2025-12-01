@@ -25,6 +25,7 @@ public class AccommodationType : Entity<AccommodationTypeId>
     private string _amenities = string.Empty; // Comma-separated list of amenities
     private string _unitNamingPrefix = string.Empty;
     private string _unitNamingPattern = "Numbers"; // "Letters", "Numbers", "PrefixNumbers"
+    private decimal? _areaSquareMeters; // Optional area in square meters
     
     // ============================================================================
     // PUBLIC PROPERTIES (Read-only)
@@ -42,6 +43,7 @@ public class AccommodationType : Entity<AccommodationTypeId>
     public string Amenities => _amenities;
     public string UnitNamingPrefix => _unitNamingPrefix;
     public string UnitNamingPattern => _unitNamingPattern;
+    public decimal? AreaSquareMeters => _areaSquareMeters;
     
     // ============================================================================
     // LEGACY PROPERTIES (for EF Core backward compatibility)
@@ -192,6 +194,21 @@ public class AccommodationType : Entity<AccommodationTypeId>
         {
             _unitNamingPattern = "Numbers"; // Default
         }
+    }
+
+    /// <summary>
+    /// Updates the area in square meters for this accommodation type.
+    /// </summary>
+    /// <param name="areaSquareMeters">The area in square meters, or null to clear the value.</param>
+    /// <exception cref="DomainException">Thrown when the area is negative.</exception>
+    public void UpdateAreaSquareMeters(decimal? areaSquareMeters)
+    {
+        if (areaSquareMeters.HasValue && areaSquareMeters.Value < 0)
+        {
+            throw new DomainException("Area in square meters cannot be negative");
+        }
+
+        _areaSquareMeters = areaSquareMeters;
     }
 }
 

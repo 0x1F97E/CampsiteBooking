@@ -19,5 +19,6 @@ public class CampsiteFormDto
     public double Longitude { get; set; }
     public int EstablishedYear { get; set; } = DateTime.Now.Year;
     public bool IsActive { get; set; } = true;
+    public DateTime? SeasonOpeningDate { get; set; }
 }
 

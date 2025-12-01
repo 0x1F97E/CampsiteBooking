@@ -40,7 +40,13 @@
                     @foreach (var campsite in _campsites)
                     {
                         <MudSelectItem T="int?" Value="@campsite.Id">
-                            @campsite.Name - @campsite.City
+                            <div class="d-flex align-center">
+                                @campsite.Name - @campsite.City
+                                @if (!campsite.IsActive)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="ml-2">Off Season</MudChip>
+                                }
+                            </div>
                         </MudSelectItem>
                     }
                 </MudSelect>
@@ -68,11 +74,43 @@
         var selectedCampsite = GetSelectedCampsite();
         @if (selectedCampsite != null)
         {
+            <!-- Off Season Banner -->
+            @if (!selectedCampsite.IsActive)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Class="mb-4" Icon="@Icons.Material.Filled.WbSunny">
+                    <MudText Typo="Typo.h6" Class="mb-1">
+                        <MudIcon Icon="@Icons.Material.Filled.AcUnit" Size="Size.Small" Class="mr-1" />
+                        Off Season
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        This campsite is currently closed for the season and not available for booking.
+                        @if (selectedCampsite.SeasonOpeningDate.HasValue)
+                        {
+                            <strong> Expected to reopen on @selectedCampsite.SeasonOpeningDate.Value.ToString("MMMM d, yyyy").</strong>
+                        }
+                    </MudText>
+                </MudAlert>
+            }
+
             <MudPaper Elevation="3" Class="pa-4 mb-6">
-                <MudText Typo="Typo.h5" GutterBottom="true">
-                    <MudIcon Icon="@Icons.Material.Filled.ContactPhone" Class="mr-2" />
-                    Contact Information - @selectedCampsite.Name
-                </MudText>
+                <div class="d-flex align-center justify-space-between mb-2">
+                    <MudText Typo="Typo.h5">
+                        <MudIcon Icon="@Icons.Material.Filled.ContactPhone" Class="mr-2" />
+                        Contact Information - @selectedCampsite.Name
+                    </MudText>
+                    @if (!selectedCampsite.IsActive)
+                    {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.AcUnit">
+                            Off Season
+                        </MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle">
+                            Open
+                        </MudChip>
+                    }
+                </div>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
                     Get in touch with this campsite
                 </MudText>
@@ -327,7 +365,9 @@
                 City = c.City ?? "",
                 PostalCode = c.PostalCode ?? "",
                 PhoneNumber = c.PhoneNumber ?? "",
-                Email = c.Email?.Value ?? ""
+                Email = c.Email?.Value ?? "",
+                IsActive = c.IsActive,
+                SeasonOpeningDate = c.SeasonOpeningDate
             }).ToList();
 
         Console.WriteLine($"   ✅ Loaded {_campsites.Count} campsites for Information page");
@@ -497,6 +537,8 @@
         public string PostalCode { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
+        public DateTime? SeasonOpeningDate { get; set; }
     }
 
     private class EventDto

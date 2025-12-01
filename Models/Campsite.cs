@@ -25,6 +25,7 @@ public class Campsite : AggregateRoot<CampsiteId>
     private string _websiteUrl = string.Empty;
     private int _establishedYear;
     private bool _isActive;
+    private DateTime? _seasonOpeningDate;
     private DateTime _createdDate;
     private DateTime _updatedDate;
 
@@ -45,6 +46,7 @@ public class Campsite : AggregateRoot<CampsiteId>
     public string WebsiteUrl => _websiteUrl;
     public int EstablishedYear => _establishedYear;
     public bool IsActive => _isActive;
+    public DateTime? SeasonOpeningDate => _seasonOpeningDate;
     public DateTime CreatedDate => _createdDate;
     public DateTime UpdatedDate => _updatedDate;
     
@@ -149,6 +151,19 @@ public class Campsite : AggregateRoot<CampsiteId>
             throw new DomainException("Campsite is already inactive");
 
         _isActive = false;
+        _updatedDate = DateTime.UtcNow;
+    }
+
+    public void SetActiveStatus(bool isActive, DateTime? seasonOpeningDate = null)
+    {
+        _isActive = isActive;
+        _seasonOpeningDate = isActive ? null : seasonOpeningDate;
+        _updatedDate = DateTime.UtcNow;
+    }
+
+    public void UpdateSeasonOpeningDate(DateTime? openingDate)
+    {
+        _seasonOpeningDate = openingDate;
         _updatedDate = DateTime.UtcNow;
     }
 

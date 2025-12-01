@@ -719,6 +719,60 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"❌ Error adding UnitNaming columns: {ex.Message}");
     }
 
+    // Add AreaSquareMeters column to AccommodationTypes table
+    try
+    {
+        Console.WriteLine("🔧 Adding AreaSquareMeters column to AccommodationTypes table...");
+
+        var areaSquareMetersExists = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='AccommodationTypes' AND COLUMN_NAME='AreaSquareMeters'"
+        ).FirstOrDefaultAsync();
+
+        if (areaSquareMetersExists == 0)
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE AccommodationTypes
+                ADD COLUMN AreaSquareMeters DECIMAL(10,2) NULL
+            ");
+            Console.WriteLine("   ✅ AreaSquareMeters column added");
+        }
+        else
+        {
+            Console.WriteLine("   ✅ AreaSquareMeters column already exists");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error adding AreaSquareMeters column: {ex.Message}");
+    }
+
+    // Add SeasonOpeningDate column to Campsites table
+    try
+    {
+        Console.WriteLine("🔧 Adding SeasonOpeningDate column to Campsites table...");
+
+        var seasonOpeningDateExists = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='Campsites' AND COLUMN_NAME='SeasonOpeningDate'"
+        ).FirstOrDefaultAsync();
+
+        if (seasonOpeningDateExists == 0)
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE Campsites
+                ADD COLUMN SeasonOpeningDate DATETIME(6) NULL
+            ");
+            Console.WriteLine("   ✅ SeasonOpeningDate column added");
+        }
+        else
+        {
+            Console.WriteLine("   ✅ SeasonOpeningDate column already exists");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error adding SeasonOpeningDate column: {ex.Message}");
+    }
+
     // Seed initial data
     await DatabaseSeeder.SeedAsync(db);
 
@@ -728,6 +782,36 @@ using (var scope = app.Services.CreateScope())
     Console.WriteLine("\n🔧 Applying amenities data fix...");
     await AmenitiesDataFixer.FixAmenitiesDataAsync(db);
     Console.WriteLine("✅ Amenities data fix completed\n");
+
+    // FIX: Update existing accommodation types with AreaSquareMeters values if null
+    Console.WriteLine("🔧 Updating AreaSquareMeters for existing accommodation types...");
+    try
+    {
+        var accommodationTypes = await db.AccommodationTypes.ToListAsync();
+        foreach (var accType in accommodationTypes)
+        {
+            if (!accType.AreaSquareMeters.HasValue)
+            {
+                // Assign realistic area based on accommodation type
+                decimal areaValue = accType.Type?.ToLower() switch
+                {
+                    var t when t != null && t.Contains("cabin") => 32m,
+                    var t when t != null && t.Contains("tent") => 20m,
+                    var t when t != null && t.Contains("glamping") => 45m,
+                    var t when t != null && t.Contains("rv") => 40m,
+                    _ => 25m
+                };
+                accType.UpdateAreaSquareMeters(areaValue);
+                Console.WriteLine($"   Updated {accType.Type} with AreaSquareMeters = {areaValue}");
+            }
+        }
+        await db.SaveChangesAsync();
+        Console.WriteLine("✅ AreaSquareMeters update completed\n");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error updating AreaSquareMeters: {ex.Message}");
+    }
 
     // DIAGNOSTICS: Run data synchronization diagnostics to help identify issues
     // This will show all bookings and users in the database
