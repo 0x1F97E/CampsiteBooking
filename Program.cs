@@ -809,7 +809,8 @@ using (var scope = app.Services.CreateScope())
     }
 
     // Seed initial data
-    await DatabaseSeeder.SeedAsync(db);
+    // Temporarily skip seeding to allow app startup (foreign key issue with ServiceCatalogItems)
+    // await DatabaseSeeder.SeedAsync(db);
 
     // FIX: Apply amenities data fix to correct old data from before EF Core change tracking fix
     // This ensures all amenities are properly saved with the _amenities field marked as modified
