@@ -4,11 +4,13 @@
 <div class="slideshow-container" style="position: relative; width: 100%; height: @(Height)px; overflow: hidden;">
     @if (_images.Any())
     {
-        <!-- Current Image -->
-        <MudImage Src="@_images[_currentIndex]" 
-                  Alt="@($"Image {_currentIndex + 1} of {_images.Count}")"
-                  ObjectFit="ObjectFit.Cover"
-                  Style="width: 100%; height: 100%; object-fit: cover;" />
+        <!-- Current Image (Clickable to enlarge) -->
+        <div @onclick="OpenEnlargedView" style="width: 100%; height: 100%; cursor: zoom-in;">
+            <MudImage Src="@_images[_currentIndex]"
+                      Alt="@($"Image {_currentIndex + 1} of {_images.Count}")"
+                      ObjectFit="ObjectFit.Cover"
+                      Style="width: 100%; height: 100%; object-fit: cover;" />
+        </div>
 
         @if (ShowControls && _images.Count > 1)
         {
@@ -44,7 +46,7 @@
                 @for (int i = 0; i < _images.Count; i++)
                 {
                     var index = i;
-                    <div @onclick="@(() => GoToImage(index))"
+                    <div @onclick="@(() => GoToImage(index))" @onclick:stopPropagation="true"
                          style="width: 10px; height: 10px; border-radius: 50%; cursor: pointer;
                                 background-color: @(i == _currentIndex ? "white" : "rgba(255,255,255,0.5)");
                                 border: 1px solid rgba(0,0,0,0.3);
@@ -53,24 +55,114 @@
             </div>
         }
 
-        <!-- Image Counter -->
+        <!-- Image Counter + Zoom hint -->
         @if (_images.Count > 1)
         {
-            <div style="position: absolute; top: 8px; left: 8px; background-color: rgba(0,0,0,0.5); 
+            <div style="position: absolute; top: 8px; left: 8px; background-color: rgba(0,0,0,0.5);
                         color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem;">
                 @(_currentIndex + 1) / @_images.Count
+            </div>
+        }
+
+        <!-- Zoom hint icon -->
+        @if (EnableZoom)
+        {
+            <div style="position: absolute; bottom: 8px; right: 8px; background-color: rgba(0,0,0,0.5);
+                        color: white; padding: 4px; border-radius: 4px; display: flex; align-items: center; gap: 4px;">
+                <MudIcon Icon="@Icons.Material.Filled.ZoomIn" Size="Size.Small" />
             </div>
         }
     }
     else
     {
         <!-- Placeholder when no images -->
-        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; 
+        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
                     background-color: #f5f5f5;">
             <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Large" Color="Color.Default" />
         </div>
     }
 </div>
+
+<!-- Enlarged Image Modal/Overlay -->
+@if (_isEnlargedViewOpen && _images.Any())
+{
+    <div class="image-overlay" @onclick="CloseEnlargedView"
+         style="position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background-color: rgba(0,0,0,0.9); z-index: 9999;
+                display: flex; align-items: center; justify-content: center;
+                animation: fadeIn 0.2s ease-out;">
+
+        <!-- Close Button -->
+        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                       Color="Color.Default"
+                       Size="Size.Large"
+                       OnClick="CloseEnlargedView"
+                       Style="position: absolute; top: 16px; right: 16px; background-color: rgba(255,255,255,0.2); color: white; border-radius: 50%;"
+                       aria-label="Close enlarged view" />
+
+        <!-- Image Counter in Enlarged View -->
+        @if (_images.Count > 1)
+        {
+            <div style="position: absolute; top: 16px; left: 16px; background-color: rgba(255,255,255,0.2);
+                        color: white; padding: 8px 16px; border-radius: 20px; font-size: 1rem; font-weight: 500;">
+                @(_currentIndex + 1) / @_images.Count
+            </div>
+        }
+
+        <!-- Previous Button (Enlarged View) -->
+        @if (_images.Count > 1)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                           Color="Color.Default"
+                           Size="Size.Large"
+                           OnClick="PreviousImageEnlarged"
+                           Style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); background-color: rgba(255,255,255,0.2); color: white; border-radius: 50%;"
+                           aria-label="Previous image" />
+        }
+
+        <!-- Enlarged Image Container -->
+        <div @onclick:stopPropagation="true"
+             style="max-width: 90vw; max-height: 85vh; display: flex; align-items: center; justify-content: center;">
+            <img src="@_images[_currentIndex]"
+                 alt="@($"Enlarged image {_currentIndex + 1} of {_images.Count}")"
+                 style="max-width: 100%; max-height: 85vh; object-fit: contain; border-radius: 4px;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.5);" />
+        </div>
+
+        <!-- Next Button (Enlarged View) -->
+        @if (_images.Count > 1)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                           Color="Color.Default"
+                           Size="Size.Large"
+                           OnClick="NextImageEnlarged"
+                           Style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background-color: rgba(255,255,255,0.2); color: white; border-radius: 50%;"
+                           aria-label="Next image" />
+        }
+
+        <!-- Position Indicators in Enlarged View -->
+        @if (_images.Count > 1)
+        {
+            <div style="position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px;">
+                @for (int i = 0; i < _images.Count; i++)
+                {
+                    var index = i;
+                    <div @onclick="@(() => GoToImageEnlarged(index))" @onclick:stopPropagation="true"
+                         style="width: 12px; height: 12px; border-radius: 50%; cursor: pointer;
+                                background-color: @(i == _currentIndex ? "white" : "rgba(255,255,255,0.4)");
+                                border: 2px solid rgba(255,255,255,0.6);
+                                transition: all 0.3s ease;
+                                transform: @(i == _currentIndex ? "scale(1.2)" : "scale(1)");" />
+                }
+            </div>
+        }
+
+        <!-- Keyboard hint -->
+        <div style="position: absolute; bottom: 24px; right: 24px; color: rgba(255,255,255,0.5); font-size: 0.75rem;">
+            Press ESC to close
+        </div>
+    </div>
+}
 
 @code {
     [Parameter] public List<string> GalleryImages { get; set; } = new();
@@ -80,11 +172,14 @@
     [Parameter] public int IntervalSeconds { get; set; } = 5;
     [Parameter] public bool ShowControls { get; set; } = true;
     [Parameter] public int Height { get; set; } = 200;
+    [Parameter] public bool EnableZoom { get; set; } = true;
 
     private List<string> _images = new();
     private int _currentIndex = 0;
     private System.Timers.Timer? _timer;
     private bool _isPlaying = false;
+    private bool _isEnlargedViewOpen = false;
+    private bool _wasPlayingBeforeEnlarge = false;
 
     protected override void OnInitialized()
     {
@@ -99,7 +194,7 @@
     {
         var previousCount = _images.Count;
         BuildImageList();
-        
+
         // Reset index if images changed significantly
         if (_images.Count != previousCount)
         {
@@ -168,6 +263,48 @@
     }
 
     private void GoToImage(int index)
+    {
+        if (index >= 0 && index < _images.Count)
+            _currentIndex = index;
+    }
+
+    // Enlarged view methods
+    private void OpenEnlargedView()
+    {
+        if (!EnableZoom || !_images.Any()) return;
+
+        // Remember if slideshow was playing and pause it
+        _wasPlayingBeforeEnlarge = _isPlaying;
+        if (_isPlaying)
+        {
+            StopSlideshow();
+        }
+
+        _isEnlargedViewOpen = true;
+    }
+
+    private void CloseEnlargedView()
+    {
+        _isEnlargedViewOpen = false;
+
+        // Resume slideshow if it was playing before
+        if (_wasPlayingBeforeEnlarge && AutoPlay && _images.Count > 1)
+        {
+            StartSlideshow();
+        }
+    }
+
+    private void NextImageEnlarged()
+    {
+        _currentIndex = (_currentIndex + 1) % _images.Count;
+    }
+
+    private void PreviousImageEnlarged()
+    {
+        _currentIndex = (_currentIndex - 1 + _images.Count) % _images.Count;
+    }
+
+    private void GoToImageEnlarged(int index)
     {
         if (index >= 0 && index < _images.Count)
             _currentIndex = index;
