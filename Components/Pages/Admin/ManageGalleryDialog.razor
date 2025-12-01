@@ -35,11 +35,21 @@
             @if (_galleryImages.Any())
             {
                 <MudText Typo="Typo.subtitle1" Class="mb-2">Gallery Images (@_galleryImages.Count)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" Style="vertical-align: text-bottom;" />
+                    The first image will be used as the main display image
+                </MudText>
                 <MudGrid>
                     @foreach (var (imageUrl, index) in _galleryImages.Select((url, i) => (url, i)))
                     {
                         <MudItem xs="12" sm="6" md="4">
-                            <MudCard>
+                            <MudCard Class="@(index == 0 ? "mud-border-primary" : "")" Style="@(index == 0 ? "border: 2px solid var(--mud-palette-primary);" : "")">
+                                @if (index == 0)
+                                {
+                                    <MudChip T="string" Color="Color.Primary" Size="Size.Small" Style="position: absolute; top: 8px; left: 8px; z-index: 1;">
+                                        Main Image
+                                    </MudChip>
+                                }
                                 <MudCardMedia Image="@imageUrl" Height="150" />
                                 <MudCardActions>
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete"

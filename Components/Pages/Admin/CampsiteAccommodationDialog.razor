@@ -64,20 +64,6 @@
                     </MudItem>
 
                     <MudItem xs="12">
-                        <MudTextField @bind-Value="AccommodationType.ImageUrl" Label="Image URL" Variant="Variant.Outlined"
-                                      Placeholder="https://example.com/image.jpg" />
-                    </MudItem>
-
-                    @if (!string.IsNullOrWhiteSpace(AccommodationType.ImageUrl))
-                    {
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.subtitle2" GutterBottom="true">Image Preview:</MudText>
-                            <MudImage Src="@AccommodationType.ImageUrl" Alt="Accommodation preview"
-                                      Height="200" ObjectFit="ObjectFit.Cover" Class="rounded" />
-                        </MudItem>
-                    }
-
-                    <MudItem xs="12">
                         <MudSelect T="string" @bind-Value="AccommodationType.Icon"
                                    Label="Icon"
                                    Variant="Variant.Outlined"

@@ -549,20 +549,26 @@
                                             <MudItem xs="12">
                                                 <MudText Typo="Typo.subtitle1" Class="mb-2">
                                                     <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Small" Class="mr-1" />
-                                                    Pictures
+                                                    Photo Gallery
                                                 </MudText>
                                                 <MudGrid>
-                                                    <MudItem xs="12">
-                                                        <MudTextField @bind-Value="accType.ImageUrl"
-                                                                      Label="Main Image URL"
-                                                                      Variant="Variant.Outlined"
-                                                                      FullWidth="true" />
-                                                    </MudItem>
-                                                    @if (!string.IsNullOrWhiteSpace(accType.ImageUrl))
+                                                    @if (accType.GalleryImages.Any())
                                                     {
                                                         <MudItem xs="12">
-                                                            <MudImage Src="@accType.ImageUrl" Alt="@accType.Type"
-                                                                      Height="200" ObjectFit="ObjectFit.Cover" Class="rounded" />
+                                                            <div class="d-flex flex-wrap gap-2">
+                                                                @foreach (var (imageUrl, index) in accType.GalleryImages.Take(4).Select((url, i) => (url, i)))
+                                                                {
+                                                                    <MudImage Src="@imageUrl" Alt="@($"{accType.Type} image {index + 1}")"
+                                                                              Height="100" Width="100" ObjectFit="ObjectFit.Cover" Class="rounded" />
+                                                                }
+                                                                @if (accType.GalleryImages.Count > 4)
+                                                                {
+                                                                    <MudPaper Class="d-flex align-center justify-center rounded"
+                                                                              Style="width: 100px; height: 100px; background-color: var(--mud-palette-background-grey);">
+                                                                        <MudText Typo="Typo.body1" Color="Color.Primary">+@(accType.GalleryImages.Count - 4)</MudText>
+                                                                    </MudPaper>
+                                                                }
+                                                            </div>
                                                         </MudItem>
                                                     }
                                                     <MudItem xs="12">
@@ -789,6 +795,10 @@
                 Console.WriteLine($"   ... and {allSpots.Count - 10} more spots");
             }
 
+            // Load all photos for accommodation types
+            var allPhotos = await context.Photos.ToListAsync();
+            Console.WriteLine($"📊 Loaded {allPhotos.Count} total photos from database");
+
             // Convert entities to DTOs with null-safe access
             _accommodationTypes = entities.Select(e => {
                 // Get spots for this accommodation type
@@ -808,7 +818,19 @@
                     })
                     .ToList();
 
-                Console.WriteLine($"   📦 {e.Type}: {typeSpots.Count} spots loaded, maintenance count: {typeSpots.Count(s => s.IsUnderMaintenance)}");
+                // Get gallery images for this accommodation type
+                var galleryImages = allPhotos
+                    .Where(p => p.AccommodationTypeId?.Value == e.Id?.Value)
+                    .OrderBy(p => p.DisplayOrder)
+                    .Select(p => p.Url)
+                    .ToList();
+
+                Console.WriteLine($"   📦 {e.Type}: {typeSpots.Count} spots loaded, maintenance count: {typeSpots.Count(s => s.IsUnderMaintenance)}, {galleryImages.Count} gallery images");
+
+                // Use first gallery image as the main image if no ImageUrl is set
+                var mainImageUrl = !string.IsNullOrWhiteSpace(e.ImageUrl)
+                    ? e.ImageUrl
+                    : (galleryImages.FirstOrDefault() ?? "");
 
                 return new AccommodationTypeDto
                 {
@@ -818,11 +840,11 @@
                     Description = e.Description ?? "",
                     MaxCapacity = e.MaxCapacity,
                     PricePerNight = e.BasePrice?.Amount ?? 0m,
-                    ImageUrl = e.ImageUrl ?? "",
+                    ImageUrl = mainImageUrl,
                     Icon = "", // Default icon, can be customized later
                     Amenities = e.GetAmenitiesList(), // Load from database
                     Spots = typeSpots,
-                    GalleryImages = new List<string>(),
+                    GalleryImages = galleryImages,
                     IsActive = e.IsActive,
                     AvailableUnits = e.AvailableUnits,
                     UnitNamingPrefix = e.UnitNamingPrefix ?? "",
@@ -1375,10 +1397,95 @@
         }
     }
 
-    private void ManageGallery(AccommodationTypeDto accType)
+    private async Task ManageGallery(AccommodationTypeDto accType)
     {
-        // This would open a dialog to manage the photo gallery
-        Snackbar.Add("Photo gallery management coming soon!", Severity.Info);
+        var parameters = new DialogParameters
+        {
+            ["Title"] = $"Photo Gallery - {accType.Type}",
+            ["GalleryImages"] = accType.GalleryImages ?? new List<string>()
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<ManageGalleryDialog>("Manage Photo Gallery", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is List<string> updatedGallery)
+        {
+            try
+            {
+                var accommodationTypeIdValue = accType.Id;
+                var campsiteIdValue = accType.CampsiteId;
+                var now = DateTime.UtcNow;
+
+                // Use a single context but with raw SQL for all operations to avoid tracking issues
+                await using var context = await DbContextFactory.CreateDbContextAsync();
+
+                // Step 1: Delete existing photos using raw SQL
+                await context.Database.ExecuteSqlRawAsync(
+                    "DELETE FROM Photos WHERE AccommodationTypeId = {0}",
+                    accommodationTypeIdValue);
+
+                // Step 2: Get the maximum existing photo ID using ADO.NET directly
+                var connection = context.Database.GetDbConnection();
+                await connection.OpenAsync();
+                int nextPhotoId = 1;
+                try
+                {
+                    using var command = connection.CreateCommand();
+                    command.CommandText = "SELECT COALESCE(MAX(Id), 0) FROM Photos";
+                    var maxIdResult = await command.ExecuteScalarAsync();
+                    nextPhotoId = (maxIdResult != null && maxIdResult != DBNull.Value)
+                        ? Convert.ToInt32(maxIdResult) + 1
+                        : 1;
+                }
+                finally
+                {
+                    await connection.CloseAsync();
+                }
+
+                // Step 3: Insert new photos using raw SQL to avoid entity tracking conflicts
+                // Include both Id and PhotoId columns since they're both required
+                for (int i = 0; i < updatedGallery.Count; i++)
+                {
+                    var url = updatedGallery[i];
+                    var caption = accType.Type;
+                    var altText = $"{accType.Type} photo {i + 1}";
+                    var displayOrder = i;
+                    var isPrimary = i == 0;
+                    var category = "Gallery";
+                    var photoId = nextPhotoId + i;
+
+                    await context.Database.ExecuteSqlRawAsync(
+                        @"INSERT INTO Photos (Id, PhotoId, CampsiteId, AccommodationTypeId, Url, Caption, AltText, DisplayOrder, IsPrimary, UploadedDate, UpdatedDate, Category)
+                          VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11})",
+                        photoId, photoId, campsiteIdValue, accommodationTypeIdValue, url, caption, altText, displayOrder, isPrimary, now, now, category);
+                }
+
+                // Step 4: Update the accommodation type's ImageUrl
+                var newImageUrl = updatedGallery.FirstOrDefault() ?? "";
+                await context.Database.ExecuteSqlRawAsync(
+                    "UPDATE AccommodationTypes SET ImageUrl = {0} WHERE Id = {1}",
+                    newImageUrl, accommodationTypeIdValue);
+
+                // Update the DTO
+                accType.GalleryImages = updatedGallery;
+                accType.ImageUrl = newImageUrl;
+
+                Snackbar.Add("Photo gallery updated successfully!", Severity.Success);
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error saving photo gallery: {ex.Message}");
+                Snackbar.Add($"Error saving photo gallery: {ex.Message}", Severity.Error);
+            }
+        }
     }
 
     private bool GetAmenityValue(AccommodationTypeDto accType, string amenity)
