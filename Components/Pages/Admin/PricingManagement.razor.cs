@@ -21,18 +21,60 @@ public class PricingManagementBase : ComponentBase
     protected bool _loading = true;
 
     // Preview calculator
-    protected string _previewAccommodationType = "Cabin";
+    protected int _previewCampsiteId = 0;
+    protected int _previewAccommodationTypeId = 0;
     protected string _previewSeason = "High Season";
     protected int _previewNights = 3;
     protected decimal _previewBase = 0;
     protected decimal _previewMultiplier = 1.5m;
     protected decimal _previewTotal = 0;
+    protected List<BasePricingDto> _previewAccommodationTypes = new();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadPricingData();
         await LoadSeasonalPricing();
         await LoadDiscounts();
+        InitializePreviewDefaults();
+        CalculatePreview();
+    }
+
+    private void InitializePreviewDefaults()
+    {
+        // Set default preview campsite to the first campsite if available
+        if (_campsites.Any())
+        {
+            _previewCampsiteId = _campsites.First().Id;
+            UpdatePreviewAccommodationTypes();
+        }
+    }
+
+    protected void OnPreviewCampsiteChanged(int campsiteId)
+    {
+        _previewCampsiteId = campsiteId;
+        UpdatePreviewAccommodationTypes();
+        CalculatePreview();
+    }
+
+    private void UpdatePreviewAccommodationTypes()
+    {
+        var campsite = _campsites.FirstOrDefault(c => c.Id == _previewCampsiteId);
+        _previewAccommodationTypes = campsite?.Pricing?.ToList() ?? new List<BasePricingDto>();
+
+        // Reset accommodation type selection to first available or 0
+        if (_previewAccommodationTypes.Any())
+        {
+            _previewAccommodationTypeId = _previewAccommodationTypes.First().Id;
+        }
+        else
+        {
+            _previewAccommodationTypeId = 0;
+        }
+    }
+
+    protected void OnPreviewAccommodationTypeChanged(int accommodationTypeId)
+    {
+        _previewAccommodationTypeId = accommodationTypeId;
         CalculatePreview();
     }
 
@@ -243,9 +285,25 @@ public class PricingManagementBase : ComponentBase
 
     protected void CalculatePreview()
     {
-        var pricing = GetSelectedCampsitePricing().FirstOrDefault(p => p.Type == _previewAccommodationType);
+        // Find the selected accommodation type from the preview accommodation types list
+        var pricing = _previewAccommodationTypes.FirstOrDefault(p => p.Id == _previewAccommodationTypeId);
         _previewBase = pricing?.Price ?? 0;
+
+        // Get the seasonal multiplier based on selected season
+        var season = _seasonalMultipliers.FirstOrDefault(s => s.Name == _previewSeason);
+        _previewMultiplier = season?.Multiplier ?? 1.0m;
+
         _previewTotal = _previewBase * _previewMultiplier * _previewNights;
+    }
+
+    protected string GetPreviewCampsiteName()
+    {
+        return _campsites.FirstOrDefault(c => c.Id == _previewCampsiteId)?.Name ?? "No campsite selected";
+    }
+
+    protected string GetPreviewAccommodationTypeName()
+    {
+        return _previewAccommodationTypes.FirstOrDefault(a => a.Id == _previewAccommodationTypeId)?.Type ?? "No accommodation selected";
     }
 
     // Save accommodation type pricing (base price only - max capacity is managed in Campsite Management)
