@@ -32,6 +32,7 @@ public class CampsiteBookingDbContext : DbContext
     public DbSet<SeasonalPricing> SeasonalPricings => Set<SeasonalPricing>();
     public DbSet<Discount> Discounts => Set<Discount>();
     public DbSet<PeripheralPurchase> PeripheralPurchases => Set<PeripheralPurchase>();
+    public DbSet<PurchaseOption> PurchaseOptions => Set<PurchaseOption>();
     public DbSet<Amenity> Amenities => Set<Amenity>();
     public DbSet<AmenityLookup> AmenityLookups => Set<AmenityLookup>();
     public DbSet<Photo> Photos => Set<Photo>();
@@ -374,6 +375,42 @@ public class CampsiteBookingDbContext : DbContext
             entity.HasIndex(a => a.Name).IsUnique();
         });
 
+        // Configure PurchaseOption entity
+        modelBuilder.Entity<PurchaseOption>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+
+            entity.Property(p => p.Id).HasColumnName("Id")
+                .HasConversion(new PurchaseOptionIdConverter());
+
+            entity.Ignore(p => p.PurchaseOptionId);
+
+            entity.Property(p => p.CampsiteId).HasColumnName("CampsiteId")
+                .HasConversion(new CampsiteIdConverter())
+                .IsRequired();
+
+            entity.Property(p => p.AccommodationTypeId).HasColumnName("AccommodationTypeId")
+                .HasConversion(new AccommodationTypeIdConverter());
+
+            entity.Property(p => p.Name).HasColumnName("Name")
+                .HasMaxLength(100).IsRequired();
+
+            entity.Property(p => p.Description).HasColumnName("Description")
+                .HasMaxLength(500);
+
+            entity.Property(p => p.Price).HasColumnName("Price")
+                .HasConversion(new MoneyConverter());
+
+            entity.Property(p => p.Category).HasColumnName("Category")
+                .HasMaxLength(50);
+
+            entity.Property(p => p.IsActive).HasColumnName("IsActive");
+
+            entity.Property(p => p.CreatedDate).HasColumnName("CreatedDate");
+
+            entity.Property(p => p.UpdatedDate).HasColumnName("UpdatedDate");
+        });
+
         // Configure Photo entity to map private fields
         modelBuilder.Entity<Photo>(entity =>
         {
@@ -540,6 +577,7 @@ public class CampsiteBookingDbContext : DbContext
         configurationBuilder.Properties<SeasonalPricingId>().HaveConversion<SeasonalPricingIdConverter>();
         configurationBuilder.Properties<DiscountId>().HaveConversion<DiscountIdConverter>();
         configurationBuilder.Properties<PeripheralPurchaseId>().HaveConversion<PeripheralPurchaseIdConverter>();
+        configurationBuilder.Properties<PurchaseOptionId>().HaveConversion<PurchaseOptionIdConverter>();
         configurationBuilder.Properties<AmenityId>().HaveConversion<AmenityIdConverter>();
         configurationBuilder.Properties<AmenityLookupId>().HaveConversion<AmenityLookupIdConverter>();
         configurationBuilder.Properties<PhotoId>().HaveConversion<PhotoIdConverter>();

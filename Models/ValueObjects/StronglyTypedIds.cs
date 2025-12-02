@@ -124,6 +124,13 @@ public sealed class PeripheralPurchaseId : StronglyTypedId
     public static PeripheralPurchaseId CreateNew() => new(0, allowZero: true);
 }
 
+public sealed class PurchaseOptionId : StronglyTypedId
+{
+    private PurchaseOptionId(int value, bool allowZero = false) : base(value, allowZero) { }
+    public static PurchaseOptionId Create(int value) => new(value);
+    public static PurchaseOptionId CreateNew() => new(0, allowZero: true);
+}
+
 public sealed class AmenityId : StronglyTypedId
 {
     private AmenityId(int value, bool allowZero = false) : base(value, allowZero) { }

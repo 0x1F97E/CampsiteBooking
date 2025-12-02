@@ -90,8 +90,15 @@
                                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">Additional Services:</MudText>
                                 @foreach (var service in _selectedServices)
                                 {
-                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                        <MudText Typo="Typo.body2" Class="ml-3">@service.Name:</MudText>
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                           Size="Size.Small"
+                                                           Color="Color.Error"
+                                                           Title="Remove service"
+                                                           OnClick="@(() => RemovePeripheralPurchase(service))" />
+                                            <MudText Typo="Typo.body2">@service.Name:</MudText>
+                                        </MudStack>
                                         <MudText Typo="Typo.body1" Color="Color.Info"><b>$@service.Price.ToString("N2")</b></MudText>
                                     </MudStack>
                                 }
@@ -293,6 +300,7 @@
                                          Dense="true"
                                          Class="mb-2">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@GetCategoryIcon(service.Category)" Size="Size.Small" Class="mr-1" />
                                     <MudText Typo="Typo.body1">@service.Name (+$@service.Price.ToString("N2"))</MudText>
                                 </MudStack>
                                 <MudText Typo="Typo.body2" Class="ml-2" Color="Color.Secondary">
@@ -316,6 +324,7 @@
                                          Dense="true"
                                          Class="mb-2">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@GetCategoryIcon(service.Category)" Size="Size.Small" Class="mr-1" />
                                     <MudText Typo="Typo.body1">@service.Name (+$@service.Price.ToString("N2"))</MudText>
                                 </MudStack>
                                 <MudText Typo="Typo.body2" Class="ml-2" Color="Color.Secondary">
@@ -609,8 +618,8 @@
             // Load camping spots for this campsite (with availability based on selected dates)
             await LoadCampingSpotsAsync();
 
-            // Load peripheral purchases
-            LoadPeripheralPurchases();
+            // Load peripheral purchases (purchase options from database)
+            await LoadPeripheralPurchasesAsync();
         }
         catch (Exception ex)
         {
@@ -1084,14 +1093,89 @@
         }
     }
 
-    private void LoadPeripheralPurchases()
+    private async Task LoadPeripheralPurchasesAsync()
     {
-        // TODO: Load from database when PeripheralPurchases table is created
-        // For now, return empty lists (no hardcoded data)
-        _accommodationPeripheralPurchases = new List<PeripheralPurchaseDto>();
-        _campsitePeripheralPurchases = new List<PeripheralPurchaseDto>();
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
 
-        Console.WriteLine("⚠️ Peripheral purchases not loaded - database table not yet created");
+            var campsiteId = CampsiteId.Create(_campsiteId);
+
+            // Load all active purchase options for this campsite
+            var purchaseOptions = await context.PurchaseOptions
+                .Where(p => p.CampsiteId == campsiteId && p.IsActive)
+                .ToListAsync();
+
+            Console.WriteLine($"📦 Loaded {purchaseOptions.Count} purchase options for campsite {_campsiteId}");
+
+            // Filter for accommodation-specific options (where AccommodationTypeId matches the selected accommodation)
+            if (_accommodationId.HasValue)
+            {
+                var accommodationTypeId = AccommodationTypeId.Create(_accommodationId.Value);
+                _accommodationPeripheralPurchases = purchaseOptions
+                    .Where(p => p.AccommodationTypeId != null && p.AccommodationTypeId == accommodationTypeId)
+                    .Select(p => new PeripheralPurchaseDto
+                    {
+                        Id = p.Id?.Value ?? 0,
+                        Name = p.Name,
+                        Description = p.Description,
+                        Price = p.Price?.Amount ?? 0,
+                        Category = p.Category,
+                        IsActive = p.IsActive,
+                        IsSelected = false
+                    })
+                    .ToList();
+
+                Console.WriteLine($"   🏠 Found {_accommodationPeripheralPurchases.Count} accommodation-specific options for accommodation type {_accommodationId}");
+            }
+            else
+            {
+                _accommodationPeripheralPurchases = new List<PeripheralPurchaseDto>();
+            }
+
+            // Filter for campsite-level options (where AccommodationTypeId is NULL)
+            _campsitePeripheralPurchases = purchaseOptions
+                .Where(p => p.AccommodationTypeId == null)
+                .Select(p => new PeripheralPurchaseDto
+                {
+                    Id = p.Id?.Value ?? 0,
+                    Name = p.Name,
+                    Description = p.Description,
+                    Price = p.Price?.Amount ?? 0,
+                    Category = p.Category,
+                    IsActive = p.IsActive,
+                    IsSelected = false
+                })
+                .ToList();
+
+            Console.WriteLine($"   🏕️ Found {_campsitePeripheralPurchases.Count} campsite-level options");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading purchase options: {ex.Message}");
+            _accommodationPeripheralPurchases = new List<PeripheralPurchaseDto>();
+            _campsitePeripheralPurchases = new List<PeripheralPurchaseDto>();
+        }
+    }
+
+    private string GetCategoryIcon(string? category)
+    {
+        return category?.ToLowerInvariant() switch
+        {
+            "activity" => Icons.Material.Filled.DirectionsRun,
+            "service" => Icons.Material.Filled.RoomService,
+            "equipment" => Icons.Material.Filled.Build,
+            "food & beverage" or "food" => Icons.Material.Filled.Restaurant,
+            "other" => Icons.Material.Filled.MoreHoriz,
+            _ => Icons.Material.Filled.ShoppingCart
+        };
+    }
+
+    private void RemovePeripheralPurchase(PeripheralPurchaseDto service)
+    {
+        // Deselect the service - this will remove it from the booking summary
+        service.IsSelected = false;
+        StateHasChanged();
     }
 
     private void ApplyDiscount()
@@ -1206,6 +1290,27 @@
 
             var bookingId = booking.Id?.Value ?? 0;
             Console.WriteLine($"✅ Created booking {bookingId} for user {currentUserId}");
+
+            // Save selected peripheral purchases (add-ons)
+            if (_selectedServices.Any())
+            {
+                var bookingIdValue = BookingId.Create(bookingId);
+                foreach (var service in _selectedServices)
+                {
+                    var peripheralPurchase = PeripheralPurchase.Create(
+                        bookingIdValue,
+                        service.Name,
+                        service.Description,
+                        1, // quantity
+                        Money.Create(service.Price, "DKK")
+                    );
+
+                    await context.PeripheralPurchases.AddAsync(peripheralPurchase);
+                    Console.WriteLine($"✅ Added peripheral purchase '{service.Name}' (${service.Price:N2}) to booking {bookingId}");
+                }
+                await context.SaveChangesAsync();
+                Console.WriteLine($"✅ Saved {_selectedServices.Count} peripheral purchases for booking {bookingId}");
+            }
 
             // Publish BookingCreatedEvent to Kafka for email/SMS notifications
             try
@@ -1448,6 +1553,7 @@
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        public string Category { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
         public bool IsSelected { get; set; } = false;
     }

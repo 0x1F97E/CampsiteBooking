@@ -55,9 +55,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.Bed" Class="mr-2" />
                 Accommodation Types & Pricing
             </MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
-                Manage accommodation types, quantities, prices, and their peripheral purchases for @GetSelectedCampsiteName()
-            </MudText>
+
 
             @foreach (var accommodation in GetSelectedCampsitePricing())
             {
@@ -81,16 +79,6 @@
                                 </div>
                             </div>
                         </CardHeaderContent>
-                        <CardHeaderActions>
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                          Color="Color.Primary"
-                                          Size="Size.Small"
-                                          OnClick="@(() => EditAccommodationType(accommodation))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                          Color="Color.Error"
-                                          Size="Size.Small"
-                                          OnClick="@(() => DeleteAccommodationType(accommodation))" />
-                        </CardHeaderActions>
                     </MudCardHeader>
                     <MudCardContent>
                         <MudText Typo="Typo.subtitle2" Class="mb-2">
@@ -104,6 +92,7 @@
                             <MudTable Items="@accommodation.AccommodationPeripheralPurchases" Hover="true" Dense="true" Elevation="0" Class="mb-2">
                                 <HeaderContent>
                                     <MudTh>Service</MudTh>
+                                    <MudTh>Category</MudTh>
                                     <MudTh>Price</MudTh>
                                     <MudTh>Status</MudTh>
                                     <MudTh>Actions</MudTh>
@@ -111,12 +100,17 @@
                                 <RowTemplate>
                                     <MudTd DataLabel="Service">
                                         <div class="d-flex align-center">
-                                            <MudIcon Icon="@GetPeripheralPurchaseIcon(context.Name)" Size="Size.Small" Class="mr-2" Color="Color.Primary" />
+                                            <MudIcon Icon="@GetCategoryIcon(context.Category)" Size="Size.Small" Class="mr-2" Color="Color.Primary" />
                                             <div>
                                                 <MudText Typo="Typo.body2"><strong>@context.Name</strong></MudText>
                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
                                             </div>
                                         </div>
+                                    </MudTd>
+                                    <MudTd DataLabel="Category">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                            @context.Category
+                                        </MudChip>
                                     </MudTd>
                                     <MudTd DataLabel="Price">
                                         <MudText Typo="Typo.body2" Color="Color.Success">
@@ -132,10 +126,12 @@
                                         <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                                       Color="Color.Primary"
                                                       Size="Size.Small"
+                                                      Title="Edit purchase option"
                                                       OnClick="@(() => EditAccommodationPeripheralPurchase(accommodation, context))" />
                                         <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                       Color="Color.Error"
                                                       Size="Size.Small"
+                                                      Title="Delete purchase option"
                                                       OnClick="@(() => DeleteAccommodationPeripheralPurchase(accommodation, context))" />
                                     </MudTd>
                                 </RowTemplate>
@@ -180,6 +176,7 @@
                     <MudTable Items="@GetSelectedCampsitePeripheralPurchases()" Hover="true" Dense="true" Elevation="0">
                         <HeaderContent>
                             <MudTh>Activity/Service</MudTh>
+                            <MudTh>Category</MudTh>
                             <MudTh>Price</MudTh>
                             <MudTh>Status</MudTh>
                             <MudTh>Actions</MudTh>
@@ -187,12 +184,17 @@
                         <RowTemplate>
                             <MudTd DataLabel="Activity/Service">
                                 <div class="d-flex align-center">
-                                    <MudIcon Icon="@GetPeripheralPurchaseIcon(context.Name)" Class="mr-3" Color="Color.Primary" />
+                                    <MudIcon Icon="@GetCategoryIcon(context.Category)" Class="mr-3" Color="Color.Primary" />
                                     <div>
                                         <MudText><strong>@context.Name</strong></MudText>
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
                                     </div>
                                 </div>
+                            </MudTd>
+                            <MudTd DataLabel="Category">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                    @context.Category
+                                </MudChip>
                             </MudTd>
                             <MudTd DataLabel="Price">
                                 <MudText Typo="Typo.body1" Color="Color.Success">
@@ -208,10 +210,12 @@
                                 <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                               Color="Color.Primary"
                                               Size="Size.Small"
+                                              Title="Edit purchase option"
                                               OnClick="@(() => EditPeripheralPurchase(context))" />
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                               Color="Color.Error"
                                               Size="Size.Small"
+                                              Title="Delete purchase option"
                                               OnClick="@(() => DeletePeripheralPurchase(context))" />
                             </MudTd>
                         </RowTemplate>

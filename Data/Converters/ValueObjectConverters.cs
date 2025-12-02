@@ -142,6 +142,11 @@ public class PeripheralPurchaseIdConverter : ValueConverter<PeripheralPurchaseId
     public PeripheralPurchaseIdConverter() : base(v => v.Value, v => PeripheralPurchaseId.Create(v)) { }
 }
 
+public class PurchaseOptionIdConverter : ValueConverter<PurchaseOptionId, int>
+{
+    public PurchaseOptionIdConverter() : base(v => v.Value, v => PurchaseOptionId.Create(v)) { }
+}
+
 public class AmenityIdConverter : ValueConverter<AmenityId, int>
 {
     public AmenityIdConverter() : base(v => v.Value, v => AmenityId.Create(v)) { }

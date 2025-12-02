@@ -53,6 +53,11 @@ public class PricingManagementBase : ComponentBase
 
             Console.WriteLine($"📊 Loaded {allAccommodationTypes.Count} accommodation types from database");
 
+            // Load all purchase options
+            var allPurchaseOptions = await context.PurchaseOptions.ToListAsync();
+
+            Console.WriteLine($"📊 Loaded {allPurchaseOptions.Count} purchase options from database");
+
             // Convert to DTOs
             _campsites = campsiteEntities.Select(c =>
             {
@@ -61,23 +66,54 @@ public class PricingManagementBase : ComponentBase
                     .Where(a => a.CampsiteId?.Value == c.Id?.Value)
                     .ToList();
 
+                // Filter campsite-level purchase options (no accommodation type)
+                var campsitePurchaseOptions = allPurchaseOptions
+                    .Where(p => p.CampsiteId?.Value == c.Id?.Value && p.AccommodationTypeId == null)
+                    .Select(p => new PeripheralPurchaseDto
+                    {
+                        Id = p.PurchaseOptionId,
+                        Name = p.Name,
+                        Description = p.Description,
+                        Price = p.Price?.Amount ?? 0,
+                        Category = p.Category,
+                        IsActive = p.IsActive
+                    })
+                    .ToList();
+
                 return new CampsitePricingDto
                 {
                     Id = c.Id?.Value ?? 0,
                     Name = c.Name ?? "Unknown",
                     City = c.City ?? "Unknown",
                     Attractiveness = c.Attractiveness ?? "Unknown",
-                    Pricing = campsiteAccommodationTypes.Select(a => new BasePricingDto
+                    Pricing = campsiteAccommodationTypes.Select(a =>
                     {
-                        Id = a.Id?.Value ?? 0,
-                        Type = a.Type ?? "Unknown",
-                        Price = a.BasePrice?.Amount ?? 0,
-                        AvailableUnits = a.AvailableUnits,
-                        MaxGuests = a.MaxCapacity,
-                        IsActive = a.IsActive,
-                        AccommodationPeripheralPurchases = new()
+                        // Filter accommodation-level purchase options
+                        var accommodationPurchaseOptions = allPurchaseOptions
+                            .Where(p => p.AccommodationTypeId?.Value == a.Id?.Value)
+                            .Select(p => new PeripheralPurchaseDto
+                            {
+                                Id = p.PurchaseOptionId,
+                                Name = p.Name,
+                                Description = p.Description,
+                                Price = p.Price?.Amount ?? 0,
+                                Category = p.Category,
+                                IsActive = p.IsActive
+                            })
+                            .ToList();
+
+                        return new BasePricingDto
+                        {
+                            Id = a.Id?.Value ?? 0,
+                            Type = a.Type ?? "Unknown",
+                            Price = a.BasePrice?.Amount ?? 0,
+                            AvailableUnits = a.AvailableUnits,
+                            MaxGuests = a.MaxCapacity,
+                            IsActive = a.IsActive,
+                            AccommodationPeripheralPurchases = accommodationPurchaseOptions
+                        };
                     }).ToList(),
-                    PeripheralPurchases = new()
+                    PeripheralPurchases = campsitePurchaseOptions
                 };
             }).ToList();
 
@@ -202,54 +238,8 @@ public class PricingManagementBase : ComponentBase
         _previewTotal = _previewBase * _previewMultiplier * _previewNights;
     }
 
-    protected void AddAccommodationType()
-    {
-        // TODO: Open dialog to add new accommodation type
-        Snackbar.Add("Add accommodation type dialog coming soon", Severity.Info);
-    }
-
-    protected void EditAccommodationType(BasePricingDto accommodation)
-    {
-        // TODO: Open dialog to edit accommodation type pricing
-        Snackbar.Add($"Edit accommodation type dialog coming soon", Severity.Info);
-    }
-
-    protected async Task DeleteAccommodationType(BasePricingDto accommodation)
-    {
-        var campsite = GetSelectedCampsite();
-        if (campsite == null) return;
-
-        try
-        {
-            using var context = await DbContextFactory.CreateDbContextAsync();
-
-            var accommodationTypeId = AccommodationTypeId.Create(accommodation.Id);
-            var dbAccommodationType = await context.AccommodationTypes
-                .FirstOrDefaultAsync(a => a.Id == accommodationTypeId);
-
-            if (dbAccommodationType == null)
-            {
-                Snackbar.Add("Accommodation type not found", Severity.Error);
-                return;
-            }
-
-            // Remove from database
-            context.AccommodationTypes.Remove(dbAccommodationType);
-            await context.SaveChangesAsync();
-
-            // Remove from in-memory list
-            campsite.Pricing.Remove(accommodation);
-
-            Console.WriteLine($"✅ Accommodation type '{accommodation.Type}' deleted successfully");
-            Snackbar.Add($"Accommodation type '{accommodation.Type}' deleted successfully", Severity.Success);
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"❌ Error deleting accommodation type: {ex.Message}");
-            Snackbar.Add($"Error deleting accommodation type: {ex.Message}", Severity.Error);
-        }
-    }
+    // Note: Accommodation types are managed via the Campsites admin section.
+    // This pricing page only manages purchase options (add-ons) for accommodation types.
 
     protected void AddSeasonalMultiplier()
     {
@@ -343,21 +333,108 @@ public class PricingManagementBase : ComponentBase
         }
     }
 
-    protected void AddAccommodationPeripheralPurchase(BasePricingDto accommodation)
+    protected async Task AddAccommodationPeripheralPurchase(BasePricingDto accommodation)
     {
-        Snackbar.Add($"Add peripheral purchase to {accommodation.Type}", Severity.Info);
+        var campsite = GetSelectedCampsite();
+        if (campsite == null) return;
+
+        var parameters = new DialogParameters<AddPurchaseDialog>
+        {
+            { x => x.Purchase, new AddPurchaseDialog.PurchaseDialogDto { AccommodationTypeId = accommodation.Id } },
+            { x => x.IsEdit, false },
+            { x => x.AccommodationTypeName, accommodation.Type }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddPurchaseDialog>($"Add Purchase Option for {accommodation.Type}", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is AddPurchaseDialog.PurchaseDialogDto purchaseDto)
+        {
+            await SavePurchaseOption(campsite.Id, purchaseDto);
+
+            // Add to in-memory list with the ID from the saved entity
+            accommodation.AccommodationPeripheralPurchases.Add(new PeripheralPurchaseDto
+            {
+                Id = purchaseDto.Id,
+                Name = purchaseDto.Name,
+                Description = purchaseDto.Description,
+                Price = purchaseDto.Price,
+                Category = purchaseDto.Category,
+                IsActive = purchaseDto.IsActive
+            });
+
+            Snackbar.Add($"Purchase option '{purchaseDto.Name}' added successfully", Severity.Success);
+            StateHasChanged();
+        }
     }
 
-    protected void EditAccommodationPeripheralPurchase(BasePricingDto accommodation, PeripheralPurchaseDto purchase)
+    protected async Task EditAccommodationPeripheralPurchase(BasePricingDto accommodation, PeripheralPurchaseDto purchase)
     {
-        Snackbar.Add($"Edit {purchase.Name}", Severity.Info);
+        var parameters = new DialogParameters<AddPurchaseDialog>
+        {
+            { x => x.Purchase, new AddPurchaseDialog.PurchaseDialogDto
+                {
+                    Id = purchase.Id,
+                    Name = purchase.Name,
+                    Description = purchase.Description,
+                    Price = purchase.Price,
+                    Category = purchase.Category,
+                    IsActive = purchase.IsActive,
+                    AccommodationTypeId = accommodation.Id
+                }
+            },
+            { x => x.IsEdit, true },
+            { x => x.AccommodationTypeName, accommodation.Type }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddPurchaseDialog>($"Edit Purchase Option", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is AddPurchaseDialog.PurchaseDialogDto purchaseDto)
+        {
+            await UpdatePurchaseOption(purchaseDto);
+
+            // Update in-memory
+            purchase.Name = purchaseDto.Name;
+            purchase.Description = purchaseDto.Description;
+            purchase.Price = purchaseDto.Price;
+            purchase.Category = purchaseDto.Category;
+            purchase.IsActive = purchaseDto.IsActive;
+
+            Snackbar.Add($"Purchase option '{purchaseDto.Name}' updated successfully", Severity.Success);
+            StateHasChanged();
+        }
     }
 
-    protected void DeleteAccommodationPeripheralPurchase(BasePricingDto accommodation, PeripheralPurchaseDto purchase)
+    protected async Task DeleteAccommodationPeripheralPurchase(BasePricingDto accommodation, PeripheralPurchaseDto purchase)
     {
-        accommodation.AccommodationPeripheralPurchases.Remove(purchase);
-        Snackbar.Add($"Peripheral purchase '{purchase.Name}' deleted successfully", Severity.Success);
-        StateHasChanged();
+        var confirm = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete the purchase option '{purchase.Name}'?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirm == true)
+        {
+            await DeletePurchaseOptionFromDb(purchase.Id);
+            accommodation.AccommodationPeripheralPurchases.Remove(purchase);
+            Snackbar.Add($"Purchase option '{purchase.Name}' deleted successfully", Severity.Success);
+            StateHasChanged();
+        }
     }
 
     protected IEnumerable<PeripheralPurchaseDto> GetSelectedCampsitePeripheralPurchases()
@@ -368,24 +445,217 @@ public class PricingManagementBase : ComponentBase
         return new List<PeripheralPurchaseDto>();
     }
 
-    protected void AddPeripheralPurchase()
-    {
-        Snackbar.Add("Add new peripheral purchase", Severity.Info);
-    }
-
-    protected void EditPeripheralPurchase(PeripheralPurchaseDto purchase)
-    {
-        Snackbar.Add($"Edit {purchase.Name}", Severity.Info);
-    }
-
-    protected void DeletePeripheralPurchase(PeripheralPurchaseDto purchase)
+    protected async Task AddPeripheralPurchase()
     {
         var campsite = GetSelectedCampsite();
-        if (campsite != null)
+        if (campsite == null) return;
+
+        var parameters = new DialogParameters<AddPurchaseDialog>
         {
-            campsite.PeripheralPurchases.Remove(purchase);
-            Snackbar.Add($"Peripheral purchase '{purchase.Name}' deleted successfully", Severity.Success);
+            { x => x.Purchase, new AddPurchaseDialog.PurchaseDialogDto() },
+            { x => x.IsEdit, false }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddPurchaseDialog>($"Add Purchase Option for {campsite.Name}", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is AddPurchaseDialog.PurchaseDialogDto purchaseDto)
+        {
+            await SavePurchaseOption(campsite.Id, purchaseDto);
+
+            // Add to in-memory list with the ID from the saved entity
+            campsite.PeripheralPurchases.Add(new PeripheralPurchaseDto
+            {
+                Id = purchaseDto.Id,
+                Name = purchaseDto.Name,
+                Description = purchaseDto.Description,
+                Price = purchaseDto.Price,
+                Category = purchaseDto.Category,
+                IsActive = purchaseDto.IsActive
+            });
+
+            Snackbar.Add($"Purchase option '{purchaseDto.Name}' added successfully", Severity.Success);
             StateHasChanged();
+        }
+    }
+
+    protected async Task EditPeripheralPurchase(PeripheralPurchaseDto purchase)
+    {
+        var parameters = new DialogParameters<AddPurchaseDialog>
+        {
+            { x => x.Purchase, new AddPurchaseDialog.PurchaseDialogDto
+                {
+                    Id = purchase.Id,
+                    Name = purchase.Name,
+                    Description = purchase.Description,
+                    Price = purchase.Price,
+                    Category = purchase.Category,
+                    IsActive = purchase.IsActive
+                }
+            },
+            { x => x.IsEdit, true }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddPurchaseDialog>("Edit Purchase Option", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is AddPurchaseDialog.PurchaseDialogDto purchaseDto)
+        {
+            await UpdatePurchaseOption(purchaseDto);
+
+            // Update in-memory
+            purchase.Name = purchaseDto.Name;
+            purchase.Description = purchaseDto.Description;
+            purchase.Price = purchaseDto.Price;
+            purchase.Category = purchaseDto.Category;
+            purchase.IsActive = purchaseDto.IsActive;
+
+            Snackbar.Add($"Purchase option '{purchaseDto.Name}' updated successfully", Severity.Success);
+            StateHasChanged();
+        }
+    }
+
+    protected async Task DeletePeripheralPurchase(PeripheralPurchaseDto purchase)
+    {
+        var campsite = GetSelectedCampsite();
+        if (campsite == null) return;
+
+        var confirm = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete the purchase option '{purchase.Name}'?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirm == true)
+        {
+            await DeletePurchaseOptionFromDb(purchase.Id);
+            campsite.PeripheralPurchases.Remove(purchase);
+            Snackbar.Add($"Purchase option '{purchase.Name}' deleted successfully", Severity.Success);
+            StateHasChanged();
+        }
+    }
+
+    private async Task SavePurchaseOption(int campsiteId, AddPurchaseDialog.PurchaseDialogDto dto)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            PurchaseOption purchaseOption;
+
+            if (dto.AccommodationTypeId.HasValue)
+            {
+                purchaseOption = PurchaseOption.CreateForAccommodationType(
+                    CampsiteId.Create(campsiteId),
+                    AccommodationTypeId.Create(dto.AccommodationTypeId.Value),
+                    dto.Name,
+                    dto.Description,
+                    Money.Create(dto.Price, "USD"),
+                    dto.Category
+                );
+            }
+            else
+            {
+                purchaseOption = PurchaseOption.CreateForCampsite(
+                    CampsiteId.Create(campsiteId),
+                    dto.Name,
+                    dto.Description,
+                    Money.Create(dto.Price, "USD"),
+                    dto.Category
+                );
+            }
+
+            if (!dto.IsActive)
+            {
+                purchaseOption.Deactivate();
+            }
+
+            await context.PurchaseOptions.AddAsync(purchaseOption);
+            await context.SaveChangesAsync();
+
+            dto.Id = purchaseOption.PurchaseOptionId;
+            Console.WriteLine($"✅ Saved purchase option '{dto.Name}' with ID {dto.Id}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error saving purchase option: {ex.Message}");
+            Snackbar.Add($"Error saving purchase option: {ex.Message}", Severity.Error);
+            throw;
+        }
+    }
+
+    private async Task UpdatePurchaseOption(AddPurchaseDialog.PurchaseDialogDto dto)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var purchaseOptionId = PurchaseOptionId.Create(dto.Id);
+            var dbPurchaseOption = await context.PurchaseOptions
+                .FirstOrDefaultAsync(p => p.Id == purchaseOptionId);
+
+            if (dbPurchaseOption == null)
+            {
+                Snackbar.Add("Purchase option not found", Severity.Error);
+                return;
+            }
+
+            dbPurchaseOption.UpdateDetails(
+                dto.Name,
+                dto.Description,
+                Money.Create(dto.Price, "USD"),
+                dto.Category
+            );
+
+            dbPurchaseOption.SetActive(dto.IsActive);
+
+            await context.SaveChangesAsync();
+            Console.WriteLine($"✅ Updated purchase option '{dto.Name}'");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error updating purchase option: {ex.Message}");
+            Snackbar.Add($"Error updating purchase option: {ex.Message}", Severity.Error);
+            throw;
+        }
+    }
+
+    private async Task DeletePurchaseOptionFromDb(int purchaseOptionId)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var id = PurchaseOptionId.Create(purchaseOptionId);
+            var dbPurchaseOption = await context.PurchaseOptions
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (dbPurchaseOption != null)
+            {
+                context.PurchaseOptions.Remove(dbPurchaseOption);
+                await context.SaveChangesAsync();
+                Console.WriteLine($"✅ Deleted purchase option with ID {purchaseOptionId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error deleting purchase option: {ex.Message}");
+            Snackbar.Add($"Error deleting purchase option: {ex.Message}", Severity.Error);
+            throw;
         }
     }
 
@@ -415,6 +685,19 @@ public class PricingManagementBase : ComponentBase
             var n when n.Contains("hiking") => Icons.Material.Filled.Hiking,
             var n when n.Contains("campfire") || n.Contains("firewood") => Icons.Material.Filled.LocalFireDepartment,
             _ => Icons.Material.Filled.LocalActivity
+        };
+    }
+
+    protected string GetCategoryIcon(string? category)
+    {
+        return category?.ToLowerInvariant() switch
+        {
+            "activity" => Icons.Material.Filled.DirectionsRun,
+            "service" => Icons.Material.Filled.RoomService,
+            "equipment" => Icons.Material.Filled.Build,
+            "food & beverage" or "food" => Icons.Material.Filled.Restaurant,
+            "other" => Icons.Material.Filled.MoreHoriz,
+            _ => Icons.Material.Filled.ShoppingCart
         };
     }
 

@@ -1,0 +1,121 @@
+@using MudBlazor
+@rendermode InteractiveServer
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_isValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Purchase.Name" 
+                                  Label="Purchase Option Name" 
+                                  Variant="Variant.Outlined" 
+                                  Required="true"
+                                  RequiredError="Name is required"
+                                  MaxLength="100"
+                                  Placeholder="e.g., Kayak Rental, Fishing Trip, Campfire Package" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Purchase.Description" 
+                                  Label="Description" 
+                                  Variant="Variant.Outlined" 
+                                  Lines="3"
+                                  MaxLength="500"
+                                  Placeholder="Describe what this purchase includes..." />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="Purchase.Price" 
+                                     Label="Price" 
+                                     Variant="Variant.Outlined" 
+                                     Format="N2" 
+                                     Min="0" 
+                                     Adornment="Adornment.Start" 
+                                     AdornmentText="$"
+                                     Required="true"
+                                     RequiredError="Price is required" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect @bind-Value="Purchase.Category" 
+                               Label="Category" 
+                               Variant="Variant.Outlined" 
+                               Required="true"
+                               RequiredError="Category is required">
+                        <MudSelectItem Value="@("Activity")">
+                            <MudIcon Icon="@Icons.Material.Filled.DirectionsRun" Size="Size.Small" Class="mr-2" />
+                            Activity
+                        </MudSelectItem>
+                        <MudSelectItem Value="@("Service")">
+                            <MudIcon Icon="@Icons.Material.Filled.RoomService" Size="Size.Small" Class="mr-2" />
+                            Service
+                        </MudSelectItem>
+                        <MudSelectItem Value="@("Equipment")">
+                            <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Class="mr-2" />
+                            Equipment
+                        </MudSelectItem>
+                        <MudSelectItem Value="@("Food")">
+                            <MudIcon Icon="@Icons.Material.Filled.Restaurant" Size="Size.Small" Class="mr-2" />
+                            Food & Beverage
+                        </MudSelectItem>
+                        <MudSelectItem Value="@("Other")">
+                            <MudIcon Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" Class="mr-2" />
+                            Other
+                        </MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSwitch @bind-Value="Purchase.IsActive" Color="Color.Success" Label="Active" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="Submit" 
+                   Disabled="@(!_isValid)">
+            @(IsEdit ? "Update" : "Create")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public PurchaseDialogDto Purchase { get; set; } = new();
+
+    [Parameter]
+    public bool IsEdit { get; set; }
+
+    [Parameter]
+    public string? AccommodationTypeName { get; set; }
+
+    private MudForm _form = null!;
+    private bool _isValid;
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Submit()
+    {
+        if (_isValid)
+        {
+            MudDialog.Close(DialogResult.Ok(Purchase));
+        }
+    }
+
+    public class PurchaseDialogDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public string Category { get; set; } = "Activity";
+        public bool IsActive { get; set; } = true;
+        public int? AccommodationTypeId { get; set; }
+    }
+}
+
