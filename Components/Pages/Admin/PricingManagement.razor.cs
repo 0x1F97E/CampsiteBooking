@@ -248,8 +248,42 @@ public class PricingManagementBase : ComponentBase
         _previewTotal = _previewBase * _previewMultiplier * _previewNights;
     }
 
-    // Note: Accommodation types are managed via the Campsites admin section.
-    // This pricing page only manages purchase options (add-ons) for accommodation types.
+    // Save accommodation type pricing (base price and max capacity)
+    protected async Task SaveAccommodationPricing(BasePricingDto accommodation)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var accommodationTypeId = AccommodationTypeId.Create(accommodation.Id);
+            var dbAccommodationType = await context.AccommodationTypes
+                .FirstOrDefaultAsync(a => a.Id == accommodationTypeId);
+
+            if (dbAccommodationType == null)
+            {
+                Snackbar.Add("Accommodation type not found", Severity.Error);
+                return;
+            }
+
+            // Update pricing using domain methods
+            dbAccommodationType.UpdateBasePrice(Money.Create(accommodation.Price, "DKK"));
+            dbAccommodationType.UpdateMaxCapacity(accommodation.MaxGuests);
+
+            // Mark private fields as modified for EF Core to track changes
+            context.Entry(dbAccommodationType).Property("_basePrice").IsModified = true;
+            context.Entry(dbAccommodationType).Property("_maxCapacity").IsModified = true;
+
+            await context.SaveChangesAsync();
+
+            Console.WriteLine($"✅ Saved pricing for '{accommodation.Type}': ${accommodation.Price}/night, {accommodation.MaxGuests} guests max");
+            Snackbar.Add($"Pricing for '{accommodation.Type}' saved successfully!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error saving accommodation pricing: {ex.Message}");
+            Snackbar.Add($"Error saving pricing: {ex.Message}", Severity.Error);
+        }
+    }
 
     protected void AddSeasonalMultiplier()
     {

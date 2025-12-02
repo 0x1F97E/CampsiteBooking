@@ -210,5 +210,40 @@ public class AccommodationType : Entity<AccommodationTypeId>
 
         _areaSquareMeters = areaSquareMeters;
     }
+
+    /// <summary>
+    /// Updates the base price for this accommodation type.
+    /// </summary>
+    /// <param name="basePrice">The new base price.</param>
+    /// <exception cref="DomainException">Thrown when the price is null or negative.</exception>
+    public void UpdateBasePrice(Money basePrice)
+    {
+        if (basePrice == null)
+        {
+            throw new DomainException("Base price cannot be null");
+        }
+
+        if (basePrice.Amount < 0)
+        {
+            throw new DomainException("Base price cannot be negative");
+        }
+
+        _basePrice = basePrice;
+    }
+
+    /// <summary>
+    /// Updates the maximum capacity for this accommodation type.
+    /// </summary>
+    /// <param name="maxCapacity">The new maximum capacity.</param>
+    /// <exception cref="DomainException">Thrown when the capacity is less than 1.</exception>
+    public void UpdateMaxCapacity(int maxCapacity)
+    {
+        if (maxCapacity < 1)
+        {
+            throw new DomainException("Max capacity must be at least 1");
+        }
+
+        _maxCapacity = maxCapacity;
+    }
 }
 

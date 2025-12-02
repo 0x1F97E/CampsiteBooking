@@ -15,7 +15,7 @@
             Pricing Management
         </MudText>
         <MudText Typo="Typo.body1" Color="Color.Secondary">
-            Configure campsite-specific pricing - each campsite has its own base prices and seasonal rates
+            Configure accommodation base prices, purchase options, seasonal multipliers, and discounts
         </MudText>
     </div>
 
@@ -56,7 +56,6 @@
                 Accommodation Types & Pricing
             </MudText>
 
-
             @foreach (var accommodation in GetSelectedCampsitePricing())
             {
                 <MudCard Elevation="2" Class="mb-3">
@@ -68,7 +67,7 @@
                                     <div>
                                         <MudText Typo="Typo.h6">@accommodation.Type</MudText>
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                            @accommodation.AvailableUnits units • $@accommodation.Price.ToString("N2")/night • @accommodation.MaxGuests guests max
+                                            @accommodation.AvailableUnits units
                                         </MudText>
                                     </div>
                                 </div>
@@ -81,6 +80,41 @@
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent>
+                        <!-- Pricing & Capacity Section -->
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" Class="mr-1" />
+                            Base Pricing & Capacity
+                        </MudText>
+                        <MudDivider Class="mb-3" />
+                        <MudGrid>
+                            <MudItem xs="12" sm="4">
+                                <MudNumericField @bind-Value="accommodation.Price"
+                                                 Label="Price per Night"
+                                                 Variant="Variant.Outlined"
+                                                 Min="0m"
+                                                 Format="N2"
+                                                 Adornment="Adornment.Start"
+                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudNumericField @bind-Value="accommodation.MaxGuests"
+                                                 Label="Max Guests"
+                                                 Variant="Variant.Outlined"
+                                                 Min="1" />
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Save"
+                                           OnClick="@(() => SaveAccommodationPricing(accommodation))"
+                                           FullWidth="true"
+                                           Style="height: 56px;">
+                                    Save Pricing
+                                </MudButton>
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudDivider Class="my-4" />
                         <MudText Typo="Typo.subtitle2" Class="mb-2">
                             <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Small" Class="mr-1" />
                             Accommodation Peripheral Purchases
