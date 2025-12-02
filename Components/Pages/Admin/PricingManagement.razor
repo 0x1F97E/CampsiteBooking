@@ -26,7 +26,8 @@
                 <MudGrid>
                     <MudItem xs="12" md="6">
                         <MudSelect T="int"
-                                  @bind-Value="_selectedCampsiteId"
+                                  Value="_selectedCampsiteId"
+                                  ValueChanged="@((int value) => OnSelectedCampsiteChanged(value))"
                                   Label="Select Campsite"
                                   Variant="Variant.Outlined"
                                   AdornmentIcon="@Icons.Material.Filled.Cabin"
@@ -87,24 +88,18 @@
                         </MudText>
                         <MudDivider Class="mb-3" />
                         <MudGrid>
-                            <MudItem xs="12" sm="6">
-                                <MudNumericField @bind-Value="accommodation.Price"
+                            <MudItem xs="12">
+                                <MudNumericField T="decimal"
+                                                 Value="accommodation.Price"
+                                                 ValueChanged="@((decimal newValue) => OnAccommodationPriceChanged(accommodation, newValue))"
                                                  Label="Price per Night"
                                                  Variant="Variant.Outlined"
                                                  Min="0m"
                                                  Format="N2"
                                                  Adornment="Adornment.Start"
-                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudButton Variant="Variant.Filled"
-                                           Color="Color.Primary"
-                                           StartIcon="@Icons.Material.Filled.Save"
-                                           OnClick="@(() => SaveAccommodationPricing(accommodation))"
-                                           FullWidth="true"
-                                           Style="height: 56px;">
-                                    Save Pricing
-                                </MudButton>
+                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                                 Class="@GetAccommodationPriceFieldClass(accommodation.Id)"
+                                                 Immediate="false" />
                             </MudItem>
                         </MudGrid>
 
@@ -181,6 +176,40 @@
                         </MudButton>
                     </MudCardContent>
                 </MudCard>
+            }
+
+            @* Save Changes Button for Campsite Pricing *@
+            @if (HasModifiedAccommodationPrices())
+            {
+                <MudPaper Elevation="2" Class="pa-4 mt-4">
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="mr-1" />
+                                @GetModifiedAccommodationPricesCount() price(s) modified
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Tertiary">
+                                Click "Save Changes" to persist your changes
+                            </MudText>
+                        </div>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Save"
+                                   Disabled="@_isSavingAccommodationPrices"
+                                   OnClick="SaveAccommodationChanges"
+                                   Size="Size.Large">
+                            @if (_isSavingAccommodationPrices)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <span>Save Changes</span>
+                            }
+                        </MudButton>
+                    </div>
+                </MudPaper>
             }
         </MudItem>
 
@@ -352,7 +381,6 @@
                             {
                                 <MudTh>@accommodationType</MudTh>
                             }
-                            <MudTh>Actions</MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="Campsite">
@@ -384,14 +412,6 @@
                                     }
                                 </MudTd>
                             }
-                            <MudTd DataLabel="Actions">
-                                <MudButton Size="Size.Small"
-                                          Variant="Variant.Outlined"
-                                          Color="Color.Primary"
-                                          OnClick="@(() => SelectCampsite(context.Id))">
-                                    Edit Pricing
-                                </MudButton>
-                            </MudTd>
                         </RowTemplate>
                     </MudTable>
 
