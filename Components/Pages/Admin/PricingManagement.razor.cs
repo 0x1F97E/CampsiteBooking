@@ -160,6 +160,9 @@ public class PricingManagementBase : ComponentBase
             }).ToList();
 
             Console.WriteLine($"✅ Loaded {_campsites.Count} campsites with pricing data");
+
+            // Store original prices for change tracking
+            StoreOriginalPrices();
         }
         catch (Exception ex)
         {
@@ -933,6 +936,176 @@ public class PricingManagementBase : ComponentBase
         {
             Console.WriteLine($"❌ Error saving seasonal multipliers: {ex.Message}");
             Snackbar.Add($"Error saving changes: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // ============================================================================
+    // INLINE PRICING EDITING SUPPORT
+    // ============================================================================
+
+    private bool _isSavingAllPrices = false;
+    private Dictionary<int, decimal> _originalPrices = new();
+    private HashSet<int> _modifiedPriceIds = new();
+
+    /// <summary>
+    /// Gets all unique accommodation types across all campsites for dynamic column headers
+    /// </summary>
+    protected IEnumerable<string> GetAllAccommodationTypes()
+    {
+        return _campsites
+            .SelectMany(c => c.Pricing)
+            .Select(p => p.Type)
+            .Distinct()
+            .OrderBy(t => t);
+    }
+
+    /// <summary>
+    /// Stores original prices when data is first loaded for change tracking
+    /// </summary>
+    private void StoreOriginalPrices()
+    {
+        _originalPrices.Clear();
+        _modifiedPriceIds.Clear();
+        foreach (var campsite in _campsites)
+        {
+            foreach (var pricing in campsite.Pricing)
+            {
+                _originalPrices[pricing.Id] = pricing.Price;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handles price change events and tracks modifications
+    /// </summary>
+    protected void OnPriceChanged(BasePricingDto pricing, decimal newValue)
+    {
+        pricing.Price = newValue;
+
+        // Check if price differs from original
+        if (_originalPrices.TryGetValue(pricing.Id, out var originalPrice))
+        {
+            if (newValue != originalPrice)
+            {
+                _modifiedPriceIds.Add(pricing.Id);
+            }
+            else
+            {
+                _modifiedPriceIds.Remove(pricing.Id);
+            }
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Gets CSS class for price field based on modification state
+    /// </summary>
+    protected string GetPriceFieldClass(int accommodationId)
+    {
+        return _modifiedPriceIds.Contains(accommodationId)
+            ? "inline-price-field modified-price"
+            : "inline-price-field";
+    }
+
+    /// <summary>
+    /// Checks if there are any modified prices
+    /// </summary>
+    protected bool HasModifiedPrices()
+    {
+        return _modifiedPriceIds.Count > 0;
+    }
+
+    /// <summary>
+    /// Gets the count of modified prices
+    /// </summary>
+    protected int GetModifiedPricesCount()
+    {
+        return _modifiedPriceIds.Count;
+    }
+
+    /// <summary>
+    /// Saves all modified prices to the database
+    /// </summary>
+    protected async Task SaveAllModifiedPrices()
+    {
+        if (_isSavingAllPrices || !HasModifiedPrices())
+            return;
+
+        _isSavingAllPrices = true;
+        StateHasChanged();
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var modifiedPricings = _campsites
+                .SelectMany(c => c.Pricing)
+                .Where(p => _modifiedPriceIds.Contains(p.Id))
+                .ToList();
+
+            int successCount = 0;
+            var errors = new List<string>();
+
+            foreach (var pricing in modifiedPricings)
+            {
+                try
+                {
+                    var accommodationTypeId = AccommodationTypeId.Create(pricing.Id);
+                    var dbAccommodationType = await context.AccommodationTypes
+                        .FirstOrDefaultAsync(a => a.Id == accommodationTypeId);
+
+                    if (dbAccommodationType == null)
+                    {
+                        errors.Add($"'{pricing.Type}' not found");
+                        continue;
+                    }
+
+                    // Update pricing using domain method
+                    dbAccommodationType.UpdateBasePrice(Money.Create(pricing.Price, "DKK"));
+
+                    // Mark private field as modified for EF Core to track changes
+                    context.Entry(dbAccommodationType).Property("_basePrice").IsModified = true;
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"'{pricing.Type}': {ex.Message}");
+                }
+            }
+
+            await context.SaveChangesAsync();
+
+            // Update original prices to reflect saved values
+            foreach (var id in _modifiedPriceIds.ToList())
+            {
+                var pricing = _campsites.SelectMany(c => c.Pricing).FirstOrDefault(p => p.Id == id);
+                if (pricing != null)
+                {
+                    _originalPrices[id] = pricing.Price;
+                }
+            }
+            _modifiedPriceIds.Clear();
+
+            if (errors.Count == 0)
+            {
+                Console.WriteLine($"✅ Saved {successCount} price(s) successfully");
+                Snackbar.Add($"Successfully saved {successCount} price(s)", Severity.Success);
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ Saved {successCount} price(s) with {errors.Count} error(s)");
+                Snackbar.Add($"Saved {successCount} price(s). Errors: {string.Join(", ", errors)}", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error saving prices: {ex.Message}");
+            Snackbar.Add($"Error saving prices: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSavingAllPrices = false;
+            StateHasChanged();
         }
     }
 }
