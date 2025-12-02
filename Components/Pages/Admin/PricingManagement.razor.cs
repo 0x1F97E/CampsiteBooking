@@ -248,7 +248,7 @@ public class PricingManagementBase : ComponentBase
         _previewTotal = _previewBase * _previewMultiplier * _previewNights;
     }
 
-    // Save accommodation type pricing (base price and max capacity)
+    // Save accommodation type pricing (base price only - max capacity is managed in Campsite Management)
     protected async Task SaveAccommodationPricing(BasePricingDto accommodation)
     {
         try
@@ -265,17 +265,15 @@ public class PricingManagementBase : ComponentBase
                 return;
             }
 
-            // Update pricing using domain methods
+            // Update pricing using domain method (only base price - max capacity is configuration, not pricing)
             dbAccommodationType.UpdateBasePrice(Money.Create(accommodation.Price, "DKK"));
-            dbAccommodationType.UpdateMaxCapacity(accommodation.MaxGuests);
 
-            // Mark private fields as modified for EF Core to track changes
+            // Mark private field as modified for EF Core to track changes
             context.Entry(dbAccommodationType).Property("_basePrice").IsModified = true;
-            context.Entry(dbAccommodationType).Property("_maxCapacity").IsModified = true;
 
             await context.SaveChangesAsync();
 
-            Console.WriteLine($"✅ Saved pricing for '{accommodation.Type}': ${accommodation.Price}/night, {accommodation.MaxGuests} guests max");
+            Console.WriteLine($"✅ Saved pricing for '{accommodation.Type}': ${accommodation.Price}/night");
             Snackbar.Add($"Pricing for '{accommodation.Type}' saved successfully!", Severity.Success);
         }
         catch (Exception ex)

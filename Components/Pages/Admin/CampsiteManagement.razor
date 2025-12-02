@@ -301,7 +301,7 @@
                                                 <div>
                                                     <MudText Typo="Typo.h5">@accType.Type</MudText>
                                                     <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                        @accType.Spots.Count spots • @(accType.AreaSquareMeters.HasValue ? $"{accType.AreaSquareMeters:N0} m²" : "Size not set")
+                                                        @accType.Spots.Count spots • Max @accType.MaxCapacity guests • @(accType.AreaSquareMeters.HasValue ? $"{accType.AreaSquareMeters:N0} m²" : "Size not set")
                                                     </MudText>
                                                 </div>
                                             </div>
@@ -519,7 +519,14 @@
                                                     Configuration
                                                 </MudText>
                                                 <MudGrid>
-                                                    <MudItem xs="12" sm="6">
+                                                    <MudItem xs="12" sm="4">
+                                                        <MudNumericField T="int" @bind-Value="accType.MaxCapacity"
+                                                                         Label="Max Guests"
+                                                                         Variant="Variant.Outlined"
+                                                                         Min="1"
+                                                                         HelperText="Maximum number of guests" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="4">
                                                         <MudNumericField T="decimal?" @bind-Value="accType.AreaSquareMeters"
                                                                          Label="Area (m²)"
                                                                          Variant="Variant.Outlined"
@@ -529,10 +536,10 @@
                                                                          Clearable="true"
                                                                          HelperText="Optional - size in square meters" />
                                                     </MudItem>
-                                                    <MudItem xs="12" sm="6">
+                                                    <MudItem xs="12" sm="4">
                                                         <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
                                                             <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
-                                                            Base pricing and max capacity are managed in
+                                                            Base pricing is managed in
                                                             <MudLink Href="/admin/pricing" Color="Color.Primary">Pricing Management</MudLink>
                                                         </MudAlert>
                                                     </MudItem>
@@ -1260,6 +1267,9 @@
             // Update unit naming configuration
             dbAccommodationType.UpdateUnitNaming(accType.UnitNamingPrefix, accType.UnitNamingPattern);
 
+            // Update max capacity (configuration property)
+            dbAccommodationType.UpdateMaxCapacity(accType.MaxCapacity);
+
             // Update area in square meters (optional field)
             dbAccommodationType.UpdateAreaSquareMeters(accType.AreaSquareMeters);
 
@@ -1278,6 +1288,7 @@
             context.Entry(dbAccommodationType).Property("_amenities").IsModified = true;
             context.Entry(dbAccommodationType).Property("_unitNamingPrefix").IsModified = true;
             context.Entry(dbAccommodationType).Property("_unitNamingPattern").IsModified = true;
+            context.Entry(dbAccommodationType).Property("_maxCapacity").IsModified = true;
             context.Entry(dbAccommodationType).Property("_areaSquareMeters").IsModified = true;
             context.Entry(dbAccommodationType).Property("_isActive").IsModified = true;
 
