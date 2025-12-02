@@ -746,71 +746,8 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"❌ Error adding AreaSquareMeters column: {ex.Message}");
     }
 
-    // Add SeasonOpeningDate column to Campsites table
-    try
-    {
-        Console.WriteLine("🔧 Adding SeasonOpeningDate column to Campsites table...");
-
-        var seasonOpeningDateExists = await db.Database.SqlQueryRaw<int>(
-            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='Campsites' AND COLUMN_NAME='SeasonOpeningDate'"
-        ).FirstOrDefaultAsync();
-
-        if (seasonOpeningDateExists == 0)
-        {
-            await db.Database.ExecuteSqlRawAsync(@"
-                ALTER TABLE Campsites
-                ADD COLUMN SeasonOpeningDate DATETIME(6) NULL
-            ");
-            Console.WriteLine("   ✅ SeasonOpeningDate column added");
-        }
-        else
-        {
-            Console.WriteLine("   ✅ SeasonOpeningDate column already exists");
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"❌ Error adding SeasonOpeningDate column: {ex.Message}");
-    }
-
-    // Add IsUnderMaintenance column to AccommodationSpots table
-    try
-    {
-        Console.WriteLine("🔧 Adding IsUnderMaintenance column to AccommodationSpots table...");
-
-        var isUnderMaintenanceExists = await db.Database.SqlQueryRaw<int>(
-            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='AccommodationSpots' AND COLUMN_NAME='IsUnderMaintenance'"
-        ).FirstOrDefaultAsync();
-
-        if (isUnderMaintenanceExists == 0)
-        {
-            await db.Database.ExecuteSqlRawAsync(@"
-                ALTER TABLE AccommodationSpots
-                ADD COLUMN IsUnderMaintenance TINYINT(1) NOT NULL DEFAULT 0
-            ");
-            Console.WriteLine("   ✅ IsUnderMaintenance column added");
-
-            // Migrate existing spots with Status = 'Maintenance' to IsUnderMaintenance = 1
-            await db.Database.ExecuteSqlRawAsync(@"
-                UPDATE AccommodationSpots
-                SET IsUnderMaintenance = 1
-                WHERE Status = 'Maintenance' OR Status = '3'
-            ");
-            Console.WriteLine("   ✅ Migrated existing maintenance spots");
-        }
-        else
-        {
-            Console.WriteLine("   ✅ IsUnderMaintenance column already exists");
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"❌ Error adding IsUnderMaintenance column: {ex.Message}");
-    }
-
     // Seed initial data
-    // Temporarily skip seeding to allow app startup (foreign key issue with ServiceCatalogItems)
-    // await DatabaseSeeder.SeedAsync(db);
+    await DatabaseSeeder.SeedAsync(db);
 
     // FIX: Apply amenities data fix to correct old data from before EF Core change tracking fix
     // This ensures all amenities are properly saved with the _amenities field marked as modified
