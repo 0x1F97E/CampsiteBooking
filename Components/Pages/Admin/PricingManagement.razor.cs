@@ -146,9 +146,18 @@ public class PricingManagementBase : ComponentBase
 
             Console.WriteLine($"📊 Loaded {seasonalPricingEntities.Count} seasonal pricing records from database");
 
+            // Debug: Log each entity's properties
+            foreach (var sp in seasonalPricingEntities.Take(3))
+            {
+                Console.WriteLine($"   📋 Entity: Id={sp.Id?.Value}, SeasonName='{sp.SeasonName}', IsActive={sp.IsActive}, Multiplier={sp.PriceMultiplier}, StartDate={sp.StartDate}, EndDate={sp.EndDate}");
+            }
+
+            // Filter active ones
+            var activeEntities = seasonalPricingEntities.Where(sp => sp.IsActive).ToList();
+            Console.WriteLine($"   🔍 Active entities: {activeEntities.Count}");
+
             // Group by season name and create DTOs
-            _seasonalMultipliers = seasonalPricingEntities
-                .Where(sp => sp.IsActive)
+            _seasonalMultipliers = activeEntities
                 .GroupBy(sp => sp.SeasonName)
                 .Select(g =>
                 {
@@ -170,6 +179,7 @@ public class PricingManagementBase : ComponentBase
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Error loading seasonal pricing: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
             _seasonalMultipliers = new();
         }
     }
@@ -751,10 +761,89 @@ public class PricingManagementBase : ComponentBase
         return pricing.Any() ? pricing.Average(p => p.Price) : 0;
     }
 
-    protected void EditSeasonalPricing()
+    protected async Task EditSeasonalPricing()
     {
-        Snackbar.Add("Edit seasonal multipliers (applies to all campsites)", Severity.Info);
-        // TODO: Open dialog to edit seasonal pricing
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            var seasonalPricingEntities = await context.SeasonalPricings.ToListAsync();
+
+            // Group by season name and create edit DTOs
+            var seasonEditDtos = seasonalPricingEntities
+                .Where(sp => sp.IsActive)
+                .GroupBy(sp => sp.SeasonName)
+                .Select(g =>
+                {
+                    var first = g.First();
+                    return new EditSeasonalMultipliersDialog.SeasonEditDto
+                    {
+                        Id = first.Id.Value,
+                        Name = first.SeasonName ?? "Unknown Season",
+                        StartDate = first.StartDate,
+                        EndDate = first.EndDate,
+                        Multiplier = first.PriceMultiplier
+                    };
+                })
+                .ToList();
+
+            var parameters = new DialogParameters<EditSeasonalMultipliersDialog>
+            {
+                { x => x.Seasons, seasonEditDtos }
+            };
+
+            var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+            var dialog = await DialogService.ShowAsync<EditSeasonalMultipliersDialog>("Edit Seasonal Multipliers", parameters, options);
+            var result = await dialog.Result;
+
+            if (result != null && !result.Canceled && result.Data is List<EditSeasonalMultipliersDialog.SeasonEditDto> updatedSeasons)
+            {
+                await SaveSeasonalMultipliers(updatedSeasons);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error editing seasonal pricing: {ex.Message}");
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveSeasonalMultipliers(List<EditSeasonalMultipliersDialog.SeasonEditDto> updatedSeasons)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            var allSeasonalPricing = await context.SeasonalPricings.ToListAsync();
+
+            foreach (var updated in updatedSeasons)
+            {
+                // Find all records with this season name and update them
+                var matchingRecords = allSeasonalPricing.Where(sp => sp.SeasonName == updated.Name).ToList();
+
+                foreach (var record in matchingRecords)
+                {
+                    // Update the price multiplier
+                    record.UpdatePriceMultiplier(updated.Multiplier);
+
+                    // Update dates if changed
+                    if (updated.StartDate.HasValue && updated.EndDate.HasValue)
+                    {
+                        record.UpdateDates(updated.StartDate.Value, updated.EndDate.Value);
+                    }
+                }
+            }
+
+            await context.SaveChangesAsync();
+            Snackbar.Add("Seasonal multipliers updated successfully!", Severity.Success);
+
+            // Reload the data to refresh the UI
+            await LoadSeasonalPricing();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error saving seasonal multipliers: {ex.Message}");
+            Snackbar.Add($"Error saving changes: {ex.Message}", Severity.Error);
+        }
     }
 }
 

@@ -426,6 +426,41 @@ public class CampsiteBookingDbContext : DbContext
             entity.Property("_category").HasColumnName("Category").HasMaxLength(50).HasDefaultValue("General");
         });
 
+        // Configure SeasonalPricing entity to map private fields
+        modelBuilder.Entity<SeasonalPricing>(entity =>
+        {
+            // Configure the Id property to use the Id column with value converter
+            entity.Property(sp => sp.Id).HasColumnName("Id")
+                .HasConversion(new SeasonalPricingIdConverter());
+
+            // Ignore the SeasonalPricingId property - it's a computed property
+            entity.Ignore(sp => sp.SeasonalPricingId);
+
+            // Ignore public properties that are backed by private fields
+            entity.Ignore(sp => sp.CampsiteId);
+            entity.Ignore(sp => sp.AccommodationTypeId);
+            entity.Ignore(sp => sp.SeasonName);
+            entity.Ignore(sp => sp.StartDate);
+            entity.Ignore(sp => sp.EndDate);
+            entity.Ignore(sp => sp.PriceMultiplier);
+            entity.Ignore(sp => sp.IsActive);
+            entity.Ignore(sp => sp.CreatedDate);
+            entity.Ignore(sp => sp.UpdatedDate);
+
+            // Map private fields to database columns
+            entity.Property("_campsiteId").HasColumnName("CampsiteId")
+                .HasConversion(new CampsiteIdConverter());
+            entity.Property("_accommodationTypeId").HasColumnName("AccommodationTypeId")
+                .HasConversion(new AccommodationTypeIdConverter());
+            entity.Property("_seasonName").HasColumnName("SeasonName").HasMaxLength(100).IsRequired();
+            entity.Property("_startDate").HasColumnName("StartDate");
+            entity.Property("_endDate").HasColumnName("EndDate");
+            entity.Property("_priceMultiplier").HasColumnName("PriceMultiplier").HasColumnType("decimal(5, 2)");
+            entity.Property("_isActive").HasColumnName("IsActive");
+            entity.Property("_createdDate").HasColumnName("CreatedDate");
+            entity.Property("_updatedDate").HasColumnName("UpdatedDate");
+        });
+
         // Configure Event entity to map private fields
         modelBuilder.Entity<Event>(entity =>
         {

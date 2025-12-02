@@ -8,6 +8,7 @@
 @inject MockPaymentService StripeService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IKafkaProducer KafkaProducer
+@inject IPricingService PricingService
 @using CampsiteBooking.Data
 @using CampsiteBooking.Models
 @using CampsiteBooking.Models.ValueObjects
@@ -80,9 +81,38 @@
                                 <MudText Typo="Typo.body2">Number of nights:</MudText>
                                 <MudText Typo="Typo.body1"><b>@_numberOfNights</b></MudText>
                             </MudStack>
+                            @if (_pricingBreakdown != null && _pricingBreakdown.AverageMultiplier != 1.0m)
+                            {
+                                <!-- Seasonal pricing information -->
+                                @if (_pricingBreakdown.SpansMultipleSeasons)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Info" Class="mb-1">
+                                        <MudIcon Icon="@Icons.Material.Filled.DateRange" Size="Size.Small" Style="vertical-align: middle;" />
+                                        Multiple seasons apply to this booking:
+                                    </MudText>
+                                    @foreach (var seasonGroup in _pricingBreakdown.NightlyBreakdown.GroupBy(n => n.SeasonName))
+                                    {
+                                        var nights = seasonGroup.Count();
+                                        var multiplier = seasonGroup.First().SeasonalMultiplier;
+                                        var seasonTotal = seasonGroup.Sum(n => n.Price);
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                            <MudText Typo="Typo.body2" Color="Color.Info">@seasonGroup.Key (@nights nights ×@multiplier.ToString("F2")):</MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info"><b>$@seasonTotal.ToString("N2")</b></MudText>
+                                        </MudStack>
+                                    }
+                                }
+                                else
+                                {
+                                    var seasonName = _pricingBreakdown.NightlyBreakdown.FirstOrDefault()?.SeasonName ?? "Seasonal";
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudText Typo="Typo.body2" Color="Color.Info">@seasonName multiplier:</MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info"><b>×@_pricingBreakdown.AverageMultiplier.ToString("F2")</b></MudText>
+                                    </MudStack>
+                                }
+                            }
                             <MudStack Row="true" Justify="Justify.SpaceBetween">
                                 <MudText Typo="Typo.body2">Accommodation subtotal:</MudText>
-                                <MudText Typo="Typo.body1"><b>$@((_spotPrice * _numberOfNights).ToString("N2"))</b></MudText>
+                                <MudText Typo="Typo.body1"><b>$@_accommodationSubtotal.ToString("N2")</b></MudText>
                             </MudStack>
                             @if (_selectedServices.Any())
                             {
@@ -176,7 +206,8 @@
                                         Class="mt-3" />
 
                         <MudSelect T="CampingSpot"
-                                  @bind-Value="_selectedSpot"
+                                  Value="_selectedSpot"
+                                  ValueChanged="OnSpotSelectedAsync"
                                   Label="Select Camping Spot"
                                   Variant="Variant.Outlined"
                                   Required="true"
@@ -541,6 +572,10 @@
     private int _discountPercentage = 0;
     private string _discountError = string.Empty;
 
+    // Seasonal pricing breakdown
+    private PricingBreakdown? _pricingBreakdown = null;
+    private bool _isCalculatingPrice = false;
+
     // Payment dialog fields
     private bool _showPaymentDialog = false;
     private MudForm? _paymentForm;
@@ -559,6 +594,9 @@
         ? _accommodation.PricePerNight * _selectedSpot.PriceModifier
         : (_accommodation?.PricePerNight ?? 0);
 
+    // Accommodation subtotal with seasonal multipliers applied
+    private decimal _accommodationSubtotal => _pricingBreakdown?.TotalPrice ?? (_spotPrice * _numberOfNights);
+
     private List<PeripheralPurchaseDto> _selectedServices =>
         _accommodationPeripheralPurchases.Where(s => s.IsSelected)
             .Concat(_campsitePeripheralPurchases.Where(s => s.IsSelected))
@@ -566,7 +604,7 @@
 
     private decimal _servicesTotal => _selectedServices.Sum(s => s.Price);
 
-    private decimal _subtotalPrice => (_spotPrice * _numberOfNights) + _servicesTotal;
+    private decimal _subtotalPrice => _accommodationSubtotal + _servicesTotal;
 
     private decimal _discountAmount => _discountApplied ? (_subtotalPrice * _discountPercentage / 100m) : 0;
 
@@ -1089,7 +1127,73 @@
         {
             Console.WriteLine($"📅 Date range changed to {newDateRange.Start:d} - {newDateRange.End:d}, reloading spots...");
             await LoadCampingSpotsAsync();
+
+            // Recalculate pricing with seasonal multipliers
+            await RecalculateSeasonalPricingAsync();
             StateHasChanged();
+        }
+    }
+
+    private async Task OnSpotSelectedAsync(CampingSpot? spot)
+    {
+        _selectedSpot = spot;
+
+        // Recalculate pricing with seasonal multipliers when spot changes
+        await RecalculateSeasonalPricingAsync();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Recalculates pricing using database-driven seasonal multipliers
+    /// </summary>
+    private async Task RecalculateSeasonalPricingAsync()
+    {
+        // Clear previous breakdown
+        _pricingBreakdown = null;
+
+        if (_accommodation == null || _dateRange?.Start == null || _dateRange?.End == null || _numberOfNights <= 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _isCalculatingPrice = true;
+
+            var spotModifier = _selectedSpot?.PriceModifier ?? 1.0m;
+
+            _pricingBreakdown = await PricingService.CalculatePriceAsync(
+                _accommodation.CampsiteId,
+                _accommodation.Id,
+                _accommodation.PricePerNight,
+                _dateRange.Start.Value,
+                _dateRange.End.Value,
+                spotModifier);
+
+            if (_pricingBreakdown.SpansMultipleSeasons)
+            {
+                Console.WriteLine($"💰 Booking spans multiple seasons. Breakdown:");
+                foreach (var seasonGroup in _pricingBreakdown.NightlyBreakdown.GroupBy(n => n.SeasonName))
+                {
+                    var nights = seasonGroup.Count();
+                    var multiplier = seasonGroup.First().SeasonalMultiplier;
+                    Console.WriteLine($"   - {seasonGroup.Key}: {nights} nights × {multiplier:F2}x");
+                }
+            }
+            else
+            {
+                var seasonName = _pricingBreakdown.NightlyBreakdown.FirstOrDefault()?.SeasonName ?? "Regular";
+                Console.WriteLine($"💰 Pricing calculated: {_numberOfNights} nights in {seasonName} season, multiplier: {_pricingBreakdown.AverageMultiplier:F2}x, total: ${_pricingBreakdown.TotalPrice:N2}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error calculating seasonal pricing: {ex.Message}");
+            // Fall back to non-seasonal pricing (already handled by _accommodationSubtotal property)
+        }
+        finally
+        {
+            _isCalculatingPrice = false;
         }
     }
 
@@ -1283,6 +1387,11 @@
                 booking.AssignAccommodationSpot(spotId);
                 Console.WriteLine($"📍 Assigned spot {_selectedSpot.SpotId} (ID: {_selectedSpot.DatabaseId}) to booking");
             }
+
+            // Update total price with seasonal multipliers and discounts
+            var totalPriceWithSeasonalMultipliers = Money.Create(_totalPrice, "DKK");
+            booking.UpdateTotalPrice(totalPriceWithSeasonalMultipliers);
+            Console.WriteLine($"💰 Updated booking total price to ${_totalPrice:N2} (includes seasonal multipliers and discounts)");
 
             // Save booking to database
             await context.Bookings.AddAsync(booking);

@@ -101,8 +101,18 @@ public class SeasonalPricing : Entity<SeasonalPricingId>
     {
         if (newMultiplier <= 0)
             throw new DomainException("Price multiplier must be greater than 0");
-        
+
         _priceMultiplier = newMultiplier;
+        _updatedDate = DateTime.UtcNow;
+    }
+
+    public void UpdateDates(DateTime newStartDate, DateTime newEndDate)
+    {
+        if (newEndDate.Date <= newStartDate.Date)
+            throw new DomainException("End date must be after start date");
+
+        _startDate = newStartDate.Date;
+        _endDate = newEndDate.Date;
         _updatedDate = DateTime.UtcNow;
     }
 }

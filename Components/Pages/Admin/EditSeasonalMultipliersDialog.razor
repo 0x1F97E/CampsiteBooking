@@ -1,0 +1,106 @@
+@using MudBlazor
+@using CampsiteBooking.Components.Pages.Admin
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            Edit seasonal multipliers that apply to all campsites and accommodation types.
+            Changes will affect pricing calculations for bookings.
+        </MudText>
+        
+        <MudDivider Class="mb-4" />
+        
+        @foreach (var season in Seasons)
+        {
+            <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background-color: #f5f5f5; border-radius: 8px;">
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle1" Color="@GetSeasonColor(season.Name)">
+                            <strong>@season.Name</strong>
+                        </MudText>
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="4">
+                        <MudDatePicker @bind-Date="season.StartDate" 
+                                       Label="Start Date"
+                                       Variant="Variant.Outlined"
+                                       DateFormat="MMM dd"
+                                       FixYear="@DateTime.Now.Year"
+                                       Dense="true" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="4">
+                        <MudDatePicker @bind-Date="season.EndDate" 
+                                       Label="End Date"
+                                       Variant="Variant.Outlined"
+                                       DateFormat="MMM dd"
+                                       FixYear="@DateTime.Now.Year"
+                                       Dense="true" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="4">
+                        <MudNumericField @bind-Value="season.Multiplier"
+                                         Label="Multiplier"
+                                         Variant="Variant.Outlined"
+                                         Format="P0"
+                                         Min="0.01m"
+                                         Max="5.0m"
+                                         Step="0.05m"
+                                         Dense="true"
+                                         HelperText="@GetMultiplierHelper(season.Multiplier)" />
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        }
+        
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+            <MudText Typo="Typo.caption">
+                <strong>Example:</strong> A base price of 100 DKK with a 150% multiplier = 150 DKK per night
+            </MudText>
+        </MudAlert>
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">
+            Save Changes
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public List<SeasonEditDto> Seasons { get; set; } = new();
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(Seasons));
+
+    private Color GetSeasonColor(string season) => season switch
+    {
+        "High Season" => Color.Error,
+        "Medium Season" => Color.Warning,
+        "Low Season" => Color.Info,
+        _ => Color.Default
+    };
+
+    private string GetMultiplierHelper(decimal multiplier)
+    {
+        if (multiplier > 1.0m) return $"+{((multiplier - 1) * 100):N0}% above base price";
+        if (multiplier < 1.0m) return $"-{((1 - multiplier) * 100):N0}% below base price";
+        return "Base price (no adjustment)";
+    }
+
+    public class SeasonEditDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public decimal Multiplier { get; set; } = 1.0m;
+    }
+}
+

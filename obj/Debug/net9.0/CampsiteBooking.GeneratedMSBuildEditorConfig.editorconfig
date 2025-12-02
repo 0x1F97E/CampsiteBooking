@@ -91,6 +91,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9EYXNoYm9hcmQucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/pc/CampsiteBooking-1/Components/Pages/Admin/EditSeasonalMultipliersDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9FZGl0U2Vhc29uYWxNdWx0aXBsaWVyc0RpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/pc/CampsiteBooking-1/Components/Pages/Admin/EventDialog.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZG1pbi9FdmVudERpYWxvZy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 

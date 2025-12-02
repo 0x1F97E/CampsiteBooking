@@ -210,6 +210,9 @@ builder.Services.AddScoped<ICampsiteRepository, CampsiteRepository>();
 // Register Unit of Work (Application Layer - Transaction Management)
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+// Register Pricing Service (Seasonal Multipliers)
+builder.Services.AddScoped<CampsiteBooking.Services.IPricingService, CampsiteBooking.Services.PricingService>();
+
 // Register Email and SMS Services
 builder.Services.AddScoped<CampsiteBooking.Services.IEmailService, CampsiteBooking.Services.EmailService>();
 builder.Services.AddScoped<CampsiteBooking.Services.ISMSService, CampsiteBooking.Services.SMSService>();
@@ -744,6 +747,55 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         Console.WriteLine($"❌ Error adding AreaSquareMeters column: {ex.Message}");
+    }
+
+    // Add missing columns to SeasonalPricings table
+    try
+    {
+        Console.WriteLine("🔧 Adding missing columns to SeasonalPricings table...");
+
+        var seasonalPricingColumnsExist = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='SeasonalPricings' AND COLUMN_NAME='CampsiteId'"
+        ).FirstOrDefaultAsync();
+
+        if (seasonalPricingColumnsExist == 0)
+        {
+            Console.WriteLine("   Adding columns to SeasonalPricings table...");
+            await db.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE SeasonalPricings
+                ADD COLUMN CampsiteId INT NOT NULL DEFAULT 0,
+                ADD COLUMN AccommodationTypeId INT NOT NULL DEFAULT 0,
+                ADD COLUMN SeasonName VARCHAR(100) NOT NULL DEFAULT '',
+                ADD COLUMN StartDate DATETIME(6) NOT NULL DEFAULT '1000-01-01 00:00:00',
+                ADD COLUMN EndDate DATETIME(6) NOT NULL DEFAULT '1000-01-01 00:00:00',
+                ADD COLUMN PriceMultiplier DECIMAL(5,2) NOT NULL DEFAULT 1.00,
+                ADD COLUMN IsActive TINYINT(1) NOT NULL DEFAULT 1,
+                ADD COLUMN CreatedDate DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                ADD COLUMN UpdatedDate DATETIME(6) NULL
+            ");
+            Console.WriteLine("   ✅ SeasonalPricings table columns added");
+        }
+        else
+        {
+            Console.WriteLine("   ✅ SeasonalPricings table columns already exist");
+        }
+
+        // Always check and drop SeasonalPricingId column if it exists
+        var seasonalPricingIdColumnExists = await db.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='CampsiteBookingDb' AND TABLE_NAME='SeasonalPricings' AND COLUMN_NAME='SeasonalPricingId'"
+        ).FirstOrDefaultAsync();
+
+        if (seasonalPricingIdColumnExists > 0)
+        {
+            Console.WriteLine("   Dropping SeasonalPricingId column from SeasonalPricings table...");
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE SeasonalPricings DROP COLUMN SeasonalPricingId");
+            Console.WriteLine("   ✅ SeasonalPricingId column dropped");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error adding SeasonalPricings columns: {ex.Message}");
+        Console.WriteLine($"   Stack trace: {ex.StackTrace}");
     }
 
     // Seed initial data

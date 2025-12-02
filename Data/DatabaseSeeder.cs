@@ -20,9 +20,15 @@ public static class DatabaseSeeder
         await SetupAutoIncrementForAllTables(context);
 
         // Seed Campsites first (before users, since Staff references CampsiteId)
-        // Force complete reseed by truncating the table
+        // Force complete reseed by deleting all records (DELETE works with FK constraints disabled)
         await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 0");
-        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Campsites");
+        try
+        {
+            // Delete dependent tables first
+            await context.Database.ExecuteSqlRawAsync("DELETE FROM ServiceCatalogItems");
+        }
+        catch { /* Table may not exist */ }
+        await context.Database.ExecuteSqlRawAsync("DELETE FROM Campsites");
         await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 1");
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE Campsites AUTO_INCREMENT = 1");
 
@@ -557,10 +563,15 @@ public static class DatabaseSeeder
 
     private static async Task SeedSeasonalPricing(CampsiteBookingDbContext context)
     {
-        // Delete existing seasonal pricing
-        await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 0");
-        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE SeasonalPricings");
-        await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 1");
+        // Check if seasonal pricing already exists - if so, preserve admin changes
+        var existingSeasonalPricing = await context.SeasonalPricings.AnyAsync();
+        if (existingSeasonalPricing)
+        {
+            Console.WriteLine("⏭️  Seasonal pricing already exists, skipping seeding to preserve admin changes...");
+            return;
+        }
+
+        Console.WriteLine("🔵 Seeding seasonal pricing...");
 
         // High Season (Summer) - June 1 to August 31
             for (int campsiteId = 1; campsiteId <= 5; campsiteId++)

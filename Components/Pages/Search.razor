@@ -3,10 +3,12 @@
 @rendermode InteractiveServer
 @inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
 @inject ISnackbar Snackbar
+@inject CampsiteBooking.Services.IPricingService PricingService
 @using CampsiteBooking.Data
 @using CampsiteBooking.Models
 @using CampsiteBooking.Models.DTOs
 @using CampsiteBooking.Models.ValueObjects
+@using CampsiteBooking.Services
 @using Microsoft.EntityFrameworkCore
 
 <PageTitle>Search Campsites - Campsite Booking</PageTitle>
@@ -151,7 +153,24 @@
                                         </MudText>
                                     }
                                 </div>
-                                <MudText Typo="Typo.h6" Color="Color.Primary">$@accommodation.PricePerNight/night</MudText>
+                                <div class="text-right">
+                                    @if (accommodation.HasSeasonalPricing && accommodation.SeasonalMultiplier != 1.0m)
+                                    {
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary" Style="text-decoration: line-through;">
+                                            $@accommodation.PricePerNight.ToString("N2")/night
+                                        </MudText>
+                                        <MudText Typo="Typo.h6" Color="Color.Primary">
+                                            $@accommodation.SeasonalPricePerNight.ToString("N2")/night
+                                        </MudText>
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                            @accommodation.SeasonName (@((accommodation.SeasonalMultiplier * 100).ToString("N0"))%)
+                                        </MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.h6" Color="Color.Primary">$@accommodation.PricePerNight.ToString("N2")/night</MudText>
+                                    }
+                                </div>
                             </MudStack>
                         </MudCardContent>
                         <MudCardActions>
@@ -393,7 +412,8 @@
                     ? accType.ImageUrl
                     : (galleryImages.FirstOrDefault() ?? "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400");
 
-                allAccommodations.Add(new AccommodationDto
+                var basePricePerNight = accType.BasePrice?.Amount ?? 0m;
+                var accommodationDto = new AccommodationDto
                 {
                     Id = accType.Id?.Value ?? 0,
                     CampsiteId = accType.CampsiteId?.Value ?? 0,
@@ -402,13 +422,55 @@
                     Type = accType.Type ?? "",
                     Description = accType.Description ?? "",
                     Capacity = accType.MaxCapacity,
-                    PricePerNight = accType.BasePrice?.Amount ?? 0m,
+                    PricePerNight = basePricePerNight,
+                    SeasonalPricePerNight = basePricePerNight, // Default to base price
+                    SeasonalMultiplier = 1.0m,
+                    SeasonName = "Regular",
+                    HasSeasonalPricing = false,
                     ImageUrl = mainImageUrl,
                     Amenities = accommodationAmenities,
                     AreaSquareMeters = accType.AreaSquareMeters,
                     AvailableSpotCount = availableSpots.Count,
                     GalleryImages = galleryImages
-                });
+                };
+
+                // Calculate seasonal pricing if date range is selected
+                if (_dateRange?.Start != null && _dateRange?.End != null && basePricePerNight > 0)
+                {
+                    try
+                    {
+                        var pricingBreakdown = await PricingService.CalculatePriceAsync(
+                            accommodationDto.CampsiteId,
+                            accommodationDto.Id,
+                            basePricePerNight,
+                            _dateRange.Start.Value,
+                            _dateRange.End.Value);
+
+                        if (pricingBreakdown != null && pricingBreakdown.NumberOfNights > 0)
+                        {
+                            // Calculate average nightly rate with seasonal pricing applied
+                            accommodationDto.SeasonalPricePerNight = pricingBreakdown.TotalPrice / pricingBreakdown.NumberOfNights;
+                            accommodationDto.SeasonalMultiplier = pricingBreakdown.AverageMultiplier;
+                            accommodationDto.HasSeasonalPricing = true;
+
+                            // Get the most common season name for display
+                            var mostCommonSeason = pricingBreakdown.NightlyBreakdown
+                                .GroupBy(n => n.SeasonName)
+                                .OrderByDescending(g => g.Count())
+                                .FirstOrDefault();
+                            accommodationDto.SeasonName = mostCommonSeason?.Key ?? "Regular";
+
+                            Console.WriteLine($"   💰 Seasonal pricing: ${basePricePerNight:N2} × {accommodationDto.SeasonalMultiplier:F2} = ${accommodationDto.SeasonalPricePerNight:N2}/night ({accommodationDto.SeasonName})");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"   ⚠️ Could not calculate seasonal pricing: {ex.Message}");
+                        // Keep default base price if seasonal pricing fails
+                    }
+                }
+
+                allAccommodations.Add(accommodationDto);
             }
 
             _accommodations = allAccommodations;
@@ -510,7 +572,11 @@
         public string Type { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public int Capacity { get; set; }
-        public decimal PricePerNight { get; set; }
+        public decimal PricePerNight { get; set; } // Base price (without seasonal multipliers)
+        public decimal SeasonalPricePerNight { get; set; } // Price with seasonal multiplier applied
+        public decimal SeasonalMultiplier { get; set; } = 1.0m; // Current seasonal multiplier
+        public string SeasonName { get; set; } = "Regular"; // Name of the current season
+        public bool HasSeasonalPricing { get; set; } // Whether seasonal pricing is applied
         public string ImageUrl { get; set; } = string.Empty;
         public List<string> Amenities { get; set; } = new();
         public decimal? AreaSquareMeters { get; set; }
