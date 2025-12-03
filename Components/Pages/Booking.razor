@@ -1282,30 +1282,103 @@
         StateHasChanged();
     }
 
-    private void ApplyDiscount()
+    private async Task ApplyDiscount()
     {
         _discountError = string.Empty;
 
-        // Validate discount code (in real app, this would call an API)
-        var validDiscounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        try
         {
-            { "SUMMER10", 10 },
-            { "SUMMER20", 20 },
-            { "WELCOME15", 15 },
-            { "EARLYBIRD", 25 },
-            { "FAMILY10", 10 },
-            { "WEEKEND5", 5 }
-        };
+            // Create a fresh DbContext for each discount lookup to ensure we get the latest data
+            await using var context = await DbContextFactory.CreateDbContextAsync();
 
-        if (validDiscounts.TryGetValue(_discountCode.Trim(), out int percentage))
-        {
+            // Validate discount code against the database
+            var codeToCheck = _discountCode.Trim().ToUpper();
+            Console.WriteLine($"🔍 ApplyDiscount: Looking for code '{codeToCheck}'");
+
+            // Use AsNoTracking() to ensure fresh data from database (no caching)
+            // Query directly using EF.Property for the backing field
+            var allDiscounts = await context.Discounts
+                .AsNoTracking()
+                .ToListAsync();
+
+            Console.WriteLine($"📊 ApplyDiscount: Found {allDiscounts.Count} discounts in database (fresh query):");
+            foreach (var d in allDiscounts)
+            {
+                Console.WriteLine($"   - ID: {d.Id?.Value}, Code: '{d.Code}', IsActive: {d.IsActive}, ValidFrom: {d.ValidFrom}, ValidUntil: {d.ValidUntil}");
+            }
+
+            var discount = allDiscounts.FirstOrDefault(d => d.Code.Equals(codeToCheck, StringComparison.OrdinalIgnoreCase));
+
+            if (discount == null)
+            {
+                Console.WriteLine($"❌ ApplyDiscount: No discount found with code '{codeToCheck}'");
+                _discountError = "Invalid discount code. Please check and try again.";
+                _discountApplied = false;
+                _appliedDiscountCode = string.Empty;
+                _discountPercentage = 0;
+                return;
+            }
+
+            Console.WriteLine($"✅ ApplyDiscount: Found discount '{discount.Code}' (ID: {discount.DiscountId})");
+
+            // Check if discount is valid (active, within date range, usage limits)
+            var checkDate = DateTime.UtcNow;
+            Console.WriteLine($"🔍 ApplyDiscount: Validating discount...");
+            Console.WriteLine($"   - Current date (UTC): {checkDate}");
+            Console.WriteLine($"   - IsActive: {discount.IsActive}");
+            Console.WriteLine($"   - ValidFrom: {discount.ValidFrom} (Current >= ValidFrom: {checkDate.Date >= discount.ValidFrom.Date})");
+            Console.WriteLine($"   - ValidUntil: {discount.ValidUntil} (Current <= ValidUntil: {checkDate.Date <= discount.ValidUntil.Date})");
+            Console.WriteLine($"   - IsValid() result: {discount.IsValid(checkDate)}");
+
+            if (!discount.IsValid(checkDate))
+            {
+                Console.WriteLine($"❌ ApplyDiscount: Discount '{discount.Code}' is NOT valid - expired or inactive");
+                _discountError = "This discount code has expired or is no longer available.";
+                _discountApplied = false;
+                _appliedDiscountCode = string.Empty;
+                _discountPercentage = 0;
+                return;
+            }
+
+            Console.WriteLine($"✅ ApplyDiscount: Discount '{discount.Code}' is valid!");
+
+            // Check minimum booking amount if applicable
+            if (discount.MinimumBookingAmount > 0 && _subtotalPrice < discount.MinimumBookingAmount)
+            {
+                _discountError = $"Minimum booking amount of ${discount.MinimumBookingAmount:N2} required for this discount.";
+                _discountApplied = false;
+                _appliedDiscountCode = string.Empty;
+                _discountPercentage = 0;
+                return;
+            }
+
+            // Apply the discount
             _discountApplied = true;
-            _appliedDiscountCode = _discountCode.Trim().ToUpper();
-            _discountPercentage = percentage;
+            _appliedDiscountCode = discount.Code;
+
+            // For percentage discounts, use the value directly
+            // For fixed discounts, calculate the equivalent percentage based on subtotal
+            if (discount.Type == "Percentage")
+            {
+                _discountPercentage = (int)discount.Value;
+            }
+            else // Fixed amount
+            {
+                // Convert fixed amount to percentage of current subtotal
+                if (_subtotalPrice > 0)
+                {
+                    _discountPercentage = (int)Math.Min(100, (discount.Value / _subtotalPrice) * 100);
+                }
+                else
+                {
+                    _discountPercentage = 0;
+                }
+            }
         }
-        else
+        catch (Exception ex)
         {
-            _discountError = "Invalid discount code. Please check and try again.";
+            Console.WriteLine($"Error applying discount: {ex.Message}");
+            _discountError = "An error occurred while validating the discount code.";
             _discountApplied = false;
             _appliedDiscountCode = string.Empty;
             _discountPercentage = 0;

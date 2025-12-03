@@ -636,7 +636,9 @@ public class PricingManagementBase : ComponentBase
     {
         try
         {
-            using var context = await DbContextFactory.CreateDbContextAsync();
+            Console.WriteLine($"🗑️ DeleteDiscount: Starting deletion of discount ID={discount.Id}, Code='{discount.Code}'");
+
+            await using var context = await DbContextFactory.CreateDbContextAsync();
 
             var discountId = DiscountId.Create(discount.Id);
             var dbDiscount = await context.Discounts
@@ -644,24 +646,35 @@ public class PricingManagementBase : ComponentBase
 
             if (dbDiscount == null)
             {
+                Console.WriteLine($"❌ DeleteDiscount: Discount ID={discount.Id} not found in database");
                 Snackbar.Add("Discount not found", Severity.Error);
                 return;
             }
 
+            Console.WriteLine($"📋 DeleteDiscount: Found discount in DB - ID={dbDiscount.Id?.Value}, Code='{dbDiscount.Code}'");
+
             // Remove from database
             context.Discounts.Remove(dbDiscount);
-            await context.SaveChangesAsync();
+            var rowsAffected = await context.SaveChangesAsync();
+
+            Console.WriteLine($"💾 DeleteDiscount: SaveChangesAsync completed, rows affected: {rowsAffected}");
+
+            // Verify deletion by checking if the discount still exists
+            var stillExists = await context.Discounts.AsNoTracking()
+                .AnyAsync(d => d.Id == discountId);
+            Console.WriteLine($"🔍 DeleteDiscount: Discount still exists after delete? {stillExists}");
 
             // Remove from in-memory list
             _discounts.Remove(discount);
 
-            Console.WriteLine($"✅ Discount '{discount.Code}' deleted successfully");
+            Console.WriteLine($"✅ Discount '{discount.Code}' deleted successfully from database and in-memory list");
             Snackbar.Add($"Discount '{discount.Code}' deleted successfully", Severity.Success);
             StateHasChanged();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Error deleting discount: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
             Snackbar.Add($"Error deleting discount: {ex.Message}", Severity.Error);
         }
     }
