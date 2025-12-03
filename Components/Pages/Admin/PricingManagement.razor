@@ -40,12 +40,6 @@
                             }
                         </MudSelect>
                     </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudAlert Severity="Severity.Info" Dense="true">
-                            <strong>@GetSelectedCampsiteName()</strong> -
-                            Attractiveness: <MudChip T="string" Size="Size.Small" Color="@GetAttractivenessColor()">@GetSelectedCampsite()?.Attractiveness</MudChip>
-                        </MudAlert>
-                    </MudItem>
                 </MudGrid>
             </MudPaper>
         </MudItem>
@@ -96,9 +90,6 @@
                                             <strong>$@accommodation.Price.ToString("N2")</strong>
                                         </MudText>
                                     </div>
-                                    <MudText Typo="Typo.caption" Color="Color.Tertiary" Class="mt-1">
-                                        To modify base prices, go to the Campsites section
-                                    </MudText>
                                 </MudPaper>
                             </MudItem>
                         </MudGrid>

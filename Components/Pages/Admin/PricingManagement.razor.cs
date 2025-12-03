@@ -1062,17 +1062,7 @@ public class PricingManagementBase : ComponentBase
         _ => Color.Default
     };
 
-    protected Color GetAttractivenessColor(string? attractiveness = null)
-    {
-        var attr = attractiveness ?? GetSelectedCampsite()?.Attractiveness ?? "";
-        return attr switch
-        {
-            "Very High" => Color.Error,
-            "High" => Color.Warning,
-            "Medium" => Color.Info,
-            _ => Color.Default
-        };
-    }
+
 
     protected int GetTotalUnits()
     {
