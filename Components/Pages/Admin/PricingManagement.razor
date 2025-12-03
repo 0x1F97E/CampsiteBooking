@@ -285,48 +285,6 @@
             </MudCard>
         </MudItem>
 
-        <!-- Accommodation Summary Statistics -->
-        <MudItem xs="12" md="6">
-            <MudCard Elevation="3">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">Accommodation Summary</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            Overview for @GetSelectedCampsiteName()
-                        </MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudGrid>
-                        <MudItem xs="6">
-                            <MudPaper Elevation="0" Class="pa-3 text-center" Style="background-color: #f5f5f5;">
-                                <MudText Typo="Typo.h4" Color="Color.Primary">@GetTotalUnits()</MudText>
-                                <MudText Typo="Typo.caption">Total Units</MudText>
-                            </MudPaper>
-                        </MudItem>
-                        <MudItem xs="6">
-                            <MudPaper Elevation="0" Class="pa-3 text-center" Style="background-color: #f5f5f5;">
-                                <MudText Typo="Typo.h4" Color="Color.Success">@GetTotalCapacity()</MudText>
-                                <MudText Typo="Typo.caption">Total Guest Capacity</MudText>
-                            </MudPaper>
-                        </MudItem>
-                        <MudItem xs="6">
-                            <MudPaper Elevation="0" Class="pa-3 text-center" Style="background-color: #f5f5f5;">
-                                <MudText Typo="Typo.h4" Color="Color.Info">@GetAccommodationTypeCount()</MudText>
-                                <MudText Typo="Typo.caption">Accommodation Types</MudText>
-                            </MudPaper>
-                        </MudItem>
-                        <MudItem xs="6">
-                            <MudPaper Elevation="0" Class="pa-3 text-center" Style="background-color: #f5f5f5;">
-                                <MudText Typo="Typo.h4" Color="Color.Warning">$@GetAveragePrice().ToString("N0")</MudText>
-                                <MudText Typo="Typo.caption">Avg. Price/Night</MudText>
-                            </MudPaper>
-                        </MudItem>
-                    </MudGrid>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
         <!-- Campsite Pricing Comparison (Editable) -->
         <MudItem xs="12">
             <MudCard Elevation="3">
