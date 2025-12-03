@@ -909,7 +909,8 @@
         {
             await using var context = await DbContextFactory.CreateDbContextAsync();
 
-            var dbPhoto = await context.Photos.FindAsync(photo.Id);
+            var photoId = PhotoId.Create(photo.Id);
+            var dbPhoto = await context.Photos.FirstOrDefaultAsync(p => p.Id == photoId);
             if (dbPhoto != null)
             {
                 // Remove old photo and create new one (since Photo is immutable)
@@ -953,7 +954,8 @@
         {
             await using var context = await DbContextFactory.CreateDbContextAsync();
 
-            var dbPhoto = await context.Photos.FindAsync(photo.Id);
+            var photoId = PhotoId.Create(photo.Id);
+            var dbPhoto = await context.Photos.FirstOrDefaultAsync(p => p.Id == photoId);
             if (dbPhoto != null)
             {
                 context.Photos.Remove(dbPhoto);
