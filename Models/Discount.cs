@@ -118,8 +118,14 @@ public class Discount : Entity<DiscountId>
     {
         if (_maxUses > 0 && _usedCount >= _maxUses)
             throw new DomainException("Discount has reached maximum usage limit");
-        
+
         _usedCount++;
+
+        // Auto-deactivate when max uses is reached
+        if (_maxUses > 0 && _usedCount >= _maxUses)
+        {
+            _isActive = false;
+        }
     }
     
     public void Activate() => _isActive = true;

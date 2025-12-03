@@ -1473,6 +1473,28 @@
             var bookingId = booking.Id?.Value ?? 0;
             Console.WriteLine($"✅ Created booking {bookingId} for user {currentUserId}");
 
+            // Increment discount usage if a discount was applied
+            if (_discountApplied && !string.IsNullOrEmpty(_appliedDiscountCode))
+            {
+                try
+                {
+                    var discount = await context.Discounts
+                        .FirstOrDefaultAsync(d => EF.Property<string>(d, "_code") == _appliedDiscountCode);
+
+                    if (discount != null)
+                    {
+                        discount.IncrementUsage();
+                        await context.SaveChangesAsync();
+                        Console.WriteLine($"✅ Incremented usage for discount '{_appliedDiscountCode}' - UsedCount: {discount.UsedCount}, MaxUses: {discount.MaxUses}, IsActive: {discount.IsActive}");
+                    }
+                }
+                catch (Exception discountEx)
+                {
+                    // Log discount increment error but don't fail the booking
+                    Console.WriteLine($"⚠️ Failed to increment discount usage for '{_appliedDiscountCode}': {discountEx.Message}");
+                }
+            }
+
             // Save selected peripheral purchases (add-ons)
             if (_selectedServices.Any())
             {

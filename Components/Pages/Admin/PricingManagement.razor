@@ -81,7 +81,7 @@
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent>
-                        <!-- Pricing & Capacity Section -->
+                        <!-- Pricing & Capacity Section (Read-Only) -->
                         <MudText Typo="Typo.subtitle2" Class="mb-2">
                             <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" Class="mr-1" />
                             Base Pricing & Capacity
@@ -89,17 +89,17 @@
                         <MudDivider Class="mb-3" />
                         <MudGrid>
                             <MudItem xs="12">
-                                <MudNumericField T="decimal"
-                                                 Value="accommodation.Price"
-                                                 ValueChanged="@((decimal newValue) => OnAccommodationPriceChanged(accommodation, newValue))"
-                                                 Label="Price per Night"
-                                                 Variant="Variant.Outlined"
-                                                 Min="0m"
-                                                 Format="N2"
-                                                 Adornment="Adornment.Start"
-                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney"
-                                                 Class="@GetAccommodationPriceFieldClass(accommodation.Id)"
-                                                 Immediate="false" />
+                                <MudPaper Elevation="0" Class="pa-3" Style="background-color: #f5f5f5;">
+                                    <div class="d-flex align-center justify-space-between">
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">Price per Night</MudText>
+                                        <MudText Typo="Typo.h6" Color="Color.Success">
+                                            <strong>$@accommodation.Price.ToString("N2")</strong>
+                                        </MudText>
+                                    </div>
+                                    <MudText Typo="Typo.caption" Color="Color.Tertiary" Class="mt-1">
+                                        To modify base prices, go to the Campsites section
+                                    </MudText>
+                                </MudPaper>
                             </MudItem>
                         </MudGrid>
 
@@ -176,40 +176,6 @@
                         </MudButton>
                     </MudCardContent>
                 </MudCard>
-            }
-
-            @* Save Changes Button for Campsite Pricing *@
-            @if (HasModifiedAccommodationPrices())
-            {
-                <MudPaper Elevation="2" Class="pa-4 mt-4">
-                    <div class="d-flex justify-space-between align-center">
-                        <div>
-                            <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="mr-1" />
-                                @GetModifiedAccommodationPricesCount() price(s) modified
-                            </MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Tertiary">
-                                Click "Save Changes" to persist your changes
-                            </MudText>
-                        </div>
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.Save"
-                                   Disabled="@_isSavingAccommodationPrices"
-                                   OnClick="SaveAccommodationChanges"
-                                   Size="Size.Large">
-                            @if (_isSavingAccommodationPrices)
-                            {
-                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                <span>Saving...</span>
-                            }
-                            else
-                            {
-                                <span>Save Changes</span>
-                            }
-                        </MudButton>
-                    </div>
-                </MudPaper>
             }
         </MudItem>
 
@@ -361,14 +327,14 @@
             </MudCard>
         </MudItem>
 
-        <!-- Campsite Comparison Table -->
+        <!-- Campsite Comparison Table (Read-Only) -->
         <MudItem xs="12">
             <MudCard Elevation="3">
                 <MudCardHeader>
                     <CardHeaderContent>
                         <MudText Typo="Typo.h6">Campsite Pricing Comparison</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            Compare and edit base prices across all campsites - click on a price to edit it inline
+                            Compare base prices across all campsites (manage prices in the Campsites section)
                         </MudText>
                     </CardHeaderContent>
                 </MudCardHeader>
@@ -395,16 +361,9 @@
                                 <MudTd DataLabel="@accommodationType">
                                     @if (pricing != null)
                                     {
-                                        <MudNumericField T="decimal"
-                                                        Value="pricing.Price"
-                                                        ValueChanged="@((decimal newValue) => OnPriceChanged(pricing, newValue))"
-                                                        Variant="Variant.Outlined"
-                                                        Margin="Margin.Dense"
-                                                        Adornment="Adornment.Start"
-                                                        AdornmentText="$"
-                                                        Style="max-width: 100px;"
-                                                        Class="@GetPriceFieldClass(pricing.Id)"
-                                                        Immediate="false" />
+                                        <MudText Typo="Typo.body2" Color="Color.Success">
+                                            <strong>$@pricing.Price.ToString("N2")</strong>
+                                        </MudText>
                                     }
                                     else
                                     {
@@ -414,30 +373,6 @@
                             }
                         </RowTemplate>
                     </MudTable>
-
-                    @if (HasModifiedPrices())
-                    {
-                        <div class="d-flex justify-end align-center gap-3 mt-4">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                @GetModifiedPricesCount() price(s) modified
-                            </MudText>
-                            <MudButton Variant="Variant.Filled"
-                                      Color="Color.Primary"
-                                      StartIcon="@Icons.Material.Filled.Save"
-                                      Disabled="@_isSavingAllPrices"
-                                      OnClick="SaveAllModifiedPrices">
-                                @if (_isSavingAllPrices)
-                                {
-                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                    <span>Saving...</span>
-                                }
-                                else
-                                {
-                                    <span>Save All Prices</span>
-                                }
-                            </MudButton>
-                        </div>
-                    }
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -590,12 +525,4 @@
     </MudGrid>
 </MudContainer>
 
-<style>
-    .modified-price .mud-input-control .mud-input {
-        background-color: rgba(255, 193, 7, 0.1);
-        border-color: #ffc107;
-    }
-    .modified-price .mud-input-control fieldset {
-        border-color: #ffc107 !important;
-    }
-</style>
+
