@@ -410,7 +410,7 @@
             .Where(p => p.CampsiteId != null && (p.Category == "Information" || p.Category == "General"))
             .Select(p => new PhotoDto
             {
-                Id = p.PhotoId,
+                Id = p.Id.Value,
                 CampsiteId = p.CampsiteId.Value,
                 CampsiteName = GetCampsiteNameById(p.CampsiteId.Value),
                 Title = p.Caption ?? string.Empty,

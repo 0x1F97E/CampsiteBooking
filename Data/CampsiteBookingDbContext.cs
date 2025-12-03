@@ -414,6 +414,13 @@ public class CampsiteBookingDbContext : DbContext
         // Configure Photo entity to map private fields
         modelBuilder.Entity<Photo>(entity =>
         {
+            // Configure the Id property to use the Id column with value converter
+            entity.Property(p => p.Id).HasColumnName("Id")
+                .HasConversion(new PhotoIdConverter());
+
+            // Ignore the PhotoId property - it's a computed property
+            entity.Ignore(p => p.PhotoId);
+
             entity.Property("_campsiteId").HasColumnName("CampsiteId");
             entity.Property("_accommodationTypeId").HasColumnName("AccommodationTypeId");
             entity.Property("_url").HasColumnName("Url").IsRequired();

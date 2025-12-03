@@ -84,6 +84,11 @@
 
     protected override void OnInitialized()
     {
+        Console.WriteLine($"🔵 AddPhotoDialog.OnInitialized called");
+        Console.WriteLine($"   Photo parameter: {(Photo != null ? $"ID={Photo.Id}, Title={Photo.Title}" : "null")}");
+        Console.WriteLine($"   PreSelectedCampsiteId: {PreSelectedCampsiteId}");
+        Console.WriteLine($"   Campsites count: {Campsites?.Count ?? 0}");
+
         if (Photo != null)
         {
             // Editing existing photo - use its values
@@ -91,12 +96,16 @@
             _campsiteId = Photo.CampsiteId;
             _description = Photo.Description;
             _imageUrl = Photo.ImageUrl;
+            Console.WriteLine($"   ✅ Loaded photo data: Title={_title}, CampsiteId={_campsiteId}");
         }
         else if (PreSelectedCampsiteId.HasValue)
         {
             // Adding new photo with pre-selected campsite
             _campsiteId = PreSelectedCampsiteId.Value;
+            Console.WriteLine($"   ✅ Pre-selected campsite: {_campsiteId}");
         }
+
+        Console.WriteLine($"🔵 AddPhotoDialog.OnInitialized completed");
     }
 
     private bool IsValid()

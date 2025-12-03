@@ -491,8 +491,7 @@ public static class DatabaseSeeder
             new { Url = "https://images.unsplash.com/photo-1548198055-8d6fcf8a4f0c?w=800&q=80", Caption = "Evening Campfires", AltText = "Cozy evenings gathered around the fireplace with family and friends.", DisplayOrder = 8 }
         };
 
-        // Add "All Campsites" photos with manually assigned IDs
-        int photoId = 1;
+        // Add "All Campsites" photos - save each one individually to let the database auto-generate IDs
         foreach (var photoData in activityPhotosData)
         {
             var photo = Photo.Create(
@@ -505,14 +504,11 @@ public static class DatabaseSeeder
                 "Information" // category - set to "Information" for the Information page
             );
 
-            // Manually set the PhotoId property to assign a unique ID
-            typeof(Photo).GetProperty("PhotoId")!.SetValue(photo, photoId);
-            photoId++;
-
             await context.Photos.AddAsync(photo);
+            await context.SaveChangesAsync();
+            context.Entry(photo).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
         }
 
-        await context.SaveChangesAsync();
         Console.WriteLine($"✅ Seeded {activityPhotosData.Length} 'General (All Campsites)' photos");
 
         // Seed campsite-specific photos - more photos per campsite to better demonstrate the organized gallery
@@ -562,15 +558,13 @@ public static class DatabaseSeeder
                 "Information"
             );
 
-            typeof(Photo).GetProperty("PhotoId")!.SetValue(photo, photoId);
-            photoId++;
-
             await context.Photos.AddAsync(photo);
+            await context.SaveChangesAsync();
+            context.Entry(photo).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
         }
 
-        await context.SaveChangesAsync();
         Console.WriteLine($"✅ Seeded {campsitePhotosData.Length} campsite-specific photos across 5 campsites");
-        Console.WriteLine($"✅ Total photos seeded: {photoId - 1}");
+        Console.WriteLine($"✅ Total photos seeded: {activityPhotosData.Length + campsitePhotosData.Length}");
     }
 
     private static async Task SeedSeasonalPricing(CampsiteBookingDbContext context)
@@ -1841,6 +1835,17 @@ public static class DatabaseSeeder
             {
                 // Ignore if already auto-increment or table doesn't exist
             }
+        }
+
+        // Fix Photos table - drop the legacy PhotoId column if it exists (EF Core now uses Id only)
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("ALTER TABLE Photos DROP COLUMN PhotoId");
+            Console.WriteLine("   ✅ Dropped legacy PhotoId column from Photos table");
+        }
+        catch
+        {
+            // Column may not exist or already dropped
         }
     }
 

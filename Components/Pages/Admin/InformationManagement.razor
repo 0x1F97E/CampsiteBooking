@@ -334,14 +334,19 @@
                                                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate">@photo.Description</MudText>
                                                 </MudCardContent>
                                                 <MudCardActions Class="pa-1 justify-end">
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                                  Color="Color.Primary"
-                                                                  Size="Size.Small"
-                                                                  OnClick="@(() => EditPhoto(photo))" />
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                                  Color="Color.Error"
-                                                                  Size="Size.Small"
-                                                                  OnClick="@(() => DeletePhoto(photo))" />
+                                                    @{ var generalPhoto = photo; }
+                                                    <span @onclick:stopPropagation="true">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                      Color="Color.Primary"
+                                                                      Size="Size.Small"
+                                                                      OnClick="@(() => EditPhoto(generalPhoto))" />
+                                                    </span>
+                                                    <span @onclick:stopPropagation="true">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                      Color="Color.Error"
+                                                                      Size="Size.Small"
+                                                                      OnClick="@(() => DeletePhoto(generalPhoto))" />
+                                                    </span>
                                                 </MudCardActions>
                                             </MudCard>
                                         </MudItem>
@@ -398,14 +403,19 @@
                                                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate">@photo.Description</MudText>
                                                     </MudCardContent>
                                                     <MudCardActions Class="pa-1 justify-end">
-                                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                                      Color="Color.Primary"
-                                                                      Size="Size.Small"
-                                                                      OnClick="@(() => EditPhoto(photo))" />
-                                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                                      Color="Color.Error"
-                                                                      Size="Size.Small"
-                                                                      OnClick="@(() => DeletePhoto(photo))" />
+                                                        @{ var campsitePhoto = photo; }
+                                                        <span @onclick:stopPropagation="true">
+                                                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                          Color="Color.Primary"
+                                                                          Size="Size.Small"
+                                                                          OnClick="@(() => EditPhoto(campsitePhoto))" />
+                                                        </span>
+                                                        <span @onclick:stopPropagation="true">
+                                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                          Color="Color.Error"
+                                                                          Size="Size.Small"
+                                                                          OnClick="@(() => DeletePhoto(campsitePhoto))" />
+                                                        </span>
                                                     </MudCardActions>
                                                 </MudCard>
                                             </MudItem>
@@ -667,29 +677,48 @@
 
     private async Task LoadPhotosAsync()
     {
-        await using var context = await DbContextFactory.CreateDbContextAsync();
-        var dbPhotos = await context.Photos.ToListAsync();
-        _photos = dbPhotos.Select(p => new PhotoDto
+        try
         {
-            Id = p.PhotoId,
-            Title = p.Caption,
-            CampsiteName = p.CampsiteId.Value == 0 ? "All Campsites" : GetCampsiteName(p.CampsiteId.Value),
-            Description = p.AltText,
-            ImageUrl = p.Url,
-            CampsiteId = p.CampsiteId.Value
-        }).ToList();
+            await using var context = await DbContextFactory.CreateDbContextAsync();
+            var dbPhotos = await context.Photos.ToListAsync();
+            Console.WriteLine($"   📷 Loaded {dbPhotos.Count} photos from database");
 
-        // Group photos by campsite for organized display
-        _photosByCampsite = _photos.GroupBy(p => p.CampsiteId)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        // Initialize expansion states for each campsite (collapsed by default, expanded if has photos)
-        foreach (var campsite in _campsites)
-        {
-            if (!_campsiteExpansionStates.ContainsKey(campsite.Id))
+            _photos = dbPhotos.Select(p => new PhotoDto
             {
-                _campsiteExpansionStates[campsite.Id] = _photosByCampsite.ContainsKey(campsite.Id) && _photosByCampsite[campsite.Id].Any();
+                Id = p.Id?.Value ?? 0,
+                Title = p.Caption ?? string.Empty,
+                CampsiteName = (p.CampsiteId?.Value ?? 0) == 0 ? "All Campsites" : GetCampsiteName(p.CampsiteId?.Value ?? 0),
+                Description = p.AltText ?? string.Empty,
+                ImageUrl = p.Url ?? string.Empty,
+                CampsiteId = p.CampsiteId?.Value ?? 0
+            }).Where(p => p.Id > 0).ToList(); // Filter out any photos with invalid IDs
+
+            Console.WriteLine($"   📷 Mapped {_photos.Count} valid photos");
+
+            // Group photos by campsite for organized display
+            _photosByCampsite = _photos.GroupBy(p => p.CampsiteId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // Initialize expansion states for each campsite (collapsed by default, expanded if has photos)
+            foreach (var campsite in _campsites)
+            {
+                if (!_campsiteExpansionStates.ContainsKey(campsite.Id))
+                {
+                    _campsiteExpansionStates[campsite.Id] = _photosByCampsite.ContainsKey(campsite.Id) && _photosByCampsite[campsite.Id].Any();
+                }
             }
+
+            // Also expand general photos section if it has photos
+            _generalPhotosExpanded = _photosByCampsite.ContainsKey(0) && _photosByCampsite[0].Any();
+
+            Console.WriteLine($"   📷 Photo groups: General={(_photosByCampsite.ContainsKey(0) ? _photosByCampsite[0].Count : 0)}, Campsite-specific={_photosByCampsite.Where(kvp => kvp.Key > 0).Sum(kvp => kvp.Value.Count)}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"   ❌ Error loading photos: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+            _photos = new List<PhotoDto>();
+            _photosByCampsite = new Dictionary<int, List<PhotoDto>>();
         }
     }
 
@@ -878,7 +907,7 @@
             context.Photos.Add(photo);
             await context.SaveChangesAsync();
 
-            newPhoto.Id = photo.PhotoId;
+            newPhoto.Id = photo.Id.Value;
             _photos.Add(newPhoto);
 
             Snackbar.Add("Photo added successfully!", Severity.Success);
@@ -889,82 +918,153 @@
 
     private async Task EditPhoto(PhotoDto photo)
     {
-        var parameters = new DialogParameters
+        try
         {
-            ["Photo"] = photo,
-            ["Campsites"] = _campsites
-        };
+            Console.WriteLine($"🔵 EditPhoto called for photo ID: {photo.Id}, Title: {photo.Title}");
 
-        var options = new DialogOptions
-        {
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            CloseButton = true
-        };
-
-        var dialog = await DialogService.ShowAsync<AddPhotoDialog>("Edit Photo", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled && result.Data is PhotoDto updatedPhoto)
-        {
-            await using var context = await DbContextFactory.CreateDbContextAsync();
-
-            var photoId = PhotoId.Create(photo.Id);
-            var dbPhoto = await context.Photos.FirstOrDefaultAsync(p => p.Id == photoId);
-            if (dbPhoto != null)
+            // Validate photo ID before proceeding
+            if (photo.Id <= 0)
             {
-                // Remove old photo and create new one (since Photo is immutable)
-                context.Photos.Remove(dbPhoto);
-
-                var campsiteId = updatedPhoto.CampsiteId == 0
-                    ? CampsiteId.CreateNew()
-                    : CampsiteId.Create(updatedPhoto.CampsiteId);
-
-                var newPhoto = Photo.Create(
-                    campsiteId,
-                    updatedPhoto.ImageUrl,
-                    updatedPhoto.Title,
-                    updatedPhoto.Description,
-                    dbPhoto.DisplayOrder,
-                    dbPhoto.AccommodationTypeId,
-                    dbPhoto.Category
-                );
-
-                // Preserve the ID
-                typeof(Photo).GetProperty("PhotoId")!.SetValue(newPhoto, photo.Id);
-                context.Photos.Add(newPhoto);
-
-                await context.SaveChangesAsync();
-
-                Snackbar.Add("Photo updated successfully!", Severity.Success);
-                await LoadPhotosAsync();
-                StateHasChanged();
+                Console.WriteLine($"   ❌ Invalid photo ID: {photo.Id}");
+                Snackbar.Add("Cannot edit photo: Invalid photo ID", Severity.Error);
+                return;
             }
+
+            Console.WriteLine($"   📋 Creating dialog parameters...");
+
+            // Create a fresh copy of the photo DTO to avoid any reference issues
+            var photoCopy = new PhotoDto
+            {
+                Id = photo.Id,
+                Title = photo.Title ?? string.Empty,
+                CampsiteId = photo.CampsiteId,
+                CampsiteName = photo.CampsiteName ?? string.Empty,
+                Description = photo.Description ?? string.Empty,
+                ImageUrl = photo.ImageUrl ?? string.Empty
+            };
+
+            var parameters = new DialogParameters
+            {
+                ["Photo"] = photoCopy,
+                ["Campsites"] = _campsites
+            };
+
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true
+            };
+
+            Console.WriteLine($"   📋 Opening dialog...");
+            var dialog = await DialogService.ShowAsync<AddPhotoDialog>("Edit Photo", parameters, options);
+            Console.WriteLine($"   📋 Waiting for dialog result...");
+            var result = await dialog.Result;
+            Console.WriteLine($"   📋 Dialog result received: Canceled={result?.Canceled}");
+
+            if (!result.Canceled && result.Data is PhotoDto updatedPhoto)
+            {
+                await using var context = await DbContextFactory.CreateDbContextAsync();
+
+                // Query by Id.Value to find the photo
+                var photoIdToFind = PhotoId.Create(photoCopy.Id);
+                var dbPhoto = await context.Photos.FirstOrDefaultAsync(p => p.Id == photoIdToFind);
+                if (dbPhoto != null)
+                {
+                    // Remove old photo and create new one (since Photo is immutable)
+                    context.Photos.Remove(dbPhoto);
+
+                    var campsiteId = updatedPhoto.CampsiteId == 0
+                        ? CampsiteId.CreateNew()
+                        : CampsiteId.Create(updatedPhoto.CampsiteId);
+
+                    var newPhoto = Photo.Create(
+                        campsiteId,
+                        updatedPhoto.ImageUrl,
+                        updatedPhoto.Title,
+                        updatedPhoto.Description,
+                        dbPhoto.DisplayOrder,
+                        dbPhoto.AccommodationTypeId,
+                        dbPhoto.Category
+                    );
+
+                    // Preserve the ID by setting the Id property directly
+                    typeof(Photo).GetProperty("Id")!.SetValue(newPhoto, PhotoId.Create(photoCopy.Id));
+                    context.Photos.Add(newPhoto);
+
+                    await context.SaveChangesAsync();
+
+                    Snackbar.Add("Photo updated successfully!", Severity.Success);
+                    await LoadPhotosAsync();
+                    StateHasChanged();
+                }
+                else
+                {
+                    Snackbar.Add("Photo not found in database", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"   ❌ Error in EditPhoto: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+            Snackbar.Add($"Error editing photo: {ex.Message}", Severity.Error);
         }
     }
 
     private async Task DeletePhoto(PhotoDto photo)
     {
-        bool? result = await DialogService.ShowMessageBox(
-            "Confirm Delete",
-            $"Are you sure you want to delete '{photo.Title}'?",
-            yesText: "Delete", cancelText: "Cancel");
-
-        if (result == true)
+        try
         {
-            await using var context = await DbContextFactory.CreateDbContextAsync();
+            Console.WriteLine($"🔵 DeletePhoto called for photo ID: {photo.Id}, Title: {photo.Title}");
 
-            var photoId = PhotoId.Create(photo.Id);
-            var dbPhoto = await context.Photos.FirstOrDefaultAsync(p => p.Id == photoId);
-            if (dbPhoto != null)
+            // Validate photo ID before proceeding
+            if (photo.Id <= 0)
             {
-                context.Photos.Remove(dbPhoto);
-                await context.SaveChangesAsync();
-
-                _photos.Remove(photo);
-                Snackbar.Add($"Photo '{photo.Title}' deleted successfully!", Severity.Success);
-                StateHasChanged();
+                Console.WriteLine($"   ❌ Invalid photo ID: {photo.Id}");
+                Snackbar.Add("Cannot delete photo: Invalid photo ID", Severity.Error);
+                return;
             }
+
+            // Store values locally to avoid any reference issues
+            var photoId = photo.Id;
+            var photoTitle = photo.Title ?? "Untitled";
+
+            Console.WriteLine($"   📋 Showing confirmation dialog...");
+            bool? result = await DialogService.ShowMessageBox(
+                "Confirm Delete",
+                $"Are you sure you want to delete '{photoTitle}'?",
+                yesText: "Delete", cancelText: "Cancel");
+            Console.WriteLine($"   📋 Confirmation result: {result}");
+
+            if (result == true)
+            {
+                Console.WriteLine($"   📋 User confirmed deletion, proceeding...");
+                await using var context = await DbContextFactory.CreateDbContextAsync();
+
+                // Query by Id.Value to find the photo
+                var photoIdToFind = PhotoId.Create(photoId);
+                var dbPhoto = await context.Photos.FirstOrDefaultAsync(p => p.Id == photoIdToFind);
+                if (dbPhoto != null)
+                {
+                    context.Photos.Remove(dbPhoto);
+                    await context.SaveChangesAsync();
+
+                    Snackbar.Add($"Photo '{photoTitle}' deleted successfully!", Severity.Success);
+                    await LoadPhotosAsync(); // Reload to update the organized view
+                    StateHasChanged();
+                }
+                else
+                {
+                    Snackbar.Add("Photo not found in database", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"   ❌ Error in DeletePhoto: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+            Snackbar.Add($"Error deleting photo: {ex.Message}", Severity.Error);
         }
     }
 
