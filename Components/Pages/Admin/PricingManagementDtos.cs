@@ -34,13 +34,14 @@ public class DiscountDto
     public int Id { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public string Type { get; set; } = string.Empty;
+    public string Type { get; set; } = "Percentage";
     public decimal Value { get; set; }
-    public DateTime ValidFrom { get; set; }
-    public DateTime ValidUntil { get; set; }
+    public DateTime ValidFrom { get; set; } = DateTime.Today;
+    public DateTime ValidUntil { get; set; } = DateTime.Today.AddMonths(1);
     public int UsedCount { get; set; }
     public int MaxUses { get; set; }
-    public bool IsActive { get; set; }
+    public decimal MinimumBookingAmount { get; set; }
+    public bool IsActive { get; set; } = true;
 }
 
 public class PeripheralPurchaseDto

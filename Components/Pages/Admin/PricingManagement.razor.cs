@@ -251,6 +251,7 @@ public class PricingManagementBase : ComponentBase
                 ValidUntil = d.ValidUntil,
                 UsedCount = d.UsedCount,
                 MaxUses = d.MaxUses,
+                MinimumBookingAmount = d.MinimumBookingAmount,
                 IsActive = d.IsActive
             }).ToList();
 
@@ -410,16 +411,225 @@ public class PricingManagementBase : ComponentBase
         }
     }
 
-    protected void AddDiscount()
+    protected async Task AddDiscount()
     {
-        // TODO: Open dialog to add new discount
-        Snackbar.Add("Add discount dialog coming soon", Severity.Info);
+        var newDiscount = new DiscountDto
+        {
+            Code = "",
+            Description = "",
+            Type = "Percentage",
+            Value = 10,
+            ValidFrom = DateTime.Today,
+            ValidUntil = DateTime.Today.AddMonths(1),
+            MaxUses = 0,
+            MinimumBookingAmount = 0,
+            IsActive = true
+        };
+
+        var parameters = new DialogParameters<DiscountDialog>
+        {
+            { x => x.Discount, newDiscount },
+            { x => x.IsEdit, false }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<DiscountDialog>("Add New Discount", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is DiscountDto discountDto)
+        {
+            await SaveNewDiscount(discountDto);
+        }
     }
 
-    protected void EditDiscount(DiscountDto discount)
+    private async Task SaveNewDiscount(DiscountDto discountDto)
     {
-        // TODO: Open dialog to edit discount
-        Snackbar.Add($"Edit discount dialog coming soon", Severity.Info);
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Check for duplicate code using EF.Property to access the backing field
+            // The Code property is ignored in EF Core config, but _code backing field is mapped
+            var codeToCheck = discountDto.Code.ToUpper().Trim();
+            var existingDiscount = await context.Discounts
+                .FirstOrDefaultAsync(d => EF.Property<string>(d, "_code") == codeToCheck);
+
+            if (existingDiscount != null)
+            {
+                Snackbar.Add($"A discount with code '{discountDto.Code}' already exists", Severity.Error);
+                return;
+            }
+
+            // Create domain entity using factory method
+            var discount = Discount.Create(
+                discountDto.Code,
+                discountDto.Description,
+                discountDto.Type,
+                discountDto.Value,
+                discountDto.ValidFrom,
+                discountDto.ValidUntil,
+                discountDto.MaxUses,
+                discountDto.MinimumBookingAmount
+            );
+
+            // Set active status
+            if (!discountDto.IsActive)
+            {
+                discount.Deactivate();
+            }
+
+            await context.Discounts.AddAsync(discount);
+            await context.SaveChangesAsync();
+
+            // Update DTO with the new ID
+            discountDto.Id = discount.Id.Value;
+
+            // Add to in-memory list
+            _discounts.Add(discountDto);
+
+            Console.WriteLine($"✅ Discount '{discountDto.Code}' created successfully");
+            Snackbar.Add($"Discount '{discountDto.Code}' created successfully", Severity.Success);
+            StateHasChanged();
+        }
+        catch (DomainException ex)
+        {
+            Console.WriteLine($"❌ Validation error creating discount: {ex.Message}");
+            Snackbar.Add($"Validation error: {ex.Message}", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error creating discount: {ex.Message}");
+            Snackbar.Add($"Error creating discount: {ex.Message}", Severity.Error);
+        }
+    }
+
+    protected async Task EditDiscount(DiscountDto discount)
+    {
+        // Create a copy for editing
+        var editDiscount = new DiscountDto
+        {
+            Id = discount.Id,
+            Code = discount.Code,
+            Description = discount.Description,
+            Type = discount.Type,
+            Value = discount.Value,
+            ValidFrom = discount.ValidFrom,
+            ValidUntil = discount.ValidUntil,
+            UsedCount = discount.UsedCount,
+            MaxUses = discount.MaxUses,
+            MinimumBookingAmount = discount.MinimumBookingAmount,
+            IsActive = discount.IsActive
+        };
+
+        var parameters = new DialogParameters<DiscountDialog>
+        {
+            { x => x.Discount, editDiscount },
+            { x => x.IsEdit, true }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<DiscountDialog>($"Edit Discount: {discount.Code}", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is DiscountDto updatedDto)
+        {
+            await UpdateDiscount(discount, updatedDto);
+        }
+    }
+
+    private async Task UpdateDiscount(DiscountDto originalDiscount, DiscountDto updatedDto)
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var discountId = DiscountId.Create(originalDiscount.Id);
+            var dbDiscount = await context.Discounts
+                .FirstOrDefaultAsync(d => d.Id == discountId);
+
+            if (dbDiscount == null)
+            {
+                Snackbar.Add("Discount not found", Severity.Error);
+                return;
+            }
+
+            // Check for duplicate code if code changed using EF.Property to access the backing field
+            if (originalDiscount.Code != updatedDto.Code)
+            {
+                var codeToCheck = updatedDto.Code.ToUpper().Trim();
+                var existingDiscount = await context.Discounts
+                    .FirstOrDefaultAsync(d => EF.Property<string>(d, "_code") == codeToCheck && d.Id != discountId);
+
+                if (existingDiscount != null)
+                {
+                    Snackbar.Add($"A discount with code '{updatedDto.Code}' already exists", Severity.Error);
+                    return;
+                }
+            }
+
+            // Create new entity with updated values (since Discount has private setters)
+            // We need to delete old and create new, or use reflection
+            // For simplicity, let's delete and recreate
+            context.Discounts.Remove(dbDiscount);
+            await context.SaveChangesAsync();
+
+            var newDiscount = Discount.Create(
+                updatedDto.Code,
+                updatedDto.Description,
+                updatedDto.Type,
+                updatedDto.Value,
+                updatedDto.ValidFrom,
+                updatedDto.ValidUntil,
+                updatedDto.MaxUses,
+                updatedDto.MinimumBookingAmount
+            );
+
+            if (!updatedDto.IsActive)
+            {
+                newDiscount.Deactivate();
+            }
+
+            await context.Discounts.AddAsync(newDiscount);
+            await context.SaveChangesAsync();
+
+            // Update in-memory DTO
+            originalDiscount.Id = newDiscount.Id.Value;
+            originalDiscount.Code = updatedDto.Code;
+            originalDiscount.Description = updatedDto.Description;
+            originalDiscount.Type = updatedDto.Type;
+            originalDiscount.Value = updatedDto.Value;
+            originalDiscount.ValidFrom = updatedDto.ValidFrom;
+            originalDiscount.ValidUntil = updatedDto.ValidUntil;
+            originalDiscount.MaxUses = updatedDto.MaxUses;
+            originalDiscount.MinimumBookingAmount = updatedDto.MinimumBookingAmount;
+            originalDiscount.IsActive = updatedDto.IsActive;
+
+            Console.WriteLine($"✅ Discount '{updatedDto.Code}' updated successfully");
+            Snackbar.Add($"Discount '{updatedDto.Code}' updated successfully", Severity.Success);
+            StateHasChanged();
+        }
+        catch (DomainException ex)
+        {
+            Console.WriteLine($"❌ Validation error updating discount: {ex.Message}");
+            Snackbar.Add($"Validation error: {ex.Message}", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error updating discount: {ex.Message}");
+            Snackbar.Add($"Error updating discount: {ex.Message}", Severity.Error);
+        }
     }
 
     protected async Task DeleteDiscount(DiscountDto discount)

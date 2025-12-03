@@ -666,73 +666,128 @@ public static class DatabaseSeeder
 
     private static async Task SeedDiscounts(CampsiteBookingDbContext context)
     {
-        // Delete existing discounts
-        await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 0");
-        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Discounts");
-        await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 1");
-        await context.Database.ExecuteSqlRawAsync("ALTER TABLE Discounts AUTO_INCREMENT = 1");
+        // First, ensure the Discounts table has all required columns
+        // The initial migration only created Id and DiscountId columns
+        await EnsureDiscountColumnsExist(context);
+
+        // Check if discounts exist and have valid data
+        // Use raw SQL to check if any discounts have empty Code (indicating they were created before columns were added)
+        var invalidDiscountCount = await context.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) as Value FROM Discounts WHERE Code = '' OR Code IS NULL"
+        ).FirstOrDefaultAsync();
+
+        if (invalidDiscountCount > 0)
+        {
+            Console.WriteLine($"🔄 Found {invalidDiscountCount} discounts with invalid data, clearing and re-seeding...");
+            await context.Database.ExecuteSqlRawAsync("DELETE FROM Discounts");
+            await context.Database.ExecuteSqlRawAsync("ALTER TABLE Discounts AUTO_INCREMENT = 1");
+        }
+        else
+        {
+            // Check if discounts already exist with valid data
+            var discountCount = await context.Database.SqlQueryRaw<int>("SELECT COUNT(*) as Value FROM Discounts").FirstOrDefaultAsync();
+            if (discountCount > 0)
+            {
+                Console.WriteLine("⏭️  Discounts already exist with valid data, skipping seeding to preserve admin changes...");
+                return;
+            }
+        }
+
+        Console.WriteLine("🔄 Seeding discounts...");
 
         // Summer 2024 Discount - Active
-            var summer2024 = Discount.Create(
-                "SUMMER2024",
-                "Summer Special Discount",
-                "Percentage",
-                15m,
-                DateTime.Now.AddDays(-30),
-                DateTime.Now.AddDays(60),
-                100,
-                0m
-            );
-            await context.Discounts.AddAsync(summer2024);
-            await context.SaveChangesAsync();
-            context.Entry(summer2024).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+        var summer2024 = Discount.Create(
+            "SUMMER2024",
+            "Summer Special Discount",
+            "Percentage",
+            15m,
+            DateTime.Now.AddDays(-30),
+            DateTime.Now.AddDays(60),
+            100,
+            0m
+        );
+        await context.Discounts.AddAsync(summer2024);
+        await context.SaveChangesAsync();
+        context.Entry(summer2024).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
-            // Early Bird Discount - Active
-            var earlyBird = Discount.Create(
-                "EARLYBIRD",
-                "Early Bird Booking",
-                "Percentage",
-                10m,
-                DateTime.Now.AddDays(-60),
-                DateTime.Now.AddDays(90),
-                0, // Unlimited uses
-                0m
-            );
-            await context.Discounts.AddAsync(earlyBird);
-            await context.SaveChangesAsync();
-            context.Entry(earlyBird).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+        // Early Bird Discount - Active
+        var earlyBird = Discount.Create(
+            "EARLYBIRD",
+            "Early Bird Booking",
+            "Percentage",
+            10m,
+            DateTime.Now.AddDays(-60),
+            DateTime.Now.AddDays(90),
+            0, // Unlimited uses
+            0m
+        );
+        await context.Discounts.AddAsync(earlyBird);
+        await context.SaveChangesAsync();
+        context.Entry(earlyBird).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
-            // Family Package Discount - Active
-            var family50 = Discount.Create(
-                "FAMILY50",
-                "Family Package Discount",
-                "Fixed",
-                50m,
-                DateTime.Now.AddDays(-15),
-                DateTime.Now.AddDays(45),
-                50,
-                200m
-            );
-            await context.Discounts.AddAsync(family50);
-            await context.SaveChangesAsync();
-            context.Entry(family50).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+        // Family Package Discount - Active
+        var family50 = Discount.Create(
+            "FAMILY50",
+            "Family Package Discount",
+            "Fixed",
+            50m,
+            DateTime.Now.AddDays(-15),
+            DateTime.Now.AddDays(45),
+            50,
+            200m
+        );
+        await context.Discounts.AddAsync(family50);
+        await context.SaveChangesAsync();
+        context.Entry(family50).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
-            // Winter 2023 Discount - Inactive (expired)
-            var winter2023 = Discount.Create(
-                "WINTER2023",
-                "Winter Promotion",
-                "Percentage",
-                20m,
-                DateTime.Now.AddDays(-120),
-                DateTime.Now.AddDays(-30),
-                100,
-                0m
-            );
-            // Deactivate the expired discount
-            winter2023.GetType().GetMethod("Deactivate")?.Invoke(winter2023, null);
-            await context.Discounts.AddAsync(winter2023);
-            await context.SaveChangesAsync();
-            context.Entry(winter2023).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+        // Winter 2023 Discount - Inactive (expired)
+        var winter2023 = Discount.Create(
+            "WINTER2023",
+            "Winter Promotion",
+            "Percentage",
+            20m,
+            DateTime.Now.AddDays(-120),
+            DateTime.Now.AddDays(-30),
+            100,
+            0m
+        );
+        // Deactivate the expired discount
+        winter2023.Deactivate();
+        await context.Discounts.AddAsync(winter2023);
+        await context.SaveChangesAsync();
+        context.Entry(winter2023).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+
+        // New Year Discount - Active with minimum booking amount
+        var newYear = Discount.Create(
+            "NEWYEAR25",
+            "New Year 2025 Celebration",
+            "Percentage",
+            25m,
+            DateTime.Now.AddDays(-10),
+            DateTime.Now.AddDays(30),
+            200, // Limited to 200 uses
+            100m // Minimum booking of $100
+        );
+        await context.Discounts.AddAsync(newYear);
+        await context.SaveChangesAsync();
+        context.Entry(newYear).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+
+        // Weekend Special - Active fixed discount
+        var weekend = Discount.Create(
+            "WEEKEND30",
+            "Weekend Getaway Special",
+            "Fixed",
+            30m,
+            DateTime.Now.AddDays(-7),
+            DateTime.Now.AddDays(60),
+            0, // Unlimited uses
+            0m // No minimum
+        );
+        await context.Discounts.AddAsync(weekend);
+        await context.SaveChangesAsync();
+        context.Entry(weekend).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+
+        Console.WriteLine("✅ Seeded 6 discount codes");
     }
 
     private static async Task SeedBookings(CampsiteBookingDbContext context)
@@ -1775,6 +1830,81 @@ public static class DatabaseSeeder
                 // Ignore if already auto-increment or table doesn't exist
             }
         }
+    }
+
+    private static async Task EnsureDiscountColumnsExist(CampsiteBookingDbContext context)
+    {
+        Console.WriteLine("🔄 Ensuring Discount table columns exist...");
+
+        // List of columns to add with their definitions
+        var columnsToAdd = new Dictionary<string, string>
+        {
+            { "Code", "VARCHAR(20) NOT NULL DEFAULT ''" },
+            { "Description", "VARCHAR(500) NULL" },
+            { "Type", "VARCHAR(20) NOT NULL DEFAULT 'Percentage'" },
+            { "Value", "DECIMAL(10, 2) NOT NULL DEFAULT 0" },
+            { "ValidFrom", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP" },
+            { "ValidUntil", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP" },
+            { "UsedCount", "INT NOT NULL DEFAULT 0" },
+            { "MaxUses", "INT NOT NULL DEFAULT 0" },
+            { "MinimumBookingAmount", "DECIMAL(10, 2) NOT NULL DEFAULT 0" },
+            { "IsActive", "TINYINT(1) NOT NULL DEFAULT 1" },
+            { "CreatedDate", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP" }
+        };
+
+        foreach (var (columnName, columnDef) in columnsToAdd)
+        {
+            try
+            {
+                // Check if column exists
+                var columnExists = await context.Database.SqlQueryRaw<int>(
+                    $"SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Discounts' AND COLUMN_NAME = '{columnName}'"
+                ).FirstOrDefaultAsync();
+
+                if (columnExists == 0)
+                {
+                    await context.Database.ExecuteSqlRawAsync($"ALTER TABLE Discounts ADD COLUMN {columnName} {columnDef}");
+                    Console.WriteLine($"   ✅ Added column {columnName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ⚠️ Could not add column {columnName}: {ex.Message}");
+            }
+        }
+
+        // Try to drop DiscountId column if it exists (it was in the initial migration but shouldn't be there)
+        try
+        {
+            var discountIdExists = await context.Database.SqlQueryRaw<int>(
+                "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Discounts' AND COLUMN_NAME = 'DiscountId'"
+            ).FirstOrDefaultAsync();
+
+            if (discountIdExists > 0)
+            {
+                await context.Database.ExecuteSqlRawAsync("ALTER TABLE Discounts DROP COLUMN DiscountId");
+                Console.WriteLine("   ✅ Dropped unnecessary DiscountId column");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"   ⚠️ Could not drop DiscountId column: {ex.Message}");
+        }
+
+        // Try to create unique index on Code (if not exists)
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE UNIQUE INDEX IX_Discounts_Code ON Discounts (Code)"
+            );
+            Console.WriteLine("   ✅ Created unique index on Code");
+        }
+        catch
+        {
+            // Index may already exist, ignore
+        }
+
+        Console.WriteLine("✅ Discount table columns verified");
     }
 }
 

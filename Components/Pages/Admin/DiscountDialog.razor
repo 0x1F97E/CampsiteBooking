@@ -1,0 +1,207 @@
+@using MudBlazor
+@rendermode InteractiveServer
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_isValid">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Discount.Code"
+                                  Label="Discount Code"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  RequiredError="Code is required"
+                                  MaxLength="20"
+                                  Placeholder="e.g., SUMMER2024"
+                                  TextChanged="@((s) => Discount.Code = s?.ToUpper() ?? string.Empty)"
+                                  HelperText="Will be auto-converted to uppercase" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect @bind-Value="Discount.Type"
+                               Label="Discount Type"
+                               Variant="Variant.Outlined"
+                               Required="true"
+                               RequiredError="Type is required">
+                        <MudSelectItem Value="@("Percentage")">
+                            <MudIcon Icon="@Icons.Material.Filled.Percent" Size="Size.Small" Class="mr-2" />
+                            Percentage
+                        </MudSelectItem>
+                        <MudSelectItem Value="@("Fixed")">
+                            <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" Class="mr-2" />
+                            Fixed Amount
+                        </MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Discount.Description"
+                                  Label="Description"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  RequiredError="Description is required"
+                                  Lines="2"
+                                  MaxLength="200"
+                                  Placeholder="Describe what this discount is for..." />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="Discount.Value"
+                                     Label="@(Discount.Type == "Percentage" ? "Percentage Value" : "Fixed Amount")"
+                                     Variant="Variant.Outlined"
+                                     Format="N2"
+                                     Min="0.01m"
+                                     Max="@(Discount.Type == "Percentage" ? 100m : decimal.MaxValue)"
+                                     Adornment="Adornment.Start"
+                                     AdornmentText="@(Discount.Type == "Percentage" ? "%" : "$")"
+                                     Required="true"
+                                     RequiredError="Value is required"
+                                     HelperText="@(Discount.Type == "Percentage" ? "Enter 1-100" : "Enter amount in dollars")" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="Discount.MinimumBookingAmount"
+                                     Label="Minimum Booking Amount"
+                                     Variant="Variant.Outlined"
+                                     Format="N2"
+                                     Min="0m"
+                                     Adornment="Adornment.Start"
+                                     AdornmentText="$"
+                                     HelperText="0 = no minimum required" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker @bind-Date="_validFromDate"
+                                   Label="Valid From"
+                                   Variant="Variant.Outlined"
+                                   Required="true"
+                                   RequiredError="Valid from date is required"
+                                   Editable="true"
+                                   DateFormat="yyyy-MM-dd" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker @bind-Date="_validUntilDate"
+                                   Label="Valid Until"
+                                   Variant="Variant.Outlined"
+                                   Required="true"
+                                   RequiredError="Valid until date is required"
+                                   Editable="true"
+                                   DateFormat="yyyy-MM-dd"
+                                   MinDate="@_validFromDate" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="Discount.MaxUses"
+                                     Label="Maximum Uses"
+                                     Variant="Variant.Outlined"
+                                     Min="0"
+                                     HelperText="0 = unlimited uses" />
+                </MudItem>
+                @if (IsEdit)
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField Value="Discount.UsedCount"
+                                         Label="Current Usage"
+                                         Variant="Variant.Outlined"
+                                         Disabled="true"
+                                         HelperText="Number of times this discount has been used" />
+                    </MudItem>
+                }
+                <MudItem xs="12">
+                    <MudSwitch @bind-Value="Discount.IsActive" Color="Color.Success" Label="Active" />
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Inactive discounts cannot be used for new bookings
+                    </MudText>
+                </MudItem>
+
+                @if (!string.IsNullOrEmpty(_validationError))
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Error" Dense="true">@_validationError</MudAlert>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Submit"
+                   Disabled="@(!_isValid || _isSubmitting)">
+            @if (_isSubmitting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            @(IsEdit ? "Update" : "Create") Discount
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public DiscountDto Discount { get; set; } = new();
+
+    [Parameter]
+    public bool IsEdit { get; set; }
+
+    private MudForm _form = null!;
+    private bool _isValid;
+    private bool _isSubmitting;
+    private string _validationError = string.Empty;
+    private DateTime? _validFromDate;
+    private DateTime? _validUntilDate;
+
+    protected override void OnInitialized()
+    {
+        _validFromDate = Discount.ValidFrom;
+        _validUntilDate = Discount.ValidUntil;
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Submit()
+    {
+        _validationError = string.Empty;
+
+        // Sync dates back to DTO
+        if (_validFromDate.HasValue)
+            Discount.ValidFrom = _validFromDate.Value;
+        if (_validUntilDate.HasValue)
+            Discount.ValidUntil = _validUntilDate.Value;
+
+        // Custom validation
+        if (Discount.ValidUntil < Discount.ValidFrom)
+        {
+            _validationError = "Valid Until date must be on or after Valid From date";
+            return;
+        }
+
+        if (Discount.Type == "Percentage" && Discount.Value > 100)
+        {
+            _validationError = "Percentage value cannot exceed 100";
+            return;
+        }
+
+        if (Discount.Value <= 0)
+        {
+            _validationError = "Discount value must be greater than 0";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Discount.Code))
+        {
+            _validationError = "Discount code is required";
+            return;
+        }
+
+        // Ensure code is uppercase
+        Discount.Code = Discount.Code.ToUpper().Trim();
+
+        if (_isValid)
+        {
+            MudDialog.Close(DialogResult.Ok(Discount));
+        }
+    }
+}
+

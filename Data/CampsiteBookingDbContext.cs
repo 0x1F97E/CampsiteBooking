@@ -566,6 +566,48 @@ public class CampsiteBookingDbContext : DbContext
             entity.Property("_adminResponse").HasColumnName("AdminResponse");
             entity.Property("_adminResponseDate").HasColumnName("AdminResponseDate");
         });
+
+        // Configure Discount entity to map private fields
+        modelBuilder.Entity<Discount>(entity =>
+        {
+            // Configure the Id property to use the Id column with value converter
+            entity.Property(d => d.Id).HasColumnName("Id")
+                .HasConversion(new DiscountIdConverter());
+
+            // Ignore the DiscountId property - it's a computed property
+            entity.Ignore(d => d.DiscountId);
+
+            // Ignore public properties that are backed by private fields
+            entity.Ignore(d => d.Code);
+            entity.Ignore(d => d.Description);
+            entity.Ignore(d => d.Type);
+            entity.Ignore(d => d.Value);
+            entity.Ignore(d => d.ValidFrom);
+            entity.Ignore(d => d.ValidUntil);
+            entity.Ignore(d => d.UsedCount);
+            entity.Ignore(d => d.MaxUses);
+            entity.Ignore(d => d.MinimumBookingAmount);
+            entity.Ignore(d => d.ApplicableCampsites);
+            entity.Ignore(d => d.ApplicableAccommodationTypes);
+            entity.Ignore(d => d.IsActive);
+            entity.Ignore(d => d.CreatedDate);
+
+            // Map private fields to database columns
+            entity.Property("_code").HasColumnName("Code").HasMaxLength(20).IsRequired();
+            entity.Property("_description").HasColumnName("Description").HasMaxLength(500);
+            entity.Property("_type").HasColumnName("Type").HasMaxLength(20).IsRequired();
+            entity.Property("_value").HasColumnName("Value").HasColumnType("decimal(10, 2)");
+            entity.Property("_validFrom").HasColumnName("ValidFrom");
+            entity.Property("_validUntil").HasColumnName("ValidUntil");
+            entity.Property("_usedCount").HasColumnName("UsedCount");
+            entity.Property("_maxUses").HasColumnName("MaxUses");
+            entity.Property("_minimumBookingAmount").HasColumnName("MinimumBookingAmount").HasColumnType("decimal(10, 2)");
+            entity.Property("_isActive").HasColumnName("IsActive");
+            entity.Property("_createdDate").HasColumnName("CreatedDate");
+
+            // Create unique index on Code
+            entity.HasIndex("_code").IsUnique();
+        });
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
