@@ -30,12 +30,22 @@ public class PricingManagementBase : ComponentBase
     protected decimal _previewTotal = 0;
     protected List<BasePricingDto> _previewAccommodationTypes = new();
 
+    // Campsite Pricing Comparison - editable prices tracking
+    // Key: "{CampsiteId}_{AccommodationTypeId}" -> Value: edited price
+    protected Dictionary<string, decimal> _editedPrices = new();
+    protected Dictionary<string, decimal> _originalPrices = new();
+    protected bool _isSavingPrices = false;
+
+    protected bool HasUnsavedPriceChanges => _editedPrices.Any(kvp =>
+        _originalPrices.TryGetValue(kvp.Key, out var original) && kvp.Value != original);
+
     protected override async Task OnInitializedAsync()
     {
         await LoadPricingData();
         await LoadSeasonalPricing();
         await LoadDiscounts();
         InitializePreviewDefaults();
+        InitializePriceTracking();
         CalculatePreview();
     }
 
@@ -1184,6 +1194,137 @@ public class PricingManagementBase : ComponentBase
             .Select(p => p.Type)
             .Distinct()
             .OrderBy(t => t);
+    }
+
+    /// <summary>
+    /// Initializes the price tracking dictionaries when pricing data is loaded
+    /// </summary>
+    protected void InitializePriceTracking()
+    {
+        _editedPrices.Clear();
+        _originalPrices.Clear();
+
+        foreach (var campsite in _campsites)
+        {
+            foreach (var pricing in campsite.Pricing)
+            {
+                var key = $"{campsite.Id}_{pricing.Id}";
+                _editedPrices[key] = pricing.Price;
+                _originalPrices[key] = pricing.Price;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets the editable price for a specific campsite/accommodation type combination
+    /// </summary>
+    protected decimal GetEditablePrice(int campsiteId, int accommodationTypeId)
+    {
+        var key = $"{campsiteId}_{accommodationTypeId}";
+        return _editedPrices.TryGetValue(key, out var price) ? price : 0;
+    }
+
+    /// <summary>
+    /// Sets the price for a specific campsite/accommodation type combination
+    /// </summary>
+    protected void SetEditablePrice(int campsiteId, int accommodationTypeId, decimal price)
+    {
+        var key = $"{campsiteId}_{accommodationTypeId}";
+        _editedPrices[key] = price;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Checks if a specific price has been modified from its original value
+    /// </summary>
+    protected bool IsPriceModified(int campsiteId, int accommodationTypeId)
+    {
+        var key = $"{campsiteId}_{accommodationTypeId}";
+        if (_editedPrices.TryGetValue(key, out var edited) &&
+            _originalPrices.TryGetValue(key, out var original))
+        {
+            return edited != original;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Saves all modified prices to the database
+    /// </summary>
+    protected async Task SavePriceChanges()
+    {
+        if (!HasUnsavedPriceChanges || _isSavingPrices) return;
+
+        _isSavingPrices = true;
+        StateHasChanged();
+
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            var modifiedCount = 0;
+
+            foreach (var kvp in _editedPrices)
+            {
+                if (!_originalPrices.TryGetValue(kvp.Key, out var originalPrice) || kvp.Value == originalPrice)
+                    continue;
+
+                // Parse the key to get campsiteId and accommodationTypeId
+                var parts = kvp.Key.Split('_');
+                if (parts.Length != 2) continue;
+
+                var campsiteId = int.Parse(parts[0]);
+                var accommodationTypeId = int.Parse(parts[1]);
+                var newPrice = kvp.Value;
+
+                // Update the AccommodationType's base price
+                var accommodationTypeIdValue = AccommodationTypeId.Create(accommodationTypeId);
+                var dbAccommodationType = await context.AccommodationTypes
+                    .FirstOrDefaultAsync(a => a.Id == accommodationTypeIdValue);
+
+                if (dbAccommodationType != null)
+                {
+                    dbAccommodationType.UpdateBasePrice(Money.Create(newPrice, "DKK"));
+                    context.Entry(dbAccommodationType).Property("_basePrice").IsModified = true;
+                    modifiedCount++;
+
+                    Console.WriteLine($"✅ Updated price for accommodation type {accommodationTypeId} to ${newPrice}");
+                }
+            }
+
+            await context.SaveChangesAsync();
+
+            // Update original prices to match new values (reset change tracking)
+            foreach (var kvp in _editedPrices.ToList())
+            {
+                _originalPrices[kvp.Key] = kvp.Value;
+            }
+
+            // Also update the in-memory campsite pricing data
+            foreach (var campsite in _campsites)
+            {
+                foreach (var pricing in campsite.Pricing)
+                {
+                    var key = $"{campsite.Id}_{pricing.Id}";
+                    if (_editedPrices.TryGetValue(key, out var newPrice))
+                    {
+                        pricing.Price = newPrice;
+                    }
+                }
+            }
+
+            Console.WriteLine($"✅ Saved {modifiedCount} price changes successfully");
+            Snackbar.Add($"Successfully saved {modifiedCount} price change{(modifiedCount != 1 ? "s" : "")}!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error saving price changes: {ex.Message}");
+            Snackbar.Add($"Error saving price changes: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSavingPrices = false;
+            StateHasChanged();
+        }
     }
 }
 

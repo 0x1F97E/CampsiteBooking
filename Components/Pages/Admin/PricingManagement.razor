@@ -327,14 +327,14 @@
             </MudCard>
         </MudItem>
 
-        <!-- Campsite Comparison Table (Read-Only) -->
+        <!-- Campsite Pricing Comparison (Editable) -->
         <MudItem xs="12">
             <MudCard Elevation="3">
                 <MudCardHeader>
                     <CardHeaderContent>
                         <MudText Typo="Typo.h6">Campsite Pricing Comparison</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            Compare base prices across all campsites (manage prices in the Campsites section)
+                            Edit base prices for each accommodation type across all campsites
                         </MudText>
                     </CardHeaderContent>
                 </MudCardHeader>
@@ -361,9 +361,20 @@
                                 <MudTd DataLabel="@accommodationType">
                                     @if (pricing != null)
                                     {
-                                        <MudText Typo="Typo.body2" Color="Color.Success">
-                                            <strong>$@pricing.Price.ToString("N2")</strong>
-                                        </MudText>
+                                        var campsiteId = context.Id;
+                                        var accId = pricing.Id;
+                                        var isModified = IsPriceModified(campsiteId, accId);
+                                        <MudNumericField T="decimal"
+                                                        Value="@GetEditablePrice(campsiteId, accId)"
+                                                        ValueChanged="@((decimal val) => SetEditablePrice(campsiteId, accId, val))"
+                                                        Variant="Variant.Outlined"
+                                                        Margin="Margin.Dense"
+                                                        Min="0"
+                                                        Adornment="Adornment.Start"
+                                                        AdornmentText="$"
+                                                        AdornmentColor="@(isModified ? Color.Warning : Color.Default)"
+                                                        Style="@(isModified ? "max-width: 120px; background-color: #fff8e1;" : "max-width: 120px;")"
+                                                        Class="@(isModified ? "modified-price" : "")" />
                                     }
                                     else
                                     {
@@ -373,6 +384,31 @@
                             }
                         </RowTemplate>
                     </MudTable>
+
+                    <!-- Save Changes Button -->
+                    <div class="d-flex justify-end mt-4">
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@(_isSavingPrices ? null : Icons.Material.Filled.Save)"
+                                   Disabled="@(!HasUnsavedPriceChanges || _isSavingPrices)"
+                                   OnClick="SavePriceChanges">
+                            @if (_isSavingPrices)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <span>Save Changes</span>
+                            }
+                        </MudButton>
+                    </div>
+                    @if (HasUnsavedPriceChanges)
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                            You have unsaved changes. Click "Save Changes" to persist your modifications.
+                        </MudAlert>
+                    }
                 </MudCardContent>
             </MudCard>
         </MudItem>

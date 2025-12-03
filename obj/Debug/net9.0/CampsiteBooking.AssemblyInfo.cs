@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CampsiteBooking")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b9a67d85b8db53090a9ce14392c432da06cd5fdd")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cb8340e88508141eaaaafcdadab31d8c1bd1e4c6")]
 [assembly: System.Reflection.AssemblyProductAttribute("CampsiteBooking")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CampsiteBooking")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
