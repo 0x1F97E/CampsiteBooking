@@ -465,28 +465,30 @@ public static class DatabaseSeeder
             Console.WriteLine("   - staff@campsitebooking.dk / Staff123!");
         }
 
-        // Check if photos already exist
+        // Force re-seed photos to ensure proper data for organized gallery display
         if (await context.Photos.AnyAsync())
         {
-            Console.WriteLine("⏭️  Photos already seeded, skipping...");
-            return;
+            Console.WriteLine("🔄 Photos exist - clearing and re-seeding to ensure proper data for organized gallery...");
+            await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 0");
+            await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Photos");
+            await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 1");
         }
 
-        Console.WriteLine("🔄 Seeding photos...");
+        Console.WriteLine("🔵 Seeding photos...");
 
         // Seed "All Campsites" Activity Photos (CampsiteId = 0)
         var campsiteIdZero = CampsiteId.CreateNew(); // CampsiteId with value 0 for "All Campsites"
 
         var activityPhotosData = new[]
         {
-            new { Url = "https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=800&q=80", Caption = "Cycling", AltText = "Explore Denmark's extensive cycling routes. Bike rentals available at most locations.", DisplayOrder = 1 },
-            new { Url = "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80", Caption = "Hiking", AltText = "Discover scenic hiking trails ranging from easy walks to challenging treks.", DisplayOrder = 2 },
-            new { Url = "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80", Caption = "Swimming", AltText = "Enjoy swimming in the sea, lakes, or on-site swimming pools at select locations.", DisplayOrder = 3 },
+            new { Url = "https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=800&q=80", Caption = "Cycling Adventures", AltText = "Explore Denmark's extensive cycling routes. Bike rentals available at most locations.", DisplayOrder = 1 },
+            new { Url = "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80", Caption = "Scenic Hiking", AltText = "Discover scenic hiking trails ranging from easy walks to challenging treks.", DisplayOrder = 2 },
+            new { Url = "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80", Caption = "Swimming Fun", AltText = "Enjoy swimming in the sea, lakes, or on-site swimming pools at select locations.", DisplayOrder = 3 },
             new { Url = "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80", Caption = "Water Sports", AltText = "Kayaking, sailing, and paddleboarding available at coastal and lakeside sites.", DisplayOrder = 4 },
-            new { Url = "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&q=80", Caption = "Fishing", AltText = "Fishing opportunities in nearby lakes, rivers, and coastal waters.", DisplayOrder = 5 },
-            new { Url = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80", Caption = "Dining", AltText = "On-site restaurants and nearby dining options featuring local Danish cuisine.", DisplayOrder = 6 },
-            new { Url = "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=800&q=80", Caption = "Golfing", AltText = "Enjoy golfing at nearby courses with beautiful Danish landscapes and coastal views.", DisplayOrder = 7 },
-            new { Url = "https://images.unsplash.com/photo-1548198055-8d6fcf8a4f0c?w=800&q=80", Caption = "Fireplace Gathering", AltText = "Cozy evenings gathered around the fireplace with family and friends.", DisplayOrder = 8 }
+            new { Url = "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&q=80", Caption = "Fishing Spots", AltText = "Fishing opportunities in nearby lakes, rivers, and coastal waters.", DisplayOrder = 5 },
+            new { Url = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80", Caption = "Local Dining", AltText = "On-site restaurants and nearby dining options featuring local Danish cuisine.", DisplayOrder = 6 },
+            new { Url = "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=800&q=80", Caption = "Golfing Nearby", AltText = "Enjoy golfing at nearby courses with beautiful Danish landscapes and coastal views.", DisplayOrder = 7 },
+            new { Url = "https://images.unsplash.com/photo-1548198055-8d6fcf8a4f0c?w=800&q=80", Caption = "Evening Campfires", AltText = "Cozy evenings gathered around the fireplace with family and friends.", DisplayOrder = 8 }
         };
 
         // Add "All Campsites" photos with manually assigned IDs
@@ -511,30 +513,40 @@ public static class DatabaseSeeder
         }
 
         await context.SaveChangesAsync();
-        Console.WriteLine($"✅ Seeded {activityPhotosData.Length} 'All Campsites' photos");
+        Console.WriteLine($"✅ Seeded {activityPhotosData.Length} 'General (All Campsites)' photos");
 
-        // Seed campsite-specific photos
+        // Seed campsite-specific photos - more photos per campsite to better demonstrate the organized gallery
         var campsitePhotosData = new[]
         {
-            // Copenhagen Beach Camp (ID 1)
-            new { CampsiteId = 1, Url = "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=800&q=80", Caption = "Beach View", AltText = "Beautiful beach view at Copenhagen Beach Camp", DisplayOrder = 1 },
-            new { CampsiteId = 1, Url = "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&q=80", Caption = "Beachside Camping", AltText = "Camping spots right by the beach", DisplayOrder = 2 },
+            // Copenhagen Beach Camp (ID 1) - Beach-focused photos
+            new { CampsiteId = 1, Url = "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=800&q=80", Caption = "Sunrise at the Beach", AltText = "Beautiful sunrise view at Copenhagen Beach Camp", DisplayOrder = 1 },
+            new { CampsiteId = 1, Url = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80", Caption = "Sandy Beach Area", AltText = "The pristine sandy beach just steps from your campsite", DisplayOrder = 2 },
+            new { CampsiteId = 1, Url = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80", Caption = "Beachfront Glamping", AltText = "Luxury glamping tents with ocean views", DisplayOrder = 3 },
+            new { CampsiteId = 1, Url = "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80", Caption = "Beach Sunset", AltText = "Spectacular sunset over the Copenhagen coastline", DisplayOrder = 4 },
 
-            // Skagen North Point (ID 2)
-            new { CampsiteId = 2, Url = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80", Caption = "Northern Lights", AltText = "Northern landscape at Skagen", DisplayOrder = 1 },
-            new { CampsiteId = 2, Url = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80", Caption = "Coastal Sunset", AltText = "Stunning sunset views", DisplayOrder = 2 },
+            // Skagen North Point (ID 2) - Northern coastal photos
+            new { CampsiteId = 2, Url = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80", Caption = "Northern Landscapes", AltText = "Dramatic northern landscape at Skagen", DisplayOrder = 1 },
+            new { CampsiteId = 2, Url = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80", Caption = "Coastal Sunset", AltText = "Stunning sunset views at Denmark's northern tip", DisplayOrder = 2 },
+            new { CampsiteId = 2, Url = "https://images.unsplash.com/photo-1499092346589-b9b6be3e94b2?w=800&q=80", Caption = "Lighthouse View", AltText = "Historic Skagen lighthouse visible from the campsite", DisplayOrder = 3 },
+            new { CampsiteId = 2, Url = "https://images.unsplash.com/photo-1532274402911-5a369e4c4bb5?w=800&q=80", Caption = "Two Seas Meeting", AltText = "Where the North Sea meets the Baltic Sea", DisplayOrder = 4 },
 
-            // Aarhus Forest Retreat (ID 3)
-            new { CampsiteId = 3, Url = "https://images.unsplash.com/photo-1511497584788-876760111969?w=800&q=80", Caption = "Forest Trail", AltText = "Peaceful forest trails", DisplayOrder = 1 },
-            new { CampsiteId = 3, Url = "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?w=800&q=80", Caption = "Forest Camping", AltText = "Camping among the trees", DisplayOrder = 2 },
+            // Aarhus Forest Retreat (ID 3) - Forest and nature photos
+            new { CampsiteId = 3, Url = "https://images.unsplash.com/photo-1511497584788-876760111969?w=800&q=80", Caption = "Forest Trail", AltText = "Peaceful forest trails winding through ancient trees", DisplayOrder = 1 },
+            new { CampsiteId = 3, Url = "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?w=800&q=80", Caption = "Forest Camping", AltText = "Camping among the tall Danish trees", DisplayOrder = 2 },
+            new { CampsiteId = 3, Url = "https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&q=80", Caption = "Morning Mist", AltText = "Beautiful morning mist in the forest", DisplayOrder = 3 },
+            new { CampsiteId = 3, Url = "https://images.unsplash.com/photo-1425913397330-cf8af2ff40a1?w=800&q=80", Caption = "Nature Walks", AltText = "Guided nature walks available daily", DisplayOrder = 4 },
 
-            // Odense Family Camp (ID 4)
-            new { CampsiteId = 4, Url = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=800&q=80", Caption = "Family Activities", AltText = "Fun activities for the whole family", DisplayOrder = 1 },
-            new { CampsiteId = 4, Url = "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=80", Caption = "Playground", AltText = "Children's playground area", DisplayOrder = 2 },
+            // Odense Family Camp (ID 4) - Family-friendly photos
+            new { CampsiteId = 4, Url = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=800&q=80", Caption = "Family Fun", AltText = "Fun activities for the whole family", DisplayOrder = 1 },
+            new { CampsiteId = 4, Url = "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=800&q=80", Caption = "Kids Playground", AltText = "Adventure playground for children of all ages", DisplayOrder = 2 },
+            new { CampsiteId = 4, Url = "https://images.unsplash.com/photo-1503455637927-730bce8583c0?w=800&q=80", Caption = "Family Picnic Area", AltText = "Spacious picnic areas perfect for family gatherings", DisplayOrder = 3 },
+            new { CampsiteId = 4, Url = "https://images.unsplash.com/photo-1476970610643-1a8a8ef27af2?w=800&q=80", Caption = "Outdoor Games", AltText = "Outdoor games and sports facilities", DisplayOrder = 4 },
 
-            // Bornholm Island Camp (ID 5)
-            new { CampsiteId = 5, Url = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80", Caption = "Island Paradise", AltText = "Beautiful island views at Bornholm", DisplayOrder = 1 },
-            new { CampsiteId = 5, Url = "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=800&q=80", Caption = "Rocky Coastline", AltText = "Stunning rocky coastline of Bornholm", DisplayOrder = 2 },
+            // Bornholm Island Camp (ID 5) - Island paradise photos
+            new { CampsiteId = 5, Url = "https://images.unsplash.com/photo-1506953823976-52e1fdc0149a?w=800&q=80", Caption = "Island Paradise", AltText = "Beautiful island views at Bornholm", DisplayOrder = 1 },
+            new { CampsiteId = 5, Url = "https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=800&q=80", Caption = "Rocky Coastline", AltText = "Stunning rocky coastline of Bornholm Island", DisplayOrder = 2 },
+            new { CampsiteId = 5, Url = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=80", Caption = "Island Cycling", AltText = "Explore the island on two wheels", DisplayOrder = 3 },
+            new { CampsiteId = 5, Url = "https://images.unsplash.com/photo-1532274402911-5a369e4c4bb5?w=800&q=80", Caption = "Coastal Views", AltText = "Breathtaking coastal views from every angle", DisplayOrder = 4 },
         };
 
         foreach (var photoData in campsitePhotosData)
@@ -557,7 +569,7 @@ public static class DatabaseSeeder
         }
 
         await context.SaveChangesAsync();
-        Console.WriteLine($"✅ Seeded {campsitePhotosData.Length} campsite-specific photos");
+        Console.WriteLine($"✅ Seeded {campsitePhotosData.Length} campsite-specific photos across 5 campsites");
         Console.WriteLine($"✅ Total photos seeded: {photoId - 1}");
     }
 

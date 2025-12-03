@@ -278,7 +278,7 @@
             </MudPaper>
         </MudItem>
 
-        <!-- Photo Gallery Management -->
+        <!-- Photo Gallery Management - Organized by Campsite -->
         <MudItem xs="12">
             <MudPaper Elevation="3" Class="pa-4">
                 <div class="d-flex justify-space-between align-center mb-4">
@@ -286,58 +286,142 @@
                         <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Class="mr-2" />
                         Photo Gallery Management
                     </MudText>
-                    <MudButton Variant="Variant.Filled"
-                              Color="Color.Primary"
-                              StartIcon="@Icons.Material.Filled.Add"
-                              OnClick="OpenAddPhotoDialog">
-                        Add Photo
-                    </MudButton>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @_photos.Count total photos across @_photosByCampsite.Count campsites
+                    </MudText>
                 </div>
 
-                <MudTable Items="@_photos" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true">
-                    <HeaderContent>
-                        <MudTh>Preview</MudTh>
-                        <MudTh>Title</MudTh>
-                        <MudTh>Campsite</MudTh>
-                        <MudTh>Description</MudTh>
-                        <MudTh>Image URL</MudTh>
-                        <MudTh>Actions</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="Preview">
-                            <MudImage Src="@context.ImageUrl"
-                                     Alt="@context.Title"
-                                     Width="100"
-                                     Height="60"
-                                     ObjectFit="ObjectFit.Cover"
-                                     Class="rounded" />
-                        </MudTd>
-                        <MudTd DataLabel="Title">
-                            <MudText Typo="Typo.body2"><strong>@context.Title</strong></MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Campsite">
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@context.CampsiteName</MudChip>
-                        </MudTd>
-                        <MudTd DataLabel="Description">
-                            <MudText Typo="Typo.body2">@context.Description</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Image URL">
-                            <MudText Typo="Typo.caption" Style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                @context.ImageUrl
-                            </MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Actions">
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                          Color="Color.Primary"
-                                          Size="Size.Small"
-                                          OnClick="@(() => EditPhoto(context))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                          Color="Color.Error"
-                                          Size="Size.Small"
-                                          OnClick="@(() => DeletePhoto(context))" />
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
+                @if (!_photosByCampsite.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Class="mb-4">
+                        No photos found. Add photos to your campsites using the "Add Photo" button in each section below.
+                    </MudAlert>
+                }
+
+                <!-- General Photos (All Campsites) Section -->
+                <MudExpansionPanels MultiExpansion="true" Class="mb-4">
+                    <MudExpansionPanel @bind-Expanded="_generalPhotosExpanded">
+                        <TitleContent>
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Public" Color="Color.Primary" />
+                                <MudText Typo="Typo.subtitle1"><strong>General Photos (All Campsites)</strong></MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">
+                                    @(_photosByCampsite.ContainsKey(0) ? _photosByCampsite[0].Count : 0) photos
+                                </MudChip>
+                                <MudSpacer />
+                                <span @onclick:stopPropagation="true">
+                                    <MudButton Variant="Variant.Filled"
+                                              Color="Color.Primary"
+                                              Size="Size.Small"
+                                              StartIcon="@Icons.Material.Filled.Add"
+                                              OnClick="@(() => OpenAddPhotoDialogForCampsite(0))">
+                                        Add Photo
+                                    </MudButton>
+                                </span>
+                            </div>
+                        </TitleContent>
+                        <ChildContent>
+                            @if (_photosByCampsite.ContainsKey(0) && _photosByCampsite[0].Any())
+                            {
+                                <MudGrid Class="pa-2">
+                                    @foreach (var photo in _photosByCampsite[0])
+                                    {
+                                        <MudItem xs="12" sm="6" md="4" lg="3">
+                                            <MudCard Elevation="2" Class="photo-card">
+                                                <MudCardMedia Image="@photo.ImageUrl" Height="150" />
+                                                <MudCardContent Class="pa-2">
+                                                    <MudText Typo="Typo.subtitle2" Class="text-truncate"><strong>@photo.Title</strong></MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate">@photo.Description</MudText>
+                                                </MudCardContent>
+                                                <MudCardActions Class="pa-1 justify-end">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                  Color="Color.Primary"
+                                                                  Size="Size.Small"
+                                                                  OnClick="@(() => EditPhoto(photo))" />
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                  Color="Color.Error"
+                                                                  Size="Size.Small"
+                                                                  OnClick="@(() => DeletePhoto(photo))" />
+                                                </MudCardActions>
+                                            </MudCard>
+                                        </MudItem>
+                                    }
+                                </MudGrid>
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Info" Dense="true" Class="ma-2">
+                                    No general photos. Click "Add Photo" to add photos that appear across all campsites.
+                                </MudAlert>
+                            }
+                        </ChildContent>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+
+                <!-- Per-Campsite Photo Sections -->
+                <MudExpansionPanels MultiExpansion="true">
+                    @foreach (var campsite in _campsites)
+                    {
+                        var campsitePhotos = _photosByCampsite.ContainsKey(campsite.Id) ? _photosByCampsite[campsite.Id] : new List<PhotoDto>();
+                        var photoCount = campsitePhotos.Count;
+                        <MudExpansionPanel @bind-Expanded="_campsiteExpansionStates[campsite.Id]">
+                            <TitleContent>
+                                <div class="d-flex align-center gap-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Terrain" Color="Color.Success" />
+                                    <MudText Typo="Typo.subtitle1"><strong>@campsite.Name</strong></MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@(photoCount > 0 ? Color.Success : Color.Default)" Class="ml-2">
+                                        @photoCount photos
+                                    </MudChip>
+                                    <MudSpacer />
+                                    <span @onclick:stopPropagation="true">
+                                        <MudButton Variant="Variant.Filled"
+                                                  Color="Color.Primary"
+                                                  Size="Size.Small"
+                                                  StartIcon="@Icons.Material.Filled.Add"
+                                                  OnClick="@(() => OpenAddPhotoDialogForCampsite(campsite.Id))">
+                                            Add Photo
+                                        </MudButton>
+                                    </span>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                @if (campsitePhotos.Any())
+                                {
+                                    <MudGrid Class="pa-2">
+                                        @foreach (var photo in campsitePhotos)
+                                        {
+                                            <MudItem xs="12" sm="6" md="4" lg="3">
+                                                <MudCard Elevation="2" Class="photo-card">
+                                                    <MudCardMedia Image="@photo.ImageUrl" Height="150" />
+                                                    <MudCardContent Class="pa-2">
+                                                        <MudText Typo="Typo.subtitle2" Class="text-truncate"><strong>@photo.Title</strong></MudText>
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate">@photo.Description</MudText>
+                                                    </MudCardContent>
+                                                    <MudCardActions Class="pa-1 justify-end">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                      Color="Color.Primary"
+                                                                      Size="Size.Small"
+                                                                      OnClick="@(() => EditPhoto(photo))" />
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                      Color="Color.Error"
+                                                                      Size="Size.Small"
+                                                                      OnClick="@(() => DeletePhoto(photo))" />
+                                                    </MudCardActions>
+                                                </MudCard>
+                                            </MudItem>
+                                        }
+                                    </MudGrid>
+                                }
+                                else
+                                {
+                                    <MudAlert Severity="Severity.Info" Dense="true" Class="ma-2">
+                                        No photos for this campsite yet. Click "Add Photo" to add images.
+                                    </MudAlert>
+                                }
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    }
+                </MudExpansionPanels>
             </MudPaper>
         </MudItem>
 
@@ -422,6 +506,11 @@
     private List<NewsletterHistoryDto> _newsletterHistory = new();
     private List<PhotoDto> _photos = new();
 
+    // Photo gallery organized by campsite (key: CampsiteId, 0 = All Campsites/General)
+    private Dictionary<int, List<PhotoDto>> _photosByCampsite = new();
+    private Dictionary<int, bool> _campsiteExpansionStates = new();
+    private bool _generalPhotosExpanded = true;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
@@ -459,6 +548,15 @@
                 SubscriberCount = 0 // Will be calculated from subscriptions
             }).ToList();
             Console.WriteLine($"   ✅ Loaded {_campsites.Count} campsites");
+
+            // Initialize expansion states for each campsite (must be done here before render)
+            foreach (var campsite in _campsites)
+            {
+                if (!_campsiteExpansionStates.ContainsKey(campsite.Id))
+                {
+                    _campsiteExpansionStates[campsite.Id] = false; // Collapsed by default, updated in LoadPhotosAsync
+                }
+            }
 
             // Load newsletter subscriptions and calculate statistics
             var subscriptions = await context.NewsletterSubscriptions.ToListAsync();
@@ -580,6 +678,19 @@
             ImageUrl = p.Url,
             CampsiteId = p.CampsiteId.Value
         }).ToList();
+
+        // Group photos by campsite for organized display
+        _photosByCampsite = _photos.GroupBy(p => p.CampsiteId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // Initialize expansion states for each campsite (collapsed by default, expanded if has photos)
+        foreach (var campsite in _campsites)
+        {
+            if (!_campsiteExpansionStates.ContainsKey(campsite.Id))
+            {
+                _campsiteExpansionStates[campsite.Id] = _photosByCampsite.ContainsKey(campsite.Id) && _photosByCampsite[campsite.Id].Any();
+            }
+        }
     }
 
     private bool IsNewsletterValid()
@@ -724,11 +835,16 @@
     }
 
     // Photo Gallery Management Methods
-    private async Task OpenAddPhotoDialog()
+    private async Task OpenAddPhotoDialogForCampsite(int preSelectedCampsiteId)
     {
+        var campsiteName = preSelectedCampsiteId == 0
+            ? "General (All Campsites)"
+            : GetCampsiteName(preSelectedCampsiteId);
+
         var parameters = new DialogParameters
         {
-            ["Campsites"] = _campsites
+            ["Campsites"] = _campsites,
+            ["PreSelectedCampsiteId"] = preSelectedCampsiteId
         };
 
         var options = new DialogOptions
@@ -738,7 +854,7 @@
             CloseButton = true
         };
 
-        var dialog = await DialogService.ShowAsync<AddPhotoDialog>("Add Photo", parameters, options);
+        var dialog = await DialogService.ShowAsync<AddPhotoDialog>($"Add Photo to {campsiteName}", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled && result.Data is PhotoDto newPhoto)

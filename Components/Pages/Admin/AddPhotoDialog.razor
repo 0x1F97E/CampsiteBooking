@@ -75,6 +75,7 @@
 
     [Parameter] public List<CampsiteSubscriberDto> Campsites { get; set; } = new();
     [Parameter] public PhotoDto? Photo { get; set; }
+    [Parameter] public int? PreSelectedCampsiteId { get; set; }
 
     private string _title = string.Empty;
     private int _campsiteId = 0;
@@ -85,10 +86,16 @@
     {
         if (Photo != null)
         {
+            // Editing existing photo - use its values
             _title = Photo.Title;
             _campsiteId = Photo.CampsiteId;
             _description = Photo.Description;
             _imageUrl = Photo.ImageUrl;
+        }
+        else if (PreSelectedCampsiteId.HasValue)
+        {
+            // Adding new photo with pre-selected campsite
+            _campsiteId = PreSelectedCampsiteId.Value;
         }
     }
 
