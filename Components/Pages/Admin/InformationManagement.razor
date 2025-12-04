@@ -369,15 +369,23 @@
                         <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Class="mr-2" />
                         Photo Gallery Management
                     </MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        @_photos.Count total photos across @_photosByCampsite.Count campsites
-                    </MudText>
+                    <div class="d-flex align-center gap-3">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @_photos.Count total photos across @_photosByCampsite.Count campsites
+                        </MudText>
+                        <MudButton Variant="Variant.Filled"
+                                  Color="Color.Primary"
+                                  StartIcon="@Icons.Material.Filled.Add"
+                                  OnClick="OpenAddPhotoDialog">
+                            Add Photo
+                        </MudButton>
+                    </div>
                 </div>
 
                 @if (!_photosByCampsite.Any())
                 {
                     <MudAlert Severity="Severity.Info" Class="mb-4">
-                        No photos found. Add photos to your campsites using the "Add Photo" button in each section below.
+                        No photos found. Click "Add Photo" above to create your first photo.
                     </MudAlert>
                 }
 
@@ -391,16 +399,6 @@
                                 <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">
                                     @(_photosByCampsite.ContainsKey(0) ? _photosByCampsite[0].Count : 0) photos
                                 </MudChip>
-                                <MudSpacer />
-                                <span @onclick:stopPropagation="true">
-                                    <MudButton Variant="Variant.Filled"
-                                              Color="Color.Primary"
-                                              Size="Size.Small"
-                                              StartIcon="@Icons.Material.Filled.Add"
-                                              OnClick="@(() => OpenAddPhotoDialogForCampsite(0))">
-                                        Add Photo
-                                    </MudButton>
-                                </span>
                             </div>
                         </TitleContent>
                         <ChildContent>
@@ -439,7 +437,7 @@
                             else
                             {
                                 <MudAlert Severity="Severity.Info" Dense="true" Class="ma-2">
-                                    No general photos. Click "Add Photo" to add photos that appear across all campsites.
+                                    No general photos. Click "Add Photo" above to add photos that appear across all campsites.
                                 </MudAlert>
                             }
                         </ChildContent>
@@ -460,16 +458,6 @@
                                     <MudChip T="string" Size="Size.Small" Color="@(photoCount > 0 ? Color.Success : Color.Default)" Class="ml-2">
                                         @photoCount photos
                                     </MudChip>
-                                    <MudSpacer />
-                                    <span @onclick:stopPropagation="true">
-                                        <MudButton Variant="Variant.Filled"
-                                                  Color="Color.Primary"
-                                                  Size="Size.Small"
-                                                  StartIcon="@Icons.Material.Filled.Add"
-                                                  OnClick="@(() => OpenAddPhotoDialogForCampsite(campsite.Id))">
-                                            Add Photo
-                                        </MudButton>
-                                    </span>
                                 </div>
                             </TitleContent>
                             <ChildContent>
@@ -508,7 +496,7 @@
                                 else
                                 {
                                     <MudAlert Severity="Severity.Info" Dense="true" Class="ma-2">
-                                        No photos for this campsite yet. Click "Add Photo" to add images.
+                                        No photos for this campsite yet. Click "Add Photo" above to add images.
                                     </MudAlert>
                                 }
                             </ChildContent>
@@ -984,6 +972,50 @@
     }
 
     // Photo Gallery Management Methods
+    private async Task OpenAddPhotoDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            ["Campsites"] = _campsites
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddPhotoDialog>("Add Photo", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is PhotoDto newPhoto)
+        {
+            await using var context = await DbContextFactory.CreateDbContextAsync();
+
+            var campsiteId = newPhoto.CampsiteId == 0
+                ? CampsiteId.CreateNew()
+                : CampsiteId.Create(newPhoto.CampsiteId);
+
+            var photo = Photo.Create(
+                campsiteId,
+                newPhoto.ImageUrl,
+                newPhoto.Title,
+                newPhoto.Description,
+                0, // displayOrder
+                null, // accommodationTypeId
+                "Information" // category
+            );
+
+            context.Photos.Add(photo);
+            await context.SaveChangesAsync();
+
+            newPhoto.Id = photo.Id.Value;
+            await LoadPhotosAsync();
+            Snackbar.Add($"Photo '{newPhoto.Title}' added successfully", Severity.Success);
+        }
+    }
+
     private async Task OpenAddPhotoDialogForCampsite(int preSelectedCampsiteId)
     {
         var campsiteName = preSelectedCampsiteId == 0
