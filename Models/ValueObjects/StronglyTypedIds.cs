@@ -201,4 +201,3 @@ public sealed class EventRegistrationId : StronglyTypedId
     public static EventRegistrationId Create(int value) => new(value);
     public static EventRegistrationId CreateNew() => new(0, allowZero: true);
 }
-

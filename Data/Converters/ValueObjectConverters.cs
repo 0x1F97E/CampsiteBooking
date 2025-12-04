@@ -198,4 +198,3 @@ public class MaintenanceTaskIdConverter : ValueConverter<MaintenanceTaskId, int>
 {
     public MaintenanceTaskIdConverter() : base(v => v.Value, v => MaintenanceTaskId.Create(v)) { }
 }
-

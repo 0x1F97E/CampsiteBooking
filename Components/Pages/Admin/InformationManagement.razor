@@ -20,7 +20,7 @@
                 Information & Newsletter Management
             </MudText>
             <MudText Typo="Typo.body1" Color="Color.Secondary">
-                Manage campsite information, events, activities, and send newsletters to subscribers (@_events.Count events, @_newsletterHistory.Count newsletters)
+                Manage campsite information, events, activities, and send newsletters to subscribers (@_events.Count events)
             </MudText>
         </div>
         <MudButton Variant="Variant.Outlined"
@@ -505,64 +505,6 @@
                 </MudExpansionPanels>
             </MudPaper>
         </MudItem>
-
-        <!-- Newsletter History -->
-        <MudItem xs="12">
-            <MudPaper Elevation="3" Class="pa-4">
-                <MudText Typo="Typo.h5" GutterBottom="true">
-                    <MudIcon Icon="@Icons.Material.Filled.History" Class="mr-2" />
-                    Newsletter History
-                </MudText>
-
-                <MudTable Items="@_newsletterHistory" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true">
-                    <HeaderContent>
-                        <MudTh>Subject</MudTh>
-                        <MudTh>Campsite</MudTh>
-                        <MudTh>Sent Date</MudTh>
-                        <MudTh>Recipients</MudTh>
-                        <MudTh>Opened</MudTh>
-                        <MudTh>Clicked</MudTh>
-                        <MudTh>Status</MudTh>
-                        <MudTh>Actions</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="Subject">
-                            <MudText Typo="Typo.body2"><strong>@context.Subject</strong></MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Campsite">
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@context.CampsiteName</MudChip>
-                        </MudTd>
-                        <MudTd DataLabel="Sent Date">
-                            <MudText Typo="Typo.body2">@context.SentDate.ToString("MMM dd, yyyy HH:mm")</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Recipients">
-                            <MudText Typo="Typo.body2">@context.RecipientCount</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Opened">
-                            <MudText Typo="Typo.body2">@context.OpenedCount (@context.OpenRate%)</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Clicked">
-                            <MudText Typo="Typo.body2">@context.ClickedCount (@context.ClickRate%)</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Status">
-                            <MudChip T="string" Size="Size.Small" Color="@(context.Status == "Sent" ? Color.Success : Color.Warning)">
-                                @context.Status
-                            </MudChip>
-                        </MudTd>
-                        <MudTd DataLabel="Actions">
-                            <MudIconButton Icon="@Icons.Material.Filled.Visibility"
-                                          Color="Color.Primary"
-                                          Size="Size.Small"
-                                          OnClick="@(() => ViewNewsletter(context))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                          Color="Color.Secondary"
-                                          Size="Size.Small"
-                                          OnClick="@(() => DuplicateNewsletter(context))" />
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-            </MudPaper>
-        </MudItem>
     </MudGrid>
 </MudContainer>
 
@@ -584,7 +526,6 @@
     private List<CampsiteSubscriberDto> _campsites = new();
     private List<NewsletterDto> _recentNewsletters = new();
     private List<EventDto> _events = new();
-    private List<NewsletterHistoryDto> _newsletterHistory = new();
     private List<PhotoDto> _photos = new();
 
     // Photo gallery organized by campsite (key: CampsiteId, 0 = All Campsites/General)
@@ -608,7 +549,7 @@
         Console.WriteLine("🔄 Admin manually refreshing information management data...");
         await LoadData();
         await LoadPhotosAsync();
-        Snackbar.Add($"Refreshed! Found {_events.Count} events and {_newsletterHistory.Count} newsletters", Severity.Success);
+        Snackbar.Add($"Refreshed! Found {_events.Count} events", Severity.Success);
         StateHasChanged();
     }
 
@@ -705,29 +646,6 @@
                 }).ToList();
             Console.WriteLine($"   ✅ Loaded {_recentNewsletters.Count} recent newsletters");
 
-            // Newsletter history (for table)
-            var newsletterAnalytics = await context.NewsletterAnalytics.ToListAsync();
-            _newsletterHistory = dbNewsletters
-                .OrderByDescending(n => n.SentDate ?? n.ScheduledDate)
-                .Select(n =>
-                {
-                    var analytics = newsletterAnalytics.FirstOrDefault(a => a.NewsletterId.Value == n.NewsletterId);
-                    return new NewsletterHistoryDto
-                    {
-                        Id = n.NewsletterId,
-                        Subject = n.Subject,
-                        CampsiteName = "All Campsites", // Newsletters don't have campsite association in current model
-                        SentDate = n.SentDate ?? n.ScheduledDate ?? DateTime.Now,
-                        RecipientCount = n.RecipientCount,
-                        OpenedCount = analytics?.TotalOpened ?? 0,
-                        ClickedCount = analytics?.TotalClicked ?? 0,
-                        OpenRate = analytics != null ? (int)(analytics.OpenRate * 100) : 0,
-                        ClickRate = analytics != null ? (int)(analytics.ClickRate * 100) : 0,
-                        Status = n.Status
-                    };
-                }).ToList();
-            Console.WriteLine($"   ✅ Loaded {_newsletterHistory.Count} newsletters for history table");
-
             if (_events.Any())
             {
                 Console.WriteLine($"\n   📋 Recent events (last 3):");
@@ -739,19 +657,6 @@
             else
             {
                 Console.WriteLine($"\n   ⚠️  NO EVENTS FOUND! Events should be seeded in the database.");
-            }
-
-            if (_newsletterHistory.Any())
-            {
-                Console.WriteLine($"\n   📋 Recent newsletters (last 3):");
-                foreach (var newsletter in _newsletterHistory.Take(3))
-                {
-                    Console.WriteLine($"      - {newsletter.Subject} ({newsletter.Status}) - {newsletter.RecipientCount} recipients");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"\n   ⚠️  NO NEWSLETTERS FOUND! Newsletters should be seeded in the database.");
             }
 
             Console.WriteLine(new string('=', 80) + "\n");
@@ -1220,19 +1125,6 @@
         }
     }
 
-    private void ViewNewsletter(NewsletterHistoryDto newsletter)
-    {
-        // TODO: Show newsletter details/preview
-        Snackbar.Add($"Viewing newsletter: {newsletter.Subject}", Severity.Info);
-    }
-
-    private void DuplicateNewsletter(NewsletterHistoryDto newsletter)
-    {
-        _newsletterSubject = newsletter.Subject + " (Copy)";
-        // TODO: Load content from history
-        Snackbar.Add("Newsletter duplicated to composer", Severity.Success);
-    }
-
     private string GetCategoryIcon(string category) => category switch
     {
         "Sports" => Icons.Material.Filled.SportsBasketball,
@@ -1280,20 +1172,6 @@
         public int RegisteredCount { get; set; }
         public string Status { get; set; } = string.Empty;
         public string EventLink { get; set; } = string.Empty;
-    }
-
-    private class NewsletterHistoryDto
-    {
-        public int Id { get; set; }
-        public string Subject { get; set; } = string.Empty;
-        public string CampsiteName { get; set; } = string.Empty;
-        public DateTime SentDate { get; set; }
-        public int RecipientCount { get; set; }
-        public int OpenedCount { get; set; }
-        public int ClickedCount { get; set; }
-        public int OpenRate { get; set; }
-        public int ClickRate { get; set; }
-        public string Status { get; set; } = string.Empty;
     }
 
     public class PhotoDto
