@@ -83,8 +83,8 @@ services:
   # BookMyHome App (Vertical Scaling)
   bookmyhome:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: bookmyhome-app
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
@@ -108,8 +108,8 @@ services:
   # Email Worker (Kafka Consumer)
   email-worker:
     build:
-      context: .
-      dockerfile: Dockerfile.EmailWorker
+      context: ..
+      dockerfile: docker/Dockerfile.EmailWorker
     container_name: bookmyhome-email-worker
     environment:
       - Kafka__BootstrapServers=kafka:29092

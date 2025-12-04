@@ -1,6 +1,0 @@
-# Never commit SSL private keys!
-*.pem
-*.key
-*.crt
-*.cert
-
