@@ -488,6 +488,7 @@ public class CampsiteBookingDbContext : DbContext
             entity.Ignore(e => e.Price);
             entity.Ignore(e => e.IsActive);
             entity.Ignore(e => e.CreatedDate);
+            entity.Ignore(e => e.EventLink);
 
             // Map private fields to database columns
             entity.Property("_campsiteId").HasColumnName("CampsiteId")
@@ -501,6 +502,7 @@ public class CampsiteBookingDbContext : DbContext
                 .HasConversion(new MoneyConverter());
             entity.Property("_isActive").HasColumnName("IsActive");
             entity.Property("_createdDate").HasColumnName("CreatedDate");
+            entity.Property("_eventLink").HasColumnName("EventLink").HasMaxLength(500);
         });
 
         // Configure Newsletter entity to map private fields

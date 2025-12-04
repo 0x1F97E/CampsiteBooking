@@ -166,7 +166,7 @@
             </MudStack>
         </MudItem>
 
-        <!-- Events & Activities Management -->
+        <!-- Events & Activities Management - Organized by Campsite -->
         <MudItem xs="12">
             <MudPaper Elevation="3" Class="pa-4">
                 <div class="d-flex justify-space-between align-center mb-4">
@@ -174,76 +174,190 @@
                         <MudIcon Icon="@Icons.Material.Filled.Event" Class="mr-2" />
                         Events & Activities
                     </MudText>
-                    <MudButton Variant="Variant.Filled"
-                              Color="Color.Primary"
-                              StartIcon="@Icons.Material.Filled.Add"
-                              OnClick="OpenAddEventDialog">
-                        Add Event
-                    </MudButton>
+                    <div class="d-flex align-center gap-3">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @_events.Count total events across @_eventsByCampsite.Count campsites
+                        </MudText>
+                        <MudButton Variant="Variant.Filled"
+                                  Color="Color.Primary"
+                                  StartIcon="@Icons.Material.Filled.Add"
+                                  OnClick="OpenAddEventDialog">
+                            Add Event
+                        </MudButton>
+                    </div>
                 </div>
 
-                <MudTable Items="@_events" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true">
-                    <HeaderContent>
-                        <MudTh>Event Name</MudTh>
-                        <MudTh>Campsite</MudTh>
-                        <MudTh>Date & Time</MudTh>
-                        <MudTh>Category</MudTh>
-                        <MudTh>Capacity</MudTh>
-                        <MudTh>Registered</MudTh>
-                        <MudTh>Status</MudTh>
-                        <MudTh>Actions</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="Event Name">
-                            <div>
-                                <MudText Typo="Typo.body2"><strong>@context.Name</strong></MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
+                @if (!_eventsByCampsite.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Class="mb-4">
+                        No events found. Click "Add Event" above to create your first event.
+                    </MudAlert>
+                }
+
+                <!-- General Events (All Campsites) Section -->
+                <MudExpansionPanels MultiExpansion="true" Class="mb-4">
+                    <MudExpansionPanel @bind-Expanded="_generalEventsExpanded">
+                        <TitleContent>
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Public" Color="Color.Primary" />
+                                <MudText Typo="Typo.subtitle1"><strong>General Events (All Campsites)</strong></MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">
+                                    @(_eventsByCampsite.ContainsKey(0) ? _eventsByCampsite[0].Count : 0) events
+                                </MudChip>
                             </div>
-                        </MudTd>
-                        <MudTd DataLabel="Campsite">
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@context.CampsiteName</MudChip>
-                        </MudTd>
-                        <MudTd DataLabel="Date & Time">
-                            <MudText Typo="Typo.body2">@context.EventDate.ToString("MMM dd, yyyy")</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.EventTime</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Category">
-                            <MudChip T="string" Size="Size.Small" Icon="@GetCategoryIcon(context.Category)">
-                                @context.Category
-                            </MudChip>
-                        </MudTd>
-                        <MudTd DataLabel="Capacity">
-                            @if (context.MaxCapacity > 0)
+                        </TitleContent>
+                        <ChildContent>
+                            @if (_eventsByCampsite.ContainsKey(0) && _eventsByCampsite[0].Any())
                             {
-                                <MudText Typo="Typo.body2">@context.MaxCapacity</MudText>
+                                <MudTable Items="@_eventsByCampsite[0]" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true" Class="ma-2">
+                                    <HeaderContent>
+                                        <MudTh>Event Name</MudTh>
+                                        <MudTh>Date & Time</MudTh>
+                                        <MudTh>Event Link</MudTh>
+                                        <MudTh>Status</MudTh>
+                                        <MudTh>Actions</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="Event Name">
+                                            <div>
+                                                <MudText Typo="Typo.body2"><strong>@context.Name</strong></MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
+                                            </div>
+                                        </MudTd>
+                                        <MudTd DataLabel="Date & Time">
+                                            <MudText Typo="Typo.body2">@context.EventDate.ToString("MMM dd, yyyy")</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.EventTime</MudText>
+                                        </MudTd>
+                                        <MudTd DataLabel="Event Link">
+                                            @if (!string.IsNullOrEmpty(context.EventLink))
+                                            {
+                                                <MudLink Href="@context.EventLink" Target="_blank" Color="Color.Primary">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Link" Size="Size.Small" Class="mr-1" />
+                                                    View Event
+                                                </MudLink>
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">—</MudText>
+                                            }
+                                        </MudTd>
+                                        <MudTd DataLabel="Status">
+                                            <MudChip T="string" Size="Size.Small" Color="@GetEventStatusColor(context.Status)">
+                                                @context.Status
+                                            </MudChip>
+                                        </MudTd>
+                                        <MudTd DataLabel="Actions">
+                                            @{ var generalEvent = context; }
+                                            <span @onclick:stopPropagation="true">
+                                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                              Color="Color.Primary"
+                                                              Size="Size.Small"
+                                                              OnClick="@(() => EditEvent(generalEvent))" />
+                                            </span>
+                                            <span @onclick:stopPropagation="true">
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                              Color="Color.Error"
+                                                              Size="Size.Small"
+                                                              OnClick="@(() => DeleteEvent(generalEvent))" />
+                                            </span>
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
                             }
                             else
                             {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">Unlimited</MudText>
+                                <MudAlert Severity="Severity.Info" Dense="true" Class="ma-2">
+                                    No general events. Click "Add Event" above to add events that appear across all campsites.
+                                </MudAlert>
                             }
-                        </MudTd>
-                        <MudTd DataLabel="Registered">
-                            <MudText Typo="Typo.body2" Color="@(context.RegisteredCount >= context.MaxCapacity && context.MaxCapacity > 0 ? Color.Error : Color.Default)">
-                                @context.RegisteredCount
-                            </MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Status">
-                            <MudChip T="string" Size="Size.Small" Color="@GetEventStatusColor(context.Status)">
-                                @context.Status
-                            </MudChip>
-                        </MudTd>
-                        <MudTd DataLabel="Actions">
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                          Color="Color.Primary"
-                                          Size="Size.Small"
-                                          OnClick="@(() => EditEvent(context))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                          Color="Color.Error"
-                                          Size="Size.Small"
-                                          OnClick="@(() => DeleteEvent(context))" />
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
+                        </ChildContent>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+
+                <!-- Per-Campsite Event Sections -->
+                <MudExpansionPanels MultiExpansion="true">
+                    @foreach (var campsite in _campsites)
+                    {
+                        var campsiteEvents = _eventsByCampsite.ContainsKey(campsite.Id) ? _eventsByCampsite[campsite.Id] : new List<EventDto>();
+                        var eventCount = campsiteEvents.Count;
+                        <MudExpansionPanel @bind-Expanded="_campsiteEventExpansionStates[campsite.Id]">
+                            <TitleContent>
+                                <div class="d-flex align-center gap-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Terrain" Color="Color.Success" />
+                                    <MudText Typo="Typo.subtitle1"><strong>@campsite.Name</strong></MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@(eventCount > 0 ? Color.Success : Color.Default)" Class="ml-2">
+                                        @eventCount events
+                                    </MudChip>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                @if (campsiteEvents.Any())
+                                {
+                                    <MudTable Items="@campsiteEvents" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true" Class="ma-2">
+                                        <HeaderContent>
+                                            <MudTh>Event Name</MudTh>
+                                            <MudTh>Date & Time</MudTh>
+                                            <MudTh>Event Link</MudTh>
+                                            <MudTh>Status</MudTh>
+                                            <MudTh>Actions</MudTh>
+                                        </HeaderContent>
+                                        <RowTemplate>
+                                            <MudTd DataLabel="Event Name">
+                                                <div>
+                                                    <MudText Typo="Typo.body2"><strong>@context.Name</strong></MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Description</MudText>
+                                                </div>
+                                            </MudTd>
+                                            <MudTd DataLabel="Date & Time">
+                                                <MudText Typo="Typo.body2">@context.EventDate.ToString("MMM dd, yyyy")</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.EventTime</MudText>
+                                            </MudTd>
+                                            <MudTd DataLabel="Event Link">
+                                                @if (!string.IsNullOrEmpty(context.EventLink))
+                                                {
+                                                    <MudLink Href="@context.EventLink" Target="_blank" Color="Color.Primary">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Link" Size="Size.Small" Class="mr-1" />
+                                                        View Event
+                                                    </MudLink>
+                                                }
+                                                else
+                                                {
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">—</MudText>
+                                                }
+                                            </MudTd>
+                                            <MudTd DataLabel="Status">
+                                                <MudChip T="string" Size="Size.Small" Color="@GetEventStatusColor(context.Status)">
+                                                    @context.Status
+                                                </MudChip>
+                                            </MudTd>
+                                            <MudTd DataLabel="Actions">
+                                                @{ var campsiteEvent = context; }
+                                                <span @onclick:stopPropagation="true">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                  Color="Color.Primary"
+                                                                  Size="Size.Small"
+                                                                  OnClick="@(() => EditEvent(campsiteEvent))" />
+                                                </span>
+                                                <span @onclick:stopPropagation="true">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                  Color="Color.Error"
+                                                                  Size="Size.Small"
+                                                                  OnClick="@(() => DeleteEvent(campsiteEvent))" />
+                                                </span>
+                                            </MudTd>
+                                        </RowTemplate>
+                                    </MudTable>
+                                }
+                                else
+                                {
+                                    <MudAlert Severity="Severity.Info" Dense="true" Class="ma-2">
+                                        No events for this campsite yet. Use the "Add Event" button above to add events.
+                                    </MudAlert>
+                                }
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    }
+                </MudExpansionPanels>
             </MudPaper>
         </MudItem>
 
@@ -338,7 +452,7 @@
                     {
                         var campsitePhotos = _photosByCampsite.ContainsKey(campsite.Id) ? _photosByCampsite[campsite.Id] : new List<PhotoDto>();
                         var photoCount = campsitePhotos.Count;
-                        <MudExpansionPanel @bind-Expanded="_campsiteExpansionStates[campsite.Id]">
+                        <MudExpansionPanel @bind-Expanded="_campsitePhotoExpansionStates[campsite.Id]">
                             <TitleContent>
                                 <div class="d-flex align-center gap-2">
                                     <MudIcon Icon="@Icons.Material.Filled.Terrain" Color="Color.Success" />
@@ -487,8 +601,13 @@
 
     // Photo gallery organized by campsite (key: CampsiteId, 0 = All Campsites/General)
     private Dictionary<int, List<PhotoDto>> _photosByCampsite = new();
-    private Dictionary<int, bool> _campsiteExpansionStates = new();
+    private Dictionary<int, bool> _campsitePhotoExpansionStates = new();
     private bool _generalPhotosExpanded = true;
+
+    // Events organized by campsite (key: CampsiteId, 0 = All Campsites/General)
+    private Dictionary<int, List<EventDto>> _eventsByCampsite = new();
+    private Dictionary<int, bool> _campsiteEventExpansionStates = new();
+    private bool _generalEventsExpanded = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -531,9 +650,13 @@
             // Initialize expansion states for each campsite (must be done here before render)
             foreach (var campsite in _campsites)
             {
-                if (!_campsiteExpansionStates.ContainsKey(campsite.Id))
+                if (!_campsitePhotoExpansionStates.ContainsKey(campsite.Id))
                 {
-                    _campsiteExpansionStates[campsite.Id] = false; // Collapsed by default, updated in LoadPhotosAsync
+                    _campsitePhotoExpansionStates[campsite.Id] = false; // Collapsed by default, updated in LoadPhotosAsync
+                }
+                if (!_campsiteEventExpansionStates.ContainsKey(campsite.Id))
+                {
+                    _campsiteEventExpansionStates[campsite.Id] = false; // Collapsed by default
                 }
             }
 
@@ -560,9 +683,23 @@
                 Category = "Event", // Default category since Event model doesn't have category field
                 MaxCapacity = e.MaxParticipants,
                 RegisteredCount = e.CurrentParticipants,
-                Status = e.IsActive ? (e.IsFull() ? "Full" : "Open") : "Closed"
+                Status = e.IsActive ? (e.IsFull() ? "Full" : "Open") : "Closed",
+                EventLink = e.EventLink ?? string.Empty
             }).OrderBy(e => e.EventDate).ToList();
             Console.WriteLine($"   ✅ Loaded {_events.Count} events from Events table");
+
+            // Group events by campsite
+            _eventsByCampsite = _events.GroupBy(e => e.CampsiteId)
+                .ToDictionary(g => g.Key, g => g.OrderBy(e => e.EventDate).ToList());
+
+            // Auto-expand campsite panels that have events
+            foreach (var campsiteId in _eventsByCampsite.Keys)
+            {
+                if (_eventsByCampsite[campsiteId].Any())
+                {
+                    _campsiteEventExpansionStates[campsiteId] = true;
+                }
+            }
 
             // Load newsletters from database
             var dbNewsletters = await context.Newsletters.ToListAsync();
@@ -671,9 +808,9 @@
             // Initialize expansion states for each campsite (collapsed by default, expanded if has photos)
             foreach (var campsite in _campsites)
             {
-                if (!_campsiteExpansionStates.ContainsKey(campsite.Id))
+                if (!_campsitePhotoExpansionStates.ContainsKey(campsite.Id))
                 {
-                    _campsiteExpansionStates[campsite.Id] = _photosByCampsite.ContainsKey(campsite.Id) && _photosByCampsite[campsite.Id].Any();
+                    _campsitePhotoExpansionStates[campsite.Id] = _photosByCampsite.ContainsKey(campsite.Id) && _photosByCampsite[campsite.Id].Any();
                 }
             }
 
@@ -767,8 +904,22 @@
 
     private async Task OpenAddEventDialog()
     {
+        await OpenAddEventDialogForCampsite(0);
+    }
+
+    private async Task OpenAddEventDialogForCampsite(int preSelectedCampsiteId)
+    {
+        var campsiteName = preSelectedCampsiteId == 0
+            ? "General (All Campsites)"
+            : GetCampsiteName(preSelectedCampsiteId);
+
+        var parameters = new DialogParameters
+        {
+            ["PreSelectedCampsiteId"] = preSelectedCampsiteId
+        };
+
         var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<EventDialog>("Add New Event", options);
+        var dialog = await DialogService.ShowAsync<EventDialog>($"Add Event to {campsiteName}", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled)
@@ -1096,6 +1247,7 @@
         public int MaxCapacity { get; set; }
         public int RegisteredCount { get; set; }
         public string Status { get; set; } = string.Empty;
+        public string EventLink { get; set; } = string.Empty;
     }
 
     private class NewsletterHistoryDto

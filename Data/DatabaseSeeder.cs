@@ -1071,6 +1071,9 @@ public static class DatabaseSeeder
 
     private static async Task SeedEvents(CampsiteBookingDbContext context)
     {
+        // Ensure EventLink column exists
+        await EnsureEventLinkColumnExists(context);
+
         // Force re-seed events to ensure they have proper CampsiteId values
         if (await context.Events.AnyAsync())
         {
@@ -1922,6 +1925,32 @@ public static class DatabaseSeeder
         }
 
         Console.WriteLine("✅ Discount table columns verified");
+    }
+
+    private static async Task EnsureEventLinkColumnExists(CampsiteBookingDbContext context)
+    {
+        Console.WriteLine("🔄 Ensuring Events table has EventLink column...");
+
+        try
+        {
+            var columnExists = await context.Database.SqlQueryRaw<int>(
+                "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Events' AND COLUMN_NAME = 'EventLink'"
+            ).FirstOrDefaultAsync();
+
+            if (columnExists == 0)
+            {
+                await context.Database.ExecuteSqlRawAsync("ALTER TABLE Events ADD COLUMN EventLink VARCHAR(500) NULL");
+                Console.WriteLine("   ✅ Added EventLink column to Events table");
+            }
+            else
+            {
+                Console.WriteLine("   ✅ EventLink column already exists");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"   ⚠️ Could not add EventLink column: {ex.Message}");
+        }
     }
 }
 

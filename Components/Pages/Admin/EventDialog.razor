@@ -90,15 +90,23 @@
             </MudItem>
 
             <MudItem xs="12">
-                <MudTextField @bind-Value="_location" 
-                             Label="Location (Optional)" 
+                <MudTextField @bind-Value="_eventLink"
+                             Label="Event Link (Optional)"
+                             Variant="Variant.Outlined"
+                             Placeholder="e.g., https://facebook.com/events/123456"
+                             HelperText="Link to Facebook event or external registration page" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_location"
+                             Label="Location (Optional)"
                              Variant="Variant.Outlined"
                              Placeholder="e.g., Main Beach Area, Activity Center" />
             </MudItem>
 
             <MudItem xs="12">
-                <MudTextField @bind-Value="_notes" 
-                             Label="Additional Notes (Optional)" 
+                <MudTextField @bind-Value="_notes"
+                             Label="Additional Notes (Optional)"
                              Variant="Variant.Outlined"
                              Lines="2"
                              Placeholder="Any special requirements or information" />
@@ -114,6 +122,7 @@
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
     [Parameter] public object? Event { get; set; }
+    [Parameter] public int PreSelectedCampsiteId { get; set; } = -1;
 
     private string _name = "";
     private string _description = "";
@@ -121,10 +130,11 @@
     private string _category = "Sports";
     private DateTime? _eventDate = DateTime.Today.AddDays(1);
     private TimeSpan? _eventTime = new TimeSpan(10, 0, 0);
-    private int _maxCapacity = 0;
+    private int _maxCapacity = 100;
     private string _status = "Open";
     private string _location = "";
     private string _notes = "";
+    private string _eventLink = "";
 
     private List<CampsiteDto> _campsites = new();
     private int? _editingEventId = null;
@@ -145,6 +155,12 @@
             _eventTime = eventDto.EventDate.TimeOfDay;
             _maxCapacity = eventDto.MaxCapacity;
             _status = eventDto.Status;
+            _eventLink = eventDto.EventLink;
+        }
+        else if (PreSelectedCampsiteId >= 0)
+        {
+            // Use pre-selected campsite from dialog parameters
+            _selectedCampsiteId = PreSelectedCampsiteId;
         }
         else if (_campsites.Any())
         {
@@ -218,7 +234,7 @@
                     return;
                 }
 
-                existingEvent.Update(_name, _description, eventDateTime, _maxCapacity);
+                existingEvent.Update(_name, _description, eventDateTime, _maxCapacity, _eventLink);
 
                 // Handle status changes
                 if (_status == "Cancelled" || _status == "Closed")
@@ -245,7 +261,8 @@
                     _description,
                     eventDateTime,
                     _maxCapacity,
-                    Money.Create(0m, "DKK") // Free event by default
+                    Money.Create(0m, "DKK"), // Free event by default
+                    _eventLink
                 );
 
                 context.Events.Add(newEvent);
@@ -290,6 +307,7 @@
         public string Category { get; set; } = string.Empty;
         public int MaxCapacity { get; set; }
         public string Status { get; set; } = string.Empty;
+        public string EventLink { get; set; } = string.Empty;
     }
 }
 
