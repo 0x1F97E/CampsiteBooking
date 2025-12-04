@@ -151,10 +151,6 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Db29raWVQb2xpY3kucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[/Users/pc/CampsiteBooking-1/Components/Pages/Counter.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Db3VudGVyLnJhem9y
-build_metadata.AdditionalFiles.CssScope = 
-
 [/Users/pc/CampsiteBooking-1/Components/Pages/EditProfileDialog.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9FZGl0UHJvZmlsZURpYWxvZy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
@@ -201,10 +197,6 @@ build_metadata.AdditionalFiles.CssScope =
 
 [/Users/pc/CampsiteBooking-1/Components/Pages/Search.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9TZWFyY2gucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = 
-
-[/Users/pc/CampsiteBooking-1/Components/Pages/Weather.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9XZWF0aGVyLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/pc/CampsiteBooking-1/Components/RedirectToLogin.razor]

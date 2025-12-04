@@ -34,7 +34,6 @@ builder.Services.AddMudServices();
 builder.Services.AddLocalization();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<LocalizationService>();
-builder.Services.AddScoped<GeoLocationService>();
 
 // Add HttpClient for Blazor components
 builder.Services.AddScoped(sp => new HttpClient
@@ -68,11 +67,8 @@ builder.Services.AddHttpClient("BookMyHomeAPI", client =>
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
-// Add HttpClient for geolocation service
+// Add HttpClient
 builder.Services.AddHttpClient();
-
-// Register ApiService for Blazor components
-builder.Services.AddScoped<ApiService>();
 
 // Register Payment Service
 // Use MockPaymentService for testing without real Stripe API keys
