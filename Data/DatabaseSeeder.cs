@@ -132,13 +132,18 @@ public static class DatabaseSeeder
             // Might already be auto-increment, ignore error
         }
 
-        // Check if accommodation types already exist - if so, skip seeding to preserve admin changes
-        var existingAccommodationTypes = await context.AccommodationTypes.AnyAsync();
-        if (existingAccommodationTypes)
+        // Force reseed AccommodationTypes to ensure clean, production-quality data
+        // This removes any test/placeholder data (e.g., "asdfasdf", "fdasfdsafdsa") and reseeds with proper values
+        Console.WriteLine("🔄 Force reseeding AccommodationTypes to ensure clean data...");
+        await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 0");
+        try
         {
-            Console.WriteLine("⏭️  Accommodation types already exist, skipping seeding to preserve admin changes...");
+            await context.Database.ExecuteSqlRawAsync("DELETE FROM AccommodationTypes");
         }
-        else
+        catch { /* Table may not exist */ }
+        await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 1");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE AccommodationTypes AUTO_INCREMENT = 1");
+
         {
             // Get the actual campsite IDs from the database (they should be 1-5 after truncate and reseed)
             var campsiteIds = await context.Database.SqlQueryRaw<int>("SELECT Id as Value FROM Campsites ORDER BY Id").ToListAsync();
@@ -360,8 +365,8 @@ public static class DatabaseSeeder
             context.Entry(tent5).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
                 Console.WriteLine("✅ Seeded accommodation types for all 5 campsites");
-            } // End of accommodation types seeding
-        } // End of if/else for accommodation types existence check
+            } // End of accommodation types seeding (if campsites exist)
+        } // End of accommodation types seeding block
 
         // Seed Accommodation Spots (needed for bookings)
         await SeedAccommodationSpots(context);
@@ -569,13 +574,17 @@ public static class DatabaseSeeder
 
     private static async Task SeedSeasonalPricing(CampsiteBookingDbContext context)
     {
-        // Check if seasonal pricing already exists - if so, preserve admin changes
-        var existingSeasonalPricing = await context.SeasonalPricings.AnyAsync();
-        if (existingSeasonalPricing)
+        // Force reseed SeasonalPricings since AccommodationTypes are being reseeded
+        // This ensures seasonal pricing references the correct accommodation type IDs
+        Console.WriteLine("🔄 Force reseeding SeasonalPricings to ensure clean data...");
+        await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 0");
+        try
         {
-            Console.WriteLine("⏭️  Seasonal pricing already exists, skipping seeding to preserve admin changes...");
-            return;
+            await context.Database.ExecuteSqlRawAsync("DELETE FROM SeasonalPricings");
         }
+        catch { /* Table may not exist */ }
+        await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 1");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE SeasonalPricings AUTO_INCREMENT = 1");
 
         Console.WriteLine("🔵 Seeding seasonal pricing...");
 
@@ -979,10 +988,84 @@ public static class DatabaseSeeder
 
     private static async Task SeedAccommodationSpots(CampsiteBookingDbContext context)
     {
-        if (await context.AccommodationSpots.AnyAsync())
+        // Force reseed AccommodationSpots since AccommodationTypes are being reseeded
+        // This ensures spots reference the correct accommodation type IDs
+        Console.WriteLine("🔄 Force reseeding AccommodationSpots to ensure clean data...");
+        await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 0");
+        try
         {
-            Console.WriteLine("⚠️ Accommodation spots already exist, skipping seeding");
-            return;
+            await context.Database.ExecuteSqlRawAsync("DELETE FROM AccommodationSpots");
+        }
+        catch { /* Table may not exist */ }
+        await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 1");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE AccommodationSpots AUTO_INCREMENT = 1");
+
+        // Ensure AccommodationSpots table has all required columns
+        Console.WriteLine("🔧 Ensuring AccommodationSpots table has all required columns...");
+
+        // First, handle legacy columns that may cause issues
+        try
+        {
+            // Make SpotId nullable or drop it if it exists (legacy column from initial migration)
+            var spotIdExists = await context.Database.SqlQueryRaw<int>(
+                "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'AccommodationSpots' AND COLUMN_NAME = 'SpotId'"
+            ).FirstOrDefaultAsync();
+
+            if (spotIdExists > 0)
+            {
+                await context.Database.ExecuteSqlRawAsync("ALTER TABLE AccommodationSpots DROP COLUMN SpotId");
+                Console.WriteLine("   ✅ Dropped legacy SpotId column");
+            }
+
+            // Make Status_Legacy nullable or drop it if it exists
+            var statusLegacyExists = await context.Database.SqlQueryRaw<int>(
+                "SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'AccommodationSpots' AND COLUMN_NAME = 'Status_Legacy'"
+            ).FirstOrDefaultAsync();
+
+            if (statusLegacyExists > 0)
+            {
+                await context.Database.ExecuteSqlRawAsync("ALTER TABLE AccommodationSpots DROP COLUMN Status_Legacy");
+                Console.WriteLine("   ✅ Dropped legacy Status_Legacy column");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"   ⚠️ Could not handle legacy columns: {ex.Message}");
+        }
+
+        var spotColumns = new (string Name, string Definition)[]
+        {
+            ("SpotIdentifier", "VARCHAR(50) NOT NULL DEFAULT ''"),
+            ("CampsiteId", "INT NULL"),
+            ("CampsiteName", "VARCHAR(200) NULL"),
+            ("AccommodationTypeId", "INT NULL"),
+            ("Latitude", "DOUBLE NULL"),
+            ("Longitude", "DOUBLE NULL"),
+            ("Type", "VARCHAR(50) NOT NULL DEFAULT 'Tent'"),
+            ("Status", "VARCHAR(50) NULL"),
+            ("IsUnderMaintenance", "TINYINT(1) NOT NULL DEFAULT 0"),
+            ("PriceModifier", "DECIMAL(10,2) NOT NULL DEFAULT 1.0"),
+            ("CreatedDate", "DATETIME(6) NULL")
+        };
+
+        foreach (var (columnName, columnDef) in spotColumns)
+        {
+            try
+            {
+                var columnExists = await context.Database.SqlQueryRaw<int>(
+                    $"SELECT COUNT(*) as Value FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'AccommodationSpots' AND COLUMN_NAME = '{columnName}'"
+                ).FirstOrDefaultAsync();
+
+                if (columnExists == 0)
+                {
+                    await context.Database.ExecuteSqlRawAsync($"ALTER TABLE AccommodationSpots ADD COLUMN {columnName} {columnDef}");
+                    Console.WriteLine($"   ✅ Added column {columnName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ⚠️ Could not add column {columnName}: {ex.Message}");
+            }
         }
 
         Console.WriteLine("🔵 Seeding accommodation spots...");
@@ -1651,11 +1734,17 @@ public static class DatabaseSeeder
     // ============================================================================
     private static async Task SeedAvailabilities(CampsiteBookingDbContext context)
     {
-        if (await context.Availabilities.AnyAsync())
+        // Force reseed Availabilities since AccommodationTypes are being reseeded
+        // This ensures availabilities reference the correct accommodation type IDs
+        Console.WriteLine("🔄 Force reseeding Availabilities to ensure clean data...");
+        await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 0");
+        try
         {
-            Console.WriteLine("⏭️  Availabilities already seeded, skipping...");
-            return;
+            await context.Database.ExecuteSqlRawAsync("DELETE FROM Availabilities");
         }
+        catch { /* Table may not exist */ }
+        await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 1");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE Availabilities AUTO_INCREMENT = 1");
 
         Console.WriteLine("🔄 Seeding availabilities...");
 
