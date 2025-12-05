@@ -209,28 +209,14 @@
                                             </MudChip>
                                         </div>
                                         <MudText Typo="Typo.body2" Class="mb-2">@evt.Description</MudText>
-                                        <MudDivider Class="my-2" />
-                                        <div class="d-flex justify-space-between align-center">
-                                            <div>
-                                                @if (evt.MaxCapacity > 0)
-                                                {
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                        <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" />
-                                                        @evt.RegisteredCount / @evt.MaxCapacity registered
-                                                    </MudText>
-                                                }
-                                                else
-                                                {
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                        <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" />
-                                                        @evt.RegisteredCount registered (Unlimited)
-                                                    </MudText>
-                                                }
-                                            </div>
-                                            <MudChip T="string" Size="Size.Small" Color="@(evt.Status == "Full" ? Color.Error : Color.Success)">
-                                                @evt.Status
-                                            </MudChip>
-                                        </div>
+                                        @if (!string.IsNullOrEmpty(evt.EventLink))
+                                        {
+                                            <MudDivider Class="my-2" />
+                                            <MudLink Href="@evt.EventLink" Target="_blank" Color="Color.Primary">
+                                                <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="mr-1" />
+                                                Register for Event
+                                            </MudLink>
+                                        }
                                     </MudCardContent>
                                 </MudCard>
                             </ItemContent>
@@ -397,9 +383,7 @@
                 EventDate = e.EventDate,
                 EventTime = e.EventDate.ToString("h:mm tt"),
                 Category = "Event", // Default category since Event model doesn't have category
-                MaxCapacity = e.MaxParticipants,
-                RegisteredCount = e.CurrentParticipants,
-                Status = e.IsActive ? (e.IsFull() ? "Full" : "Open") : "Closed"
+                EventLink = e.EventLink ?? string.Empty
             }).ToList();
 
         Console.WriteLine($"   ✅ Loaded {_events.Count} events for Information page");
@@ -551,9 +535,7 @@
         public DateTime EventDate { get; set; }
         public string EventTime { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
-        public int MaxCapacity { get; set; }
-        public int RegisteredCount { get; set; }
-        public string Status { get; set; } = string.Empty;
+        public string EventLink { get; set; } = string.Empty;
     }
 
     private class PhotoDto
