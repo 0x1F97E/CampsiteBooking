@@ -4,62 +4,60 @@ Please create a layered architecture diagram with 4 tiers:
 
 TIER 1 - CLIENT TIER (Top):
 - Web Browser
-  * Blazor WebAssembly UI
+  * Blazor Server UI (server-side rendering)
   * HTTPS connection
-  * Port: 443
+  * Port: 443 (if using Nginx) or 7001 (direct)
   
 - API Testing Tools
   * Postman
-  * Swagger UI
+  * Swagger UI (available at /swagger when in development)
 
-TIER 2 - API GATEWAY TIER:
-- YARP API Gateway Container
+TIER 2 - API GATEWAY TIER (OPTIONAL):
+- YARP API Gateway Container (OPTIONAL - Separate Project)
   * Technology: .NET 9.0 + YARP 2.1.0
   * Ports: 8000 (HTTP), 8001 (HTTPS)
-  * Features:
+  * Status: OPTIONAL - Main app works without it
+  * Features (if enabled):
     - Load Balancing (RoundRobin)
     - Health Checks (every 10s)
-    - Rate Limiting
     - Request Routing
-  * Routes:
+  * Routes (if enabled):
     - /api/bookings → BookMyHome API
     - /api/users → BookMyHome API
     - /api/auth → BookMyHome API
     - /api/campsites → BookMyHome API
+    - /swagger → BookMyHome API
+
+NOTE: API Gateway is a separate project (ApiGateway/) and is NOT required. Main application runs directly on port 7001.
 
 TIER 3 - APPLICATION TIER:
-- BookMyHome API Instance 1
-  * Technology: .NET 9.0 + ASP.NET Core
-  * Port: 7001 (HTTPS)
-  * Features: REST API, JWT Auth, Swagger
+- BookMyHome API (Main Application)
+  * Technology: .NET 9.0 + ASP.NET Core + Blazor Server
+  * Port: 7001 (HTTPS), 5000 (HTTP)
+  * Features: 
+    - REST API (Controllers/)
+    - Blazor Server UI (Components/)
+    - JWT Authentication
+    - Cookie Authentication
+    - Swagger/OpenAPI documentation
+    - Kafka Producer (active)
+    - Kafka Consumer (DISABLED - see Program.cs:227)
   
-- BookMyHome API Instance 2
-  * Port: 7002 (HTTPS)
-  * (Same as Instance 1 - for load balancing)
-  
-- BookMyHome API Instance 3
-  * Port: 7003 (HTTPS)
-  * (Same as Instance 1 - for load balancing)
-  
-- Kafka Consumer Service
-  * Technology: .NET 9.0 Background Service
-  * Purpose: Process events from Kafka
-  * Actions:
-    - Send emails
-    - Send SMS
-    - Create notifications
+NOTE: Single instance by default. Multiple instances possible but not default configuration.
 
 TIER 4 - DATA TIER:
 - MySQL Database Container
   * Image: mysql:8.0
   * Port: 3306
   * Volume: mysql_data (persistent storage)
-  * Database: bookmyhome_db
+  * Database: CampsiteBookingDb
+  * Tables: 24+ entities
   
 - Kafka Broker Container
   * Image: confluentinc/cp-kafka:7.5.0
   * Port: 9092
-  * Topics: booking-events, user-events, payment-events
+  * Topic: bookmyhome.events (SINGLE TOPIC for all events)
+  * Note: Events published but not consumed (consumer disabled)
   
 - Zookeeper Container
   * Image: confluentinc/cp-zookeeper:7.5.0
@@ -84,31 +82,63 @@ NETWORKS:
 
 VOLUMES:
 - mysql_data (persistent)
-- kafka_data (persistent)
+  * Stores MySQL database files
 
 CONNECTIONS (show with arrows):
-1. Browser → API Gateway (HTTPS, port 8001)
-2. API Gateway → API Instance 1/2/3 (Load balanced, HTTPS)
-3. API Instances → MySQL (TCP, port 3306, EF Core)
-4. API Instances → Kafka Producer (TCP, port 9092)
-5. Kafka Consumer → Kafka Broker (TCP, port 9092)
+
+1. Browser → BookMyHome API (Direct, HTTPS port 7001)
+   OR
+   Browser → API Gateway (Optional, HTTPS port 8001) → BookMyHome API
+
+2. [If Gateway Enabled] API Gateway → BookMyHome API (HTTPS, port 7001)
+   Load Balancing: RoundRobin (if multiple instances)
+
+3. BookMyHome API → MySQL (TCP, port 3306, EF Core)
+   Connection: Entity Framework Core with MySQL provider
+
+4. BookMyHome API → Kafka Producer → Kafka Broker (TCP, port 9092)
+   Topic: bookmyhome.events
+   Status: ACTIVE (events are published)
+
+5. [Kafka Consumer - DISABLED]
+   Kafka Broker → [Consumer would be here but is disabled]
+   Show with dashed line and "DISABLED" label
+
 6. Kafka → Zookeeper (TCP, port 2181)
-7. Kafka Consumer → External Services (Email/SMS APIs)
+   Coordination and cluster management
 
 VISUAL STYLE:
 - Use boxes/rectangles for containers
 - Use different colors for different tiers
 - Show port numbers on connections
-- Use solid arrows for synchronous communication
-- Use dashed arrows for asynchronous communication (Kafka)
+- Use solid arrows for active connections
+- Use dashed arrows for optional/disabled components
+- Mark API Gateway as "OPTIONAL" with dashed box
+- Mark Kafka Consumer as "DISABLED" with red X
 - Group containers by tier with labeled sections
 - Add Docker logo to show containerization
 - Add technology stack labels (e.g., ".NET 9.0", "MySQL 8.0")
 
 LEGEND:
-- Solid line = Synchronous HTTP/HTTPS
-- Dashed line = Asynchronous messaging (Kafka)
+- Solid line = Active connection
+- Dashed line = Optional/disabled connection
 - Blue boxes = Application containers
 - Green boxes = Data containers
 - Orange boxes = Infrastructure containers
+- Red X = Disabled component
+- ⚠️ = Warning/optional component
 
+STATUS INDICATORS:
+- ✅ BookMyHome API: ACTIVE
+- ✅ Kafka Producer: ACTIVE
+- ✅ MySQL: ACTIVE
+- ✅ Kafka Broker: ACTIVE
+- ❌ Kafka Consumer: DISABLED
+- ⚠️ API Gateway: OPTIONAL
+- ⚠️ Nginx: OPTIONAL
+
+ADDITIONAL NOTES:
+- Main application works without API Gateway
+- Kafka events are published but not consumed
+- Single Kafka topic: bookmyhome.events
+- All events go to same topic (event type in message key)

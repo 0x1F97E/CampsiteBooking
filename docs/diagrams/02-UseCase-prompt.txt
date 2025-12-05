@@ -1,11 +1,20 @@
-I need a UML Use Case Diagram for a campsite booking system. Please create it with standard UML notation.
+I need a UML Use Case Diagram for a campsite booking system called "BookMyHome". 
+
+SYSTEM CONTEXT:
+- Campsite booking and management system
+- Built with .NET 9.0, Blazor Server, MySQL 8.0
+- REST API with JWT authentication
+- Event-driven architecture (Kafka producer active, consumer disabled)
+
+Please create the diagram using standard UML Use Case notation.
 
 ACTORS:
 
 1. Guest (stick figure) - Primary actor, unregistered visitor
-2. Registered User (stick figure) - Extends Guest, logged-in user
+2. Registered User (stick figure) - Extends Guest, logged-in user (Guest role)
 3. Admin (stick figure) - Extends Registered User, system administrator
-4. System (stick figure) - Automated background processes
+4. Staff (stick figure) - Extends Registered User, campsite staff member
+5. System (stick figure) - Automated background processes
 
 USE CASES:
 
@@ -13,40 +22,62 @@ For Guest (unregistered):
 - Search Campsites
 - View Campsite Details
 - View Accommodation Types
+- View Accommodation Spots
 - View Availability Calendar
 - View Pricing Information
+- View Seasonal Pricing
 - Register Account
 
-For Registered User (logged-in):
+For Registered User (logged-in Guest):
 - Login
 - Logout
 - Create Booking
 - View My Bookings
-- Update Booking Details
+- View Booking Details
+- Update Booking Details (special requests)
 - Cancel Booking
 - Make Payment
 - Write Review
 - Subscribe to Newsletter
+- Unsubscribe from Newsletter
 - View Notifications
 - Update Profile
+- Change Password
 
 For Admin:
 - Manage Campsites (CRUD)
 - Manage Accommodation Types (CRUD)
-- Manage Amenities (CRUD)
-- Manage Pricing Rules
+- Manage Accommodation Spots (CRUD)
+- Manage Amenities
+- Manage Seasonal Pricing Rules
+- Manage Discounts
+- Manage Purchase Options
 - View All Bookings
 - View Analytics Dashboard
-- Manage Users
+- Manage Users (Guest, Admin, Staff)
+- Manage Reviews (approve/reject)
+- Manage Events
+- Manage Newsletters
 - Send Notifications
+- Manage Maintenance Tasks
+
+For Staff:
+- View Bookings (for assigned campsite)
+- Check In Guest
+- Check Out Guest
+- View Campsite Information
+- Update Booking Status
 
 For System (automated):
-- Send Booking Confirmation Email
-- Send Payment Receipt Email
-- Send Cancellation Email
-- Process Scheduled Notifications
-- Update Availability
-- Generate Reports
+- Send Booking Confirmation Email ⚠️ (NOT FUNCTIONAL - Consumer disabled)
+- Send Payment Receipt Email ⚠️ (NOT FUNCTIONAL - Consumer disabled)
+- Send Cancellation Email ⚠️ (NOT FUNCTIONAL - Consumer disabled)
+- Send Welcome Email ⚠️ (NOT FUNCTIONAL - Consumer disabled)
+- Send SMS Notifications ⚠️ (NOT FUNCTIONAL - Consumer disabled)
+- Process Scheduled Newsletters (Implemented - Newsletter entity supports scheduling)
+- Update Availability (Implemented - Availability entity exists)
+
+NOTE: System use cases marked with ⚠️ are implemented but NOT FUNCTIONAL because Kafka Consumer is disabled (see Program.cs:227). Email/SMS services exist but are not called automatically.
 
 RELATIONSHIPS:
 
@@ -54,19 +85,24 @@ RELATIONSHIPS:
 - "Login" includes "Authenticate User"
 - "Create Booking" includes "Check Availability"
 - "Create Booking" includes "Calculate Total Price"
+- "Create Booking" includes "Validate Dates"
 - "Make Payment" includes "Process Payment Gateway"
-- "Cancel Booking" includes "Process Refund"
+- "Cancel Booking" includes "Release Accommodation Spot"
+- "Register Account" includes "Validate Email Format"
 
 <<extend>> relationships (optional):
-- "Send Booking Confirmation Email" extends "Create Booking"
-- "Send Payment Receipt Email" extends "Make Payment"
-- "Send Cancellation Email" extends "Cancel Booking"
+- "Send Booking Confirmation Email" extends "Create Booking" ⚠️ (NOT FUNCTIONAL)
+- "Send Payment Receipt Email" extends "Make Payment" ⚠️ (NOT FUNCTIONAL)
+- "Send Cancellation Email" extends "Cancel Booking" ⚠️ (NOT FUNCTIONAL)
+- "Send Welcome Email" extends "Register Account" ⚠️ (NOT FUNCTIONAL)
 - "Write Review" extends "View My Bookings"
 - "Subscribe to Newsletter" extends "Register Account"
+- "Update Booking Details" extends "View My Bookings"
 
 Generalization (inheritance):
 - Registered User generalizes Guest (Registered User is-a Guest)
 - Admin generalizes Registered User (Admin is-a Registered User)
+- Staff generalizes Registered User (Staff is-a Registered User)
 
 SYSTEM BOUNDARY:
 - Draw a rectangle labeled "BookMyHome Campsite Booking System"
@@ -80,10 +116,17 @@ NOTATION:
 - Use dashed arrows with <<include>> for include relationships
 - Use dashed arrows with <<extend>> for extend relationships
 - Use solid arrows with hollow triangle for generalization
+- Mark non-functional use cases with ⚠️ symbol or different color (red/yellow)
 
 Please arrange the diagram with:
 - Actors on the left side
 - Use cases in the center (inside system boundary)
 - Group related use cases together
 - Show all relationships clearly
+- Clearly mark which system use cases are not functional
 
+ADDITIONAL NOTES:
+- System use cases for email/SMS are implemented in code but Kafka Consumer is disabled
+- Email and SMS services exist and can be called manually, but not automatically
+- Newsletter scheduling is functional (Newsletter entity supports scheduled sending)
+- Availability updates are functional (Availability entity exists and can be updated)

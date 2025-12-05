@@ -1,141 +1,539 @@
 I need a UML Class Diagram showing the domain model for the campsite booking system.
 
+IMPORTANT: This diagram reflects ACTUAL implementation. Location value object does NOT exist. Campsite uses double Latitude/Longitude directly.
+
 CLASSES (show with UML class boxes):
 
-1. Booking (Entity)
-   - BookingId: BookingId
+AGGREGATE ROOTS (show with <<aggregate root>> stereotype):
+
+1. Booking (AggregateRoot)
+   - Id: BookingId
    - GuestId: GuestId
    - CampsiteId: CampsiteId
+   - AccommodationSpotId: AccommodationSpotId? (nullable)
    - AccommodationTypeId: AccommodationTypeId
-   - CheckInDate: DateOnly
-   - CheckOutDate: DateOnly
+   - Period: DateRange
    - Status: BookingStatus
+   - BasePrice: Money
    - TotalPrice: Money
    - NumberOfAdults: int
    - NumberOfChildren: int
    - SpecialRequests: string
+   - CreatedDate: DateTime
+   - LastModifiedDate: DateTime
+   - CancellationDate: DateTime?
    + Create(guestId, campsiteId, ...): Booking
+   + AssignAccommodationSpot(spotId): void
    + Confirm(): void
    + Cancel(): void
    + Complete(): void
+   + UpdateTotalPrice(price): void
    + UpdateSpecialRequests(requests): void
+   + GetNumberOfNights(): int
+   + GetTotalGuests(): int
+   + IsActive(): bool
+   + CanBeModified(): bool
 
-2. Guest (Entity)
-   - GuestId: GuestId
+2. User (AggregateRoot, Base Class)
+   - Id: UserId
    - Email: Email
+   - PasswordHash: string
    - FirstName: string
    - LastName: string
    - Phone: string
    - Country: string
-   - DateOfBirth: DateOnly
-   + Create(email, firstName, ...): Guest
-   + UpdateContactInfo(phone, country): void
-
-3. User (Entity)
-   - UserId: UserId
-   - Email: Email
-   - FirstName: string
-   - LastName: string
-   - PasswordHash: string
+   - JoinedDate: DateTime
+   - LastLogin: DateTime?
    - IsActive: bool
    + Create(email, firstName, ...): User
-   + ChangePassword(newHash): void
+   + UpdateLastLogin(): void
    + Deactivate(): void
+   + Activate(): void
+   + UpdateContactInfo(phone, country): void
+   + UpdateName(firstName, lastName): void
+   + UpdateEmail(email): void
+   + SetPasswordHash(hash): void
 
-4. Campsite (Entity)
+3. Guest (Entity, inherits User)
+   - LoyaltyPoints: int
+   - PreferredCommunication: string (Email, SMS, Both)
+   + Create(email, firstName, ..., preferredCommunication): Guest
+   + UpdatePreferredCommunication(method): void
+   + AddLoyaltyPoints(points): void
+
+4. Admin (Entity, inherits User)
+   - Permissions: IReadOnlyList<string>
+   + Create(email, firstName, ...): Admin
+   + AddPermission(permission): void
+
+5. Staff (Entity, inherits User)
+   - EmployeeId: string
+   - Department: string
    - CampsiteId: CampsiteId
+   - HireDate: DateTime
+   + Create(email, firstName, ..., employeeId, department, campsiteId): Staff
+
+6. Campsite (AggregateRoot)
+   - Id: CampsiteId
    - Name: string
-   - Region: string
+   - StreetAddress: string
+   - City: string
+   - PostalCode: string
    - Description: string
-   - Location: Location
+   - Latitude: double (NOT Location value object)
+   - Longitude: double (NOT Location value object)
+   - Attractiveness: string
+   - PhoneNumber: string
+   - Email: Email?
+   - WebsiteUrl: string
+   - EstablishedYear: int
    - IsActive: bool
-   + Create(name, region, ...): Campsite
-   + AddAccommodationType(type): void
-   + AddAmenity(amenity): void
+   - SeasonOpeningDate: DateTime?
+   - CreatedDate: DateTime
+   - UpdatedDate: DateTime
+   + Create(name, streetAddress, city, ...): Campsite
+   + Activate(): void
+   + Deactivate(): void
+   + UpdateInformation(...): void
+   + UpdateLocation(latitude, longitude): void
 
-5. AccommodationType (Entity)
-   - AccommodationTypeId: AccommodationTypeId
+ENTITIES (show with <<entity>> stereotype):
+
+7. AccommodationType (Entity)
+   - Id: AccommodationTypeId
    - CampsiteId: CampsiteId
-   - Name: string
-   - Capacity: int
+   - Type: string
+   - Description: string
+   - MaxCapacity: int
    - BasePrice: Money
-   + Create(campsiteId, name, ...): AccommodationType
+   - ImageUrl: string
+   - AvailableUnits: int
+   - IsActive: bool
+   - CreatedDate: DateTime
+   - Amenities: string (comma-separated, NOT junction table)
+   - UnitNamingPrefix: string
+   - UnitNamingPattern: string
+   - AreaSquareMeters: decimal?
+   + Create(...): AccommodationType
+   + Activate(): void
+   + Deactivate(): void
+   + ReserveUnits(count): void
+   + ReleaseUnits(count): void
+   + UpdateAmenities(amenities): void
 
-6. Payment (Entity)
-   - PaymentId: PaymentId
+8. AccommodationSpot (Entity)
+   - Id: AccommodationSpotId
+   - SpotIdentifier: string
+   - CampsiteId: CampsiteId
+   - CampsiteName: string
+   - AccommodationTypeId: AccommodationTypeId
+   - Latitude: double
+   - Longitude: double
+   - Type: string
+   - Status: SpotStatus (enum: Available, Reserved, Occupied, Maintenance)
+   - IsUnderMaintenance: bool
+   - PriceModifier: decimal
+   - CreatedDate: DateTime
+   + Create(...): AccommodationSpot
+
+9. Payment (Entity, NOT AggregateRoot - cannot raise events)
+   - Id: PaymentId
    - BookingId: BookingId
    - Amount: Money
-   - Status: PaymentStatus
+   - Method: string
    - TransactionId: string
-   + Create(bookingId, amount): Payment
-   + MarkAsPaid(): void
-   + ProcessRefund(): void
+   - Status: PaymentStatus
+   - PaymentDate: DateTime
+   - RefundDate: DateTime?
+   - RefundAmount: Money?
+   - CreatedDate: DateTime
+   + Create(bookingId, amount, method, transactionId): Payment
+   + MarkAsCompleted(): void
+   + MarkAsFailed(): void
+   + ProcessRefund(refundAmount): void
+   Note: Payment events (PaymentCompletedEvent, PaymentRefundedEvent) exist but are NEVER raised
+
+10. Review (Entity)
+    - Id: ReviewId
+    - CampsiteId: CampsiteId
+    - UserId: UserId
+    - BookingId: BookingId?
+    - Rating: int (1-5)
+    - Comment: string?
+    - ReviewerName: string
+    - CreatedDate: DateTime
+    - UpdatedDate: DateTime
+    - IsApproved: bool
+    - IsVisible: bool
+    - AdminResponse: string?
+    - AdminResponseDate: DateTime?
+    + Create(...): Review
+
+11. Amenity (Entity)
+    - Id: AmenityId
+    - AmenityId: int (legacy)
+    - CampsiteId: CampsiteId
+    - Name: string
+    - Description: string?
+    - IconUrl: string?
+    - Category: string?
+    - IsAvailable: bool
+    - CreatedDate: DateTime
+    - UpdatedDate: DateTime
+
+12. AmenityLookup (Entity)
+    - Id: AmenityLookupId
+    - AmenityLookupId: int (legacy)
+    - Name: string (unique)
+    - DisplayName: string
+    - Category: string?
+    - IconClass: string?
+    - IsActive: bool
+    - SortOrder: int
+    - CreatedDate: DateTime
+    - UpdatedDate: DateTime
+
+13. Availability (Entity)
+    - Id: AvailabilityId
+    - AccommodationTypeId: AccommodationTypeId
+    - Date: DateTime
+    - AvailableUnits: int
+    - IsBlocked: bool
+    - CreatedDate: DateTime
+    - UpdatedDate: DateTime
+
+14. SeasonalPricing (Entity)
+    - Id: SeasonalPricingId
+    - CampsiteId: CampsiteId
+    - AccommodationTypeId: AccommodationTypeId
+    - SeasonName: string
+    - StartDate: DateTime
+    - EndDate: DateTime
+    - PriceMultiplier: decimal (NOT PricePerNight)
+    - IsActive: bool
+    - CreatedDate: DateTime
+    - UpdatedDate: DateTime?
+    + Create(...): SeasonalPricing
+    + IsDateInSeason(date): bool
+    + CalculatePrice(basePrice): decimal
+
+15. Discount (Entity)
+    - Id: DiscountId
+    - Code: string (unique)
+    - Description: string?
+    - Type: string
+    - Value: decimal
+    - ValidFrom: DateTime
+    - ValidUntil: DateTime
+    - UsedCount: int
+    - MaxUses: int?
+    - MinimumBookingAmount: decimal?
+    - IsActive: bool
+    - CreatedDate: DateTime
+
+16. PeripheralPurchase (Entity)
+    - Id: PeripheralPurchaseId
+    - BookingId: BookingId
+    - Name: string
+    - Description: string?
+    - Price: decimal
+    - Quantity: int
+    - CreatedDate: DateTime
+
+17. PurchaseOption (Entity)
+    - Id: PurchaseOptionId
+    - CampsiteId: CampsiteId
+    - AccommodationTypeId: AccommodationTypeId?
+    - Name: string
+    - Description: string?
+    - Price: Money
+    - Category: string?
+    - IsActive: bool
+    - CreatedDate: DateTime
+    - UpdatedDate: DateTime
+
+18. Photo (Entity)
+    - Id: PhotoId
+    - CampsiteId: int? (nullable)
+    - AccommodationTypeId: int? (nullable)
+    - Url: string
+    - Caption: string?
+    - AltText: string?
+    - DisplayOrder: int
+    - IsPrimary: bool
+    - UploadedDate: DateTime
+    - UpdatedDate: DateTime?
+    - Category: string
+
+19. Event (Entity)
+    - Id: EventId
+    - CampsiteId: CampsiteId
+    - Title: string
+    - Description: string?
+    - EventDate: DateTime
+    - MaxParticipants: int
+    - CurrentParticipants: int
+    - Price: Money?
+    - IsActive: bool
+    - CreatedDate: DateTime
+    - EventLink: string?
+    + Create(...): Event
+
+20. EventRegistration (Entity)
+    - Id: EventRegistrationId
+    - EventId: EventId
+    - UserId: UserId
+    - RegistrationDate: DateTime
+    - Status: string
+    - CreatedDate: DateTime
+
+21. Newsletter (Entity)
+    - Id: NewsletterId
+    - Subject: string
+    - Content: string
+    - ScheduledDate: DateTime?
+    - SentDate: DateTime?
+    - Status: string
+    - RecipientCount: int
+    - CreatedDate: DateTime?
+    + Create(...): Newsletter
+
+22. NewsletterSubscription (Entity)
+    - Id: NewsletterSubscriptionId
+    - UserId: UserId
+    - Email: string
+    - IsActive: bool
+    - SubscribedAt: DateTime
+    - UnsubscribedAt: DateTime?
+
+23. NewsletterAnalytics (Entity)
+    - Id: NewsletterAnalyticsId
+    - NewsletterId: NewsletterId
+    - Opens: int
+    - Clicks: int
+    - Bounces: int
+    - Unsubscribes: int
+    - CreatedDate: DateTime
+
+24. MaintenanceTask (Entity)
+    - Id: MaintenanceTaskId
+    - CampsiteId: CampsiteId
+    - AccommodationSpotId: AccommodationSpotId?
+    - Title: string
+    - Description: string?
+    - Status: string
+    - Priority: string
+    - ScheduledDate: DateTime?
+    - CompletedDate: DateTime?
+    - AssignedTo: string?
+    - CreatedDate: DateTime
+    - UpdatedDate: DateTime
 
 VALUE OBJECTS (show with <<value object>> stereotype):
 
-7. BookingId (Strongly-Typed ID)
-   - Value: Guid
-   + Create(): BookingId
-   + Create(guid): BookingId
-
-8. Email (Value Object)
+25. Email (Value Object)
    - Value: string
    + Create(email): Email
    - Validate(email): bool
+   Note: Normalizes to lowercase
 
-9. Money (Value Object)
+26. Money (Value Object)
    - Amount: decimal
    - Currency: string
    + Create(amount, currency): Money
    + Add(other): Money
    + Multiply(factor): Money
+   Note: Prevents mixing currencies
 
-10. Location (Value Object)
-    - Latitude: decimal
-    - Longitude: decimal
-    + Create(lat, lon): Location
+27. DateRange (Value Object)
+   - StartDate: DateTime
+   - EndDate: DateTime
+   + Create(start, end): DateRange
+   + GetNumberOfDays(): int
+   + GetNumberOfNights(): int
+   + Overlaps(other): bool
+   + Contains(date): bool
+   Note: Ensures end > start
 
-11. DateRange (Value Object)
-    - StartDate: DateOnly
-    - EndDate: DateOnly
-    + Create(start, end): DateRange
-    + GetNumberOfNights(): int
-    + Overlaps(other): bool
+28. BookingStatus (Value Object, NOT enum)
+   - Value: string
+   + Pending: BookingStatus (static)
+   + Confirmed: BookingStatus (static)
+   + Cancelled: BookingStatus (static)
+   + Completed: BookingStatus (static)
+   + CanTransitionTo(newStatus): bool
+   + FromString(value): BookingStatus
+   Note: Has transition rules
 
-ENUMS:
+29. PaymentStatus (Value Object, NOT enum)
+   - Value: string
+   + Pending: PaymentStatus (static)
+   + Completed: PaymentStatus (static)
+   + Failed: PaymentStatus (static)
+   + Refunded: PaymentStatus (static)
+   + CanTransitionTo(newStatus): bool
+   + FromString(value): PaymentStatus
+   Note: Has transition rules
 
-12. BookingStatus (Enum)
-    - Pending
-    - Confirmed
-    - Cancelled
-    - Completed
+STRONGLY-TYPED IDs (show with <<value object>> stereotype):
 
-13. PaymentStatus (Enum)
-    - Pending
-    - Paid
-    - Failed
-    - Refunded
+30. BookingId, PaymentId, UserId, GuestId, AdminId, StaffId
+31. CampsiteId, AccommodationTypeId, AccommodationSpotId
+32. And all other entity IDs (24+ total)
+   - Value: int
+   + Create(value): TId
+   + CreateNew(): TId
+
+BASE CLASSES:
+
+33. Entity<TId> (Abstract)
+    - Id: TId
+    + Equals(other): bool
+    + GetHashCode(): int
+
+34. AggregateRoot<TId> (Abstract, inherits Entity<TId>)
+    - DomainEvents: IReadOnlyList<IDomainEvent>
+    + RaiseDomainEvent(event): void
+    + GetDomainEvents(): IReadOnlyList<IDomainEvent>
+    + ClearDomainEvents(): void
+    Note: Only AggregateRoots can raise domain events
+
+35. ValueObject (Abstract)
+    + Equals(other): bool
+    + GetHashCode(): int
+    + GetEqualityComponents(): IEnumerable<object>
+
+DOMAIN EVENTS (show with <<domain event>> stereotype):
+
+36. BookingCreatedEvent
+   - BookingId: int
+   - GuestId: int
+   - CampsiteId: int
+   - CheckInDate: DateTime
+   - CheckOutDate: DateTime
+   - OccurredOn: DateTime
+   Note: RAISED in Booking.Create()
+
+37. BookingConfirmedEvent
+   - BookingId: int
+   - GuestId: int
+   - CheckInDate: DateTime
+   - CheckOutDate: DateTime
+   - OccurredOn: DateTime
+   Note: RAISED in Booking.Confirm()
+
+38. BookingCancelledEvent
+   - BookingId: int
+   - GuestId: int
+   - OccurredOn: DateTime
+   Note: RAISED in Booking.Cancel()
+
+39. UserCreatedEvent
+   - UserId: int
+   - Email: string
+   - OccurredOn: DateTime
+   Note: RAISED in User.Create()
+
+40. UserDeactivatedEvent
+   - UserId: int
+   - Email: string
+   - OccurredOn: DateTime
+   Note: RAISED in User.Deactivate()
+
+41. PaymentCompletedEvent
+   - PaymentId: int
+   - BookingId: int
+   - Amount: decimal
+   - Currency: string
+   - PaymentMethod: string
+   - OccurredOn: DateTime
+   Note: EXISTS but NEVER RAISED (Payment is Entity, not AggregateRoot)
+
+42. PaymentRefundedEvent
+   - PaymentId: int
+   - BookingId: int
+   - RefundAmount: decimal
+   - Currency: string
+   - Reason: string
+   - OccurredOn: DateTime
+   Note: EXISTS but NEVER RAISED (Payment is Entity, not AggregateRoot)
 
 RELATIONSHIPS:
 
-Booking → Guest (Many-to-One)
-Booking → Campsite (Many-to-One)
-Booking → AccommodationType (Many-to-One)
-Booking → Payment (One-to-One)
-Campsite → AccommodationType (One-to-Many, composition)
-Booking uses→ BookingId (composition)
-Booking uses→ Money (composition)
-Booking uses→ BookingStatus (dependency)
-Guest uses→ Email (composition)
-Payment uses→ PaymentStatus (dependency)
+Inheritance:
+- Guest → User (inheritance, TPH)
+- Admin → User (inheritance, TPH)
+- Staff → User (inheritance, TPH)
+- AggregateRoot<TId> → Entity<TId> (inheritance)
 
-VISUAL STYLE:
-- Use standard UML class notation
-- Show attributes with visibility (- private, + public)
-- Show methods with return types
-- Use composition (filled diamond) for value objects
-- Use aggregation (hollow diamond) for entities
-- Show multiplicity on associations (1, *, 0..1)
-- Add <<value object>> stereotype
-- Add <<entity>> stereotype
+Composition:
+- Booking → Guest (Many-to-One)
+- Booking → Campsite (Many-to-One)
+- Booking → AccommodationType (Many-to-One)
+- Booking → AccommodationSpot (Many-to-One, nullable)
+- Booking → Payment (One-to-One)
+- Booking → PeripheralPurchase (One-to-Many)
+- Booking → Review (One-to-Many, nullable)
+- Campsite → AccommodationType (One-to-Many)
+- Campsite → AccommodationSpot (One-to-Many)
+- Campsite → Amenity (One-to-Many)
+- Campsite → Photo (One-to-Many)
+- Campsite → Event (One-to-Many)
+- Campsite → Staff (One-to-Many)
+- AccommodationType → AccommodationSpot (One-to-Many)
+- AccommodationType → Availability (One-to-Many)
+- AccommodationType → SeasonalPricing (One-to-Many)
+- AccommodationType → Photo (One-to-Many)
+- AccommodationType → PurchaseOption (One-to-Many)
+- Event → EventRegistration (One-to-Many)
+- Newsletter → NewsletterAnalytics (One-to-One)
+- User → NewsletterSubscription (One-to-Many)
+- User → Review (One-to-Many)
+- User → EventRegistration (One-to-Many)
 
+Value Object Usage:
+- Booking uses→ BookingId (composition)
+- Booking uses→ Money (composition)
+- Booking uses→ DateRange (composition)
+- Booking uses→ BookingStatus (composition)
+- User uses→ Email (composition)
+- Payment uses→ Money (composition)
+- Payment uses→ PaymentStatus (composition)
+- Campsite uses→ Email? (composition, nullable)
+- Note: Campsite uses double Latitude/Longitude (NOT Location value object)
+
+VISUAL STYLE AND UML NOTATION:
+- Use standard UML Class Diagram notation
+- Draw class boxes with three compartments:
+  * Top: Class name with stereotype (e.g., <<aggregate root>>)
+  * Middle: Attributes with visibility (- private, + public) and type
+  * Bottom: Methods with visibility, return type, and parameters
+- Show attributes with format: visibility name: type
+  Example: - Id: BookingId
+- Show methods with format: visibility name(parameters): returnType
+  Example: + Create(guestId, campsiteId): Booking
+- Use composition (filled diamond ◆) for value objects (strong ownership)
+- Use aggregation (hollow diamond ◇) for entity relationships (weak ownership)
+- Use inheritance arrow (hollow triangle ▲) pointing to base class for inheritance
+- Show multiplicity on association ends:
+  * 1 = exactly one
+  * * = zero or more
+  * 0..1 = zero or one
+  * 1..* = one or more
+- Add UML stereotypes in guillemets:
+  * <<aggregate root>> for Booking, User, Campsite
+  * <<entity>> for other entities
+  * <<value object>> for value objects
+  * <<domain event>> for events
+- Mark PaymentCompletedEvent and PaymentRefundedEvent with note: "NOT RAISED"
+- Show User inheritance hierarchy clearly:
+  * User (base class) at top
+  * Guest, Admin, Staff below with inheritance arrows pointing up to User
+  * Label as "Table Per Hierarchy (TPH)"
+
+IMPORTANT NOTES:
+- Location value object does NOT exist - Campsite uses double Latitude/Longitude
+- Payment is Entity (not AggregateRoot) so cannot raise events
+- BookingStatus and PaymentStatus are value objects with transition rules, NOT enums
+- User inheritance uses Table Per Hierarchy (TPH) with discriminator
+- All entities use strongly-typed IDs (not int directly)

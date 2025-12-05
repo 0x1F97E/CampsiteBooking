@@ -10,29 +10,41 @@ BRANCH 1 - FUNCTIONALITY (What the system does):
 Color: Blue
 ✅ CRUD Operations
    - Create, Read, Update, Delete bookings
-   - User management
+   - User management (Guest, Admin, Staff)
    - Campsite management
+   - Accommodation type management
+   - Accommodation spot management
    
 ✅ Authentication & Authorization
-   - JWT token-based authentication
-   - Role-based access control (Guest, User, Admin)
-   - Password hashing (BCrypt)
+   - JWT token-based authentication (REST API)
+   - Cookie-based authentication (Blazor UI)
+   - Role-based access control (Guest, Admin, Staff)
+   - Password hashing (ASP.NET Core Identity PasswordHasher - PBKDF2)
    
 ✅ Search & Filter
    - Search campsites by region
    - Filter by amenities
    - Filter by availability
+   - View accommodation spots
    
 ✅ Payment Processing
    - Payment status tracking
    - Refund handling
    - Transaction history
+   - Mock payment service (Stripe integration available)
    
-✅ Email Notifications
-   - Booking confirmation
-   - Cancellation emails
-   - Welcome emails
-   - Via Kafka event-driven architecture
+⚠️ Email Notifications
+   - Email service implemented
+   - Booking confirmation emails (code exists)
+   - Cancellation emails (code exists)
+   - Welcome emails (code exists)
+   - Status: NOT FUNCTIONAL - Kafka Consumer disabled
+   - Note: Emails would be sent if consumer was enabled
+
+⚠️ SMS Notifications
+   - SMS service implemented
+   - SMS notifications (code exists)
+   - Status: NOT FUNCTIONAL - Kafka Consumer disabled
 
 BRANCH 2 - USABILITY (User experience):
 Color: Green
@@ -40,21 +52,25 @@ Color: Green
    - MudBlazor Material Design
    - Mobile-friendly
    - Adaptive layouts
+   - Server-side Blazor
    
 ✅ Intuitive Navigation
    - Clear menu structure
    - Breadcrumbs
    - Search functionality
+   - Multi-language support (EN, DA, DE, SV, NO, NL)
    
 ✅ Clear Error Messages
    - User-friendly validation messages
    - Input validation feedback
    - API error responses
+   - Domain exception handling
    
 ✅ API Documentation
    - Swagger/OpenAPI
    - Interactive API testing
    - Code examples
+   - Available at /swagger
    
 ⚠️ Accessibility
    - Basic ARIA labels
@@ -64,27 +80,31 @@ Color: Green
 BRANCH 3 - RELIABILITY (System dependability):
 Color: Orange
 ✅ Data Validation
-   - Input validation (XSS protection)
-   - Business rule validation
+   - Input validation (XSS protection via InputValidator)
+   - Business rule validation (domain entities)
    - Strongly-typed value objects
+   - Domain exception handling
    
 ✅ Error Handling
    - Try-catch blocks
    - Global exception handling
    - Logging (ILogger)
+   - Generic error messages in production
    
 ✅ Transaction Management
    - EF Core transactions
+   - Unit of Work pattern
    - ACID compliance
    - Rollback on failure
    
 ✅ Health Checks
-   - YARP health monitoring
-   - API health endpoints
+   - Health endpoint (/health)
+   - API health monitoring
    - Database connectivity checks
+   - YARP health checks (if gateway enabled)
    
 ⚠️ Retry Logic
-   - Kafka retry (partial)
+   - Kafka producer retry (3 retries)
    - No HTTP retry policy yet
 
 BRANCH 4 - PERFORMANCE (Speed and efficiency):
@@ -92,17 +112,19 @@ Color: Red
 ✅ Database Indexing
    - Primary key indexes
    - Foreign key indexes
-   - Query optimization
+   - Query optimization via EF Core
    
 ✅ Async/Await
    - Non-blocking I/O
    - Async database operations
    - Async API endpoints
+   - Async event publishing
    
-✅ Load Balancing
-   - YARP RoundRobin
-   - 3 API instances
-   - Horizontal scaling
+✅ Load Balancing Ready
+   - Stateless API (JWT tokens)
+   - Horizontal scaling possible
+   - Docker Compose scaling support
+   - Note: Single instance by default
    
 ⚠️ Caching
    - Not implemented yet
@@ -118,24 +140,29 @@ Color: Purple
    - ILogger framework
    - Structured logging
    - Error tracking
+   - Console logging
    
 ✅ Docker Deployment
    - Docker Compose
    - Container orchestration
    - Easy deployment
+   - Multi-container setup
    
 ✅ API Versioning Ready
    - Prepared for versioning
    - DTOs for API contracts
+   - Swagger documentation
    
 ✅ Comprehensive Documentation
-   - 8 markdown files
+   - Architecture documentation
    - API documentation (Swagger)
    - Deployment guides
+   - Diagram prompts
    
 ✅ Unit Tests
-   - 372 passing tests
+   - 372+ passing tests
    - Domain model coverage
+   - Value object coverage
    - xUnit framework
 
 BRANCH 6 - PLUS (+) (Additional constraints):
@@ -143,31 +170,35 @@ Color: Gray
 
 Design Constraints:
 ✅ Clean Architecture
-✅ Domain-Driven Design (DDD)
+✅ Domain-Driven Design (DDD - Hybrid approach)
 ✅ SOLID Principles
 ✅ Repository Pattern
+✅ Unit of Work Pattern
 
 Implementation Constraints:
 ✅ .NET 9.0
 ✅ C# 12
 ✅ Entity Framework Core 8.0.2
 ✅ MySQL 8.0
+✅ Blazor Server 9.0
+✅ MudBlazor 8.13.0
 
 Interface Constraints:
-✅ REST API (Level 2)
+✅ REST API (Level 2 - HTTP Verbs)
 ✅ Swagger/OpenAPI
 ✅ JSON data format
 ✅ JWT authentication
+✅ Cookie authentication
 
 Physical Constraints:
 ✅ Docker containers
 ✅ MySQL database
-✅ Kafka message broker
-✅ YARP API Gateway
+✅ Kafka message broker (single topic: bookmyhome.events)
+⚠️ YARP API Gateway (optional/separate)
 
 LEGEND (add at bottom):
 ✅ Green checkmark = Fully implemented
-⚠️ Yellow warning = Partially implemented
+⚠️ Yellow warning = Partially implemented or not functional
 ❌ Red X = Not implemented
 
 VISUAL STYLE:
@@ -177,4 +208,4 @@ VISUAL STYLE:
 - Connect all branches to the center node
 - Use sub-branches for detailed features
 - Add status indicators (✅, ⚠️, ❌) to each feature
-
+- Mark non-functional features clearly (email/SMS notifications)

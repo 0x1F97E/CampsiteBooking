@@ -1,34 +1,60 @@
-I need a Clean Architecture (Onion Architecture) diagram showing the layered structure of a .NET campsite booking system.
+I need a Clean Architecture (Onion Architecture) diagram showing the layered structure of a .NET campsite booking system called "BookMyHome".
+
+SYSTEM CONTEXT:
+- .NET 9.0 application with Blazor Server UI
+- Domain-Driven Design (DDD) with Clean Architecture
+- MySQL 8.0 database with Entity Framework Core
+- Kafka event streaming (producer active, consumer disabled)
+- Optional YARP API Gateway
+
+Please create concentric circles (like an onion) with 4 layers from innermost to outermost.
 
 Please create concentric circles (like an onion) with 4 layers:
 
 LAYER 1 - DOMAIN LAYER (Innermost Circle - Core):
 Color: Dark Blue
 Contains:
-- Entities
-  * Booking
-  * User
-  * Guest
-  * Campsite
+- Entities (24+ entities)
+  * Booking (AggregateRoot)
+  * User (AggregateRoot, base class)
+  * Guest (inherits User)
+  * Admin (inherits User)
+  * Staff (inherits User)
+  * Campsite (AggregateRoot)
   * AccommodationType
-  * Payment
+  * AccommodationSpot
+  * Payment (Entity, NOT AggregateRoot - cannot raise events)
   * Review
   * Amenity
+  * AmenityLookup
   * Availability
-  * Pricing
+  * SeasonalPricing
+  * Discount
+  * PeripheralPurchase
+  * PurchaseOption
+  * Photo
+  * Event
+  * EventRegistration
+  * Newsletter
+  * NewsletterSubscription
+  * NewsletterAnalytics
+  * MaintenanceTask
   
 - Value Objects
   * Email
   * Money
   * DateRange
-  * BookingStatus (enum)
-  * PaymentStatus (enum)
+  * BookingStatus (value object with transition rules)
+  * PaymentStatus (value object with transition rules)
   
 - Domain Events
-  * BookingCreatedEvent
-  * BookingCancelledEvent
-  * UserCreatedEvent
-  * PaymentProcessedEvent
+  * BookingCreatedEvent (RAISED in Booking.Create())
+  * BookingConfirmedEvent (RAISED in Booking.Confirm())
+  * BookingCancelledEvent (RAISED in Booking.Cancel())
+  * UserCreatedEvent (RAISED in User.Create())
+  * UserDeactivatedEvent (RAISED in User.Deactivate())
+  * PaymentCompletedEvent (EXISTS but NEVER RAISED - Payment is Entity, not AggregateRoot)
+  * PaymentRefundedEvent (EXISTS but NEVER RAISED - Payment is Entity, not AggregateRoot)
   
 - Repository Interfaces
   * IBookingRepository
@@ -36,48 +62,65 @@ Contains:
   * ICampsiteRepository
   
 - Strongly-Typed IDs
-  * BookingId
-  * UserId
-  * CampsiteId
-  * GuestId
+  * BookingId, PaymentId, UserId, GuestId, AdminId, StaffId
+  * CampsiteId, AccommodationTypeId, AccommodationSpotId
+  * And all other entity IDs (24+ total)
+
+- Common Base Classes
+  * Entity<TId>
+  * AggregateRoot<TId>
+  * ValueObject
 
 LAYER 2 - APPLICATION LAYER (Second Circle):
 Color: Light Blue
 Contains:
 - Application Services
-  * ApiService (HTTP client wrapper)
-  * KafkaProducer
-  * KafkaConsumer
+  * UnitOfWork (IUnitOfWork, UnitOfWork) - Transaction management
+  * PricingService (IPricingService) - Seasonal pricing calculations
+  * DashboardService (IDashboardService) - Analytics and reporting
   
 - DTOs (Data Transfer Objects)
   * BookingDto
   * UserDto
   * CampsiteDto
+  * AuthDto
   * CreateBookingRequest
   * UpdateBookingRequest
+  * RegisterRequest
+  * LoginRequest
   
-- Event Handlers
-  * EmailEventHandler
-  * NotificationEventHandler
+- Event Handlers (Interfaces)
+  * IEventHandler
+  * NotificationEventHandler (implementation in Infrastructure)
+
+NOTE: KafkaProducer and KafkaConsumer are in Infrastructure layer, not Application layer.
 
 LAYER 3 - INFRASTRUCTURE LAYER (Third Circle):
 Color: Green
 Contains:
 - Persistence
-  * BookMyHomeDbContext (EF Core)
-  * BookingRepository (implementation)
-  * UserRepository (implementation)
-  * CampsiteRepository (implementation)
+  * CampsiteBookingDbContext (EF Core)
+  * BookingRepository (IBookingRepository implementation)
+  * UserRepository (IUserRepository implementation)
+  * CampsiteRepository (ICampsiteRepository implementation)
+  * EF Core Value Object Converters
+  * EF Core Strongly-Typed ID Converters
   
 - External Services
-  * Kafka Integration
-  * Email Service
-  * SMS Service
+  * KafkaProducer (IKafkaProducer) - Publishes events to Kafka
+  * KafkaConsumer (BackgroundService) - ⚠️ DISABLED (commented out in Program.cs:227)
+  * EmailService (IEmailService) - SMTP email sending
+  * SMSService (ISMSService) - SMS notifications
+  * MockPaymentService - Payment processing (mock implementation)
+  * StripePaymentService - Payment processing (Stripe integration, optional)
   
 - Security
-  * InputValidator
-  * JwtTokenGenerator
-  * PasswordHasher
+  * InputValidator - XSS protection
+  * JWT Token Generation (in AuthController)
+  * Password Hashing (ASP.NET Core Identity PasswordHasher)
+  
+- Event Handlers (Implementation)
+  * NotificationEventHandler - Handles domain events (not called - consumer disabled)
   
 - Database
   * MySQL 8.0
@@ -86,18 +129,28 @@ LAYER 4 - PRESENTATION LAYER (Outermost Circle):
 Color: Orange
 Contains:
 - Web UI
-  * Blazor Server Components
-  * Razor Pages
-  * MudBlazor Components
+  * Blazor Server Components (Components/Pages/)
+  * Razor Pages (Pages/)
+  * MudBlazor Components (UI library)
+  * Layout Components (MainLayout, NavMenu, Footer)
   
-- API
-  * BookingsController
-  * UsersController
-  * CampsitesController
-  * AuthController
+- API Controllers
+  * BookingsController (REST API)
+  * UsersController (REST API)
+  * CampsitesController (REST API)
+  * AuthController (REST API - Register, Login with JWT)
   
-- API Gateway
-  * YARP Reverse Proxy
+- Authentication
+  * AuthenticationService
+  * ServerAuthenticationStateProvider
+  * AuthenticationCircuitHandler
+  * Cookie Authentication (for Blazor UI)
+  * JWT Bearer Authentication (for REST API)
+  
+- API Gateway (OPTIONAL - Separate Project)
+  * YARP Reverse Proxy (ApiGateway/ project)
+  * Note: Optional/separate, not integrated into main application
+  * Can be run separately on port 8001
 
 DEPENDENCY RULE:
 - Draw arrows pointing INWARD from outer layers to inner layers
@@ -107,16 +160,24 @@ DEPENDENCY RULE:
 - Show that Infrastructure Layer depends on Domain + Application Layers
 - Show that Presentation Layer depends on all inner layers
 
+COMPONENT STATUS INDICATORS:
+- Add ⚠️ symbol to KafkaConsumer (disabled)
+- Add ⚠️ symbol to PaymentCompletedEvent, PaymentRefundedEvent (exist but not raised)
+- Mark API Gateway as "Optional/Separate"
+
 ADDITIONAL NOTES:
 - Label the center as "DOMAIN CORE - Business Logic"
 - Add a legend showing the dependency direction
 - Use different colors for each layer
 - Make the Domain Layer (center) the most prominent
 - Add small icons or symbols to represent different component types
+- Show that Payment entity cannot raise events (it's Entity, not AggregateRoot)
+- Note that Kafka Consumer is implemented but disabled
 
 This diagram should clearly demonstrate the Clean Architecture principle where:
 1. Business logic is isolated in the center
 2. Dependencies flow inward
 3. Inner layers know nothing about outer layers
 4. The domain is independent of frameworks, UI, and databases
-
+5. Domain events are raised only by AggregateRoot entities
+6. Infrastructure handles external concerns (database, messaging, email)

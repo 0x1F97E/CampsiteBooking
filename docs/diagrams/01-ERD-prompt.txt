@@ -1,143 +1,369 @@
 I need an Entity Relationship Diagram (ERD) for a campsite booking system. Please create it using crow's foot notation.
 
+IMPORTANT: This ERD reflects the ACTUAL database schema with all 24 entities. Amenities are stored as JSON/comma-separated strings, NOT junction tables.
+
 ENTITIES AND ATTRIBUTES:
 
 1. BOOKING
-   - BookingId (PK, GUID)
-   - GuestId (FK → GUEST)
-   - CampsiteId (FK → CAMPSITE)
-   - AccommodationTypeId (FK → ACCOMMODATION_TYPE)
-   - CheckInDate (DATE)
-   - CheckOutDate (DATE)
-   - Status (ENUM: Pending, Confirmed, Cancelled, Completed)
+   - Id (PK, INT) - Strongly-typed as BookingId
+   - GuestId (FK → GUEST, INT)
+   - CampsiteId (FK → CAMPSITE, INT)
+   - AccommodationSpotId (FK → ACCOMMODATION_SPOT, INT, NULLABLE)
+   - AccommodationTypeId (FK → ACCOMMODATION_TYPE, INT)
+   - Period (JSON/DATETIME range) - Stores DateRange value object
+   - Status (VARCHAR) - BookingStatus value object: Pending, Confirmed, Cancelled, Completed
+   - BasePrice (DECIMAL)
    - TotalPrice (DECIMAL)
    - NumberOfAdults (INT)
    - NumberOfChildren (INT)
    - SpecialRequests (TEXT)
-   - CreatedAt (DATETIME)
+   - CreatedDate (DATETIME)
+   - LastModifiedDate (DATETIME)
+   - CancellationDate (DATETIME, NULLABLE)
 
-2. GUEST
-   - GuestId (PK, GUID)
-   - Email (VARCHAR, UNIQUE)
-   - FirstName (VARCHAR)
-   - LastName (VARCHAR)
-   - Phone (VARCHAR)
-   - Country (VARCHAR)
-   - DateOfBirth (DATE)
-   - CreatedAt (DATETIME)
-
-3. USER
-   - UserId (PK, GUID)
-   - Email (VARCHAR, UNIQUE)
-   - FirstName (VARCHAR)
-   - LastName (VARCHAR)
-   - Phone (VARCHAR)
-   - Country (VARCHAR)
+2. USER (Base class - Table Per Hierarchy with discriminator)
+   - Id (PK, INT) - Strongly-typed as UserId
+   - UserType (Discriminator, VARCHAR) - Values: "User", "Guest", "Admin", "Staff"
+   - Email (VARCHAR, UNIQUE) - Email value object
    - PasswordHash (VARCHAR)
-   - IsActive (BOOLEAN)
+   - FirstName (VARCHAR)
+   - LastName (VARCHAR)
+   - Phone (VARCHAR)
+   - Country (VARCHAR)
    - JoinedDate (DATETIME)
-
-4. CAMPSITE
-   - CampsiteId (PK, GUID)
-   - Name (VARCHAR)
-   - Region (VARCHAR)
-   - Description (TEXT)
-   - Latitude (DECIMAL)
-   - Longitude (DECIMAL)
+   - LastLogin (DATETIME, NULLABLE)
    - IsActive (BOOLEAN)
 
-5. ACCOMMODATION_TYPE
-   - AccommodationTypeId (PK, GUID)
-   - CampsiteId (FK → CAMPSITE)
+3. GUEST (Inherits USER via TPH)
+   - All USER attributes plus:
+   - LoyaltyPoints (INT)
+   - PreferredCommunication (VARCHAR) - Values: "Email", "SMS", "Both"
+
+4. ADMIN (Inherits USER via TPH)
+   - All USER attributes
+   - (Permissions stored in application logic, not database)
+
+5. STAFF (Inherits USER via TPH)
+   - All USER attributes plus:
+   - EmployeeId (VARCHAR)
+   - Department (VARCHAR)
+   - CampsiteId (FK → CAMPSITE, INT)
+   - HireDate (DATETIME)
+
+6. CAMPSITE
+   - Id (PK, INT) - Strongly-typed as CampsiteId
    - Name (VARCHAR)
+   - StreetAddress (VARCHAR)
+   - City (VARCHAR)
+   - PostalCode (VARCHAR)
    - Description (TEXT)
-   - Capacity (INT)
+   - Latitude (DOUBLE)
+   - Longitude (DOUBLE)
+   - Attractiveness (VARCHAR) - Values: "Low", "Medium", "High", "Very High"
+   - PhoneNumber (VARCHAR)
+   - Email (VARCHAR, NULLABLE) - Email value object
+   - WebsiteUrl (VARCHAR)
+   - EstablishedYear (INT)
+   - IsActive (BOOLEAN)
+   - SeasonOpeningDate (DATETIME, NULLABLE)
+   - CreatedDate (DATETIME)
+   - UpdatedDate (DATETIME)
+
+7. ACCOMMODATION_TYPE
+   - Id (PK, INT) - Strongly-typed as AccommodationTypeId
+   - CampsiteId (FK → CAMPSITE, INT)
+   - Type (VARCHAR)
+   - Description (TEXT)
+   - MaxCapacity (INT)
    - BasePrice (DECIMAL)
+   - ImageUrl (VARCHAR)
+   - AvailableUnits (INT)
    - IsActive (BOOLEAN)
+   - CreatedDate (DATETIME)
+   - Amenities (TEXT) - Comma-separated list stored as string (NOT junction table)
+   - UnitNamingPrefix (VARCHAR, NULLABLE)
+   - UnitNamingPattern (VARCHAR) - Default: "Numbers"
+   - AreaSquareMeters (DECIMAL, NULLABLE)
 
-6. PAYMENT
-   - PaymentId (PK, GUID)
-   - BookingId (FK → BOOKING, UNIQUE)
-   - Amount (DECIMAL)
-   - Currency (VARCHAR)
-   - Status (ENUM: Pending, Paid, Failed, Refunded)
-   - PaymentMethod (VARCHAR)
+8. ACCOMMODATION_SPOT
+   - Id (PK, INT) - Strongly-typed as AccommodationSpotId
+   - SpotIdentifier (VARCHAR) - e.g., "A1", "B2", "Cabin-1"
+   - CampsiteId (FK → CAMPSITE, INT)
+   - CampsiteName (VARCHAR)
+   - AccommodationTypeId (FK → ACCOMMODATION_TYPE, INT)
+   - Latitude (DOUBLE)
+   - Longitude (DOUBLE)
+   - Type (VARCHAR)
+   - Status (VARCHAR) - SpotStatus enum: Available, Reserved, Occupied, Maintenance
+   - IsUnderMaintenance (BOOLEAN)
+   - PriceModifier (DECIMAL)
+   - CreatedDate (DATETIME)
+
+9. PAYMENT
+   - Id (PK, INT) - Strongly-typed as PaymentId
+   - BookingId (FK → BOOKING, INT, UNIQUE) - One-to-One relationship
+   - Amount (DECIMAL) - Money value object (amount)
+   - Method (VARCHAR) - Values: CreditCard, DebitCard, MobilePay, BankTransfer, Cash
    - TransactionId (VARCHAR)
-   - ProcessedAt (DATETIME)
+   - Status (VARCHAR) - PaymentStatus value object: Pending, Completed, Failed, Refunded
+   - PaymentDate (DATETIME)
+   - RefundDate (DATETIME, NULLABLE)
+   - RefundAmount (DECIMAL, NULLABLE)
+   - CreatedDate (DATETIME)
 
-7. REVIEW
-   - ReviewId (PK, GUID)
-   - BookingId (FK → BOOKING)
-   - GuestId (FK → GUEST)
-   - Rating (INT, 1-5)
-   - Comment (TEXT)
-   - CreatedAt (DATETIME)
+10. REVIEW
+    - Id (PK, INT) - Strongly-typed as ReviewId
+    - CampsiteId (FK → CAMPSITE, INT)
+    - UserId (FK → USER, INT)
+    - BookingId (FK → BOOKING, INT, NULLABLE)
+    - Rating (INT) - 1 to 5
+    - Comment (TEXT, NULLABLE)
+    - ReviewerName (VARCHAR)
+    - CreatedDate (DATETIME)
+    - UpdatedDate (DATETIME)
+    - IsApproved (BOOLEAN)
+    - IsVisible (BOOLEAN)
+    - AdminResponse (TEXT, NULLABLE)
+    - AdminResponseDate (DATETIME, NULLABLE)
 
-8. AMENITY
-   - AmenityId (PK, GUID)
-   - Name (VARCHAR)
-   - Description (TEXT)
-   - IconName (VARCHAR)
+11. AMENITY
+    - Id (PK, INT) - Strongly-typed as AmenityId
+    - AmenityId (INT) - Legacy property
+    - CampsiteId (FK → CAMPSITE, INT)
+    - Name (VARCHAR)
+    - Description (TEXT, NULLABLE)
+    - IconUrl (VARCHAR, NULLABLE)
+    - Category (VARCHAR, NULLABLE)
+    - IsAvailable (BOOLEAN)
+    - CreatedDate (DATETIME)
+    - UpdatedDate (DATETIME)
 
-9. CAMPSITE_AMENITY (Junction Table)
-   - CampsiteId (FK → CAMPSITE)
-   - AmenityId (FK → AMENITY)
-   - PRIMARY KEY (CampsiteId, AmenityId)
+12. AMENITY_LOOKUP
+    - Id (PK, INT) - Strongly-typed as AmenityLookupId
+    - AmenityLookupId (INT) - Legacy property
+    - Name (VARCHAR, UNIQUE)
+    - DisplayName (VARCHAR)
+    - Category (VARCHAR, NULLABLE)
+    - IconClass (VARCHAR, NULLABLE)
+    - IsActive (BOOLEAN)
+    - SortOrder (INT)
+    - CreatedDate (DATETIME)
+    - UpdatedDate (DATETIME)
 
-10. ACCOMMODATION_TYPE_AMENITY (Junction Table)
-    - AccommodationTypeId (FK → ACCOMMODATION_TYPE)
-    - AmenityId (FK → AMENITY)
-    - PRIMARY KEY (AccommodationTypeId, AmenityId)
-
-11. AVAILABILITY
-    - AvailabilityId (PK, GUID)
-    - AccommodationTypeId (FK → ACCOMMODATION_TYPE)
+13. AVAILABILITY
+    - Id (PK, INT) - Strongly-typed as AvailabilityId
+    - AccommodationTypeId (FK → ACCOMMODATION_TYPE, INT)
     - Date (DATE)
     - AvailableUnits (INT)
     - IsBlocked (BOOLEAN)
+    - CreatedDate (DATETIME)
+    - UpdatedDate (DATETIME)
 
-12. PRICING
-    - PricingId (PK, GUID)
-    - AccommodationTypeId (FK → ACCOMMODATION_TYPE)
-    - StartDate (DATE)
-    - EndDate (DATE)
-    - PricePerNight (DECIMAL)
+14. SEASONAL_PRICINGS (Note: Plural, not "Pricing")
+    - Id (PK, INT) - Strongly-typed as SeasonalPricingId
+    - CampsiteId (FK → CAMPSITE, INT)
+    - AccommodationTypeId (FK → ACCOMMODATION_TYPE, INT)
+    - SeasonName (VARCHAR)
+    - StartDate (DATETIME)
+    - EndDate (DATETIME)
+    - PriceMultiplier (DECIMAL) - Multiplier (e.g., 1.5 for 50% increase), NOT PricePerNight
+    - IsActive (BOOLEAN)
+    - CreatedDate (DATETIME)
+    - UpdatedDate (DATETIME, NULLABLE)
 
-13. NEWSLETTER_SUBSCRIPTION
-    - SubscriptionId (PK, GUID)
-    - UserId (FK → USER)
+15. DISCOUNT
+    - Id (PK, INT) - Strongly-typed as DiscountId
+    - Code (VARCHAR, UNIQUE)
+    - Description (TEXT, NULLABLE)
+    - Type (VARCHAR) - Values: Percentage, FixedAmount
+    - Value (DECIMAL)
+    - ValidFrom (DATETIME)
+    - ValidUntil (DATETIME)
+    - UsedCount (INT)
+    - MaxUses (INT, NULLABLE)
+    - MinimumBookingAmount (DECIMAL, NULLABLE)
+    - IsActive (BOOLEAN)
+    - CreatedDate (DATETIME)
+
+16. PERIPHERAL_PURCHASE
+    - Id (PK, INT) - Strongly-typed as PeripheralPurchaseId
+    - BookingId (FK → BOOKING, INT)
+    - Name (VARCHAR)
+    - Description (TEXT, NULLABLE)
+    - Price (DECIMAL)
+    - Quantity (INT)
+    - CreatedDate (DATETIME)
+
+17. PURCHASE_OPTION
+    - Id (PK, INT) - Strongly-typed as PurchaseOptionId
+    - CampsiteId (FK → CAMPSITE, INT)
+    - AccommodationTypeId (FK → ACCOMMODATION_TYPE, INT, NULLABLE)
+    - Name (VARCHAR)
+    - Description (VARCHAR, NULLABLE)
+    - Price (DECIMAL) - Money value object
+    - Category (VARCHAR, NULLABLE)
+    - IsActive (BOOLEAN)
+    - CreatedDate (DATETIME)
+    - UpdatedDate (DATETIME)
+
+18. PHOTO
+    - Id (PK, INT) - Strongly-typed as PhotoId
+    - CampsiteId (FK → CAMPSITE, INT, NULLABLE)
+    - AccommodationTypeId (FK → ACCOMMODATION_TYPE, INT, NULLABLE)
+    - Url (VARCHAR)
+    - Caption (VARCHAR, NULLABLE)
+    - AltText (VARCHAR, NULLABLE)
+    - DisplayOrder (INT)
+    - IsPrimary (BOOLEAN)
+    - UploadedDate (DATETIME)
+    - UpdatedDate (DATETIME, NULLABLE)
+    - Category (VARCHAR) - Default: "General"
+
+19. EVENT
+    - Id (PK, INT) - Strongly-typed as EventId
+    - CampsiteId (FK → CAMPSITE, INT)
+    - Title (VARCHAR)
+    - Description (TEXT, NULLABLE)
+    - EventDate (DATETIME)
+    - MaxParticipants (INT)
+    - CurrentParticipants (INT)
+    - Price (DECIMAL, NULLABLE) - Money value object
+    - IsActive (BOOLEAN)
+    - CreatedDate (DATETIME)
+    - EventLink (VARCHAR, NULLABLE)
+
+20. EVENT_REGISTRATION
+    - Id (PK, INT) - Strongly-typed as EventRegistrationId
+    - EventId (FK → EVENT, INT)
+    - UserId (FK → USER, INT)
+    - RegistrationDate (DATETIME)
+    - Status (VARCHAR) - Values: Registered, Cancelled, Attended
+    - CreatedDate (DATETIME)
+
+21. NEWSLETTER
+    - Id (PK, INT) - Strongly-typed as NewsletterId
+    - Subject (VARCHAR)
+    - Content (TEXT)
+    - ScheduledDate (DATETIME, NULLABLE)
+    - SentDate (DATETIME, NULLABLE)
+    - Status (VARCHAR) - Values: Draft, Scheduled, Sent
+    - RecipientCount (INT)
+    - CreatedDate (DATETIME, NULLABLE)
+
+22. NEWSLETTER_SUBSCRIPTION
+    - Id (PK, INT) - Strongly-typed as NewsletterSubscriptionId
+    - UserId (FK → USER, INT)
     - Email (VARCHAR)
     - IsActive (BOOLEAN)
     - SubscribedAt (DATETIME)
+    - UnsubscribedAt (DATETIME, NULLABLE)
 
-14. NOTIFICATION
-    - NotificationId (PK, GUID)
-    - UserId (FK → USER)
-    - Type (VARCHAR)
+23. NEWSLETTER_ANALYTICS
+    - Id (PK, INT) - Strongly-typed as NewsletterAnalyticsId
+    - NewsletterId (FK → NEWSLETTER, INT)
+    - Opens (INT)
+    - Clicks (INT)
+    - Bounces (INT)
+    - Unsubscribes (INT)
+    - CreatedDate (DATETIME)
+
+24. MAINTENANCE_TASK
+    - Id (PK, INT) - Strongly-typed as MaintenanceTaskId
+    - CampsiteId (FK → CAMPSITE, INT)
+    - AccommodationSpotId (FK → ACCOMMODATION_SPOT, INT, NULLABLE)
     - Title (VARCHAR)
-    - Message (TEXT)
-    - IsRead (BOOLEAN)
-    - CreatedAt (DATETIME)
+    - Description (TEXT, NULLABLE)
+    - Status (VARCHAR) - Values: Pending, InProgress, Completed, Cancelled
+    - Priority (VARCHAR) - Values: Low, Medium, High, Critical
+    - ScheduledDate (DATETIME, NULLABLE)
+    - CompletedDate (DATETIME, NULLABLE)
+    - AssignedTo (VARCHAR, NULLABLE)
+    - CreatedDate (DATETIME)
+    - UpdatedDate (DATETIME)
 
 RELATIONSHIPS (Crow's Foot Notation):
 
 - BOOKING ──< GUEST (Many-to-One: Many bookings belong to one guest)
 - BOOKING ──< CAMPSITE (Many-to-One: Many bookings for one campsite)
 - BOOKING ──< ACCOMMODATION_TYPE (Many-to-One: Many bookings for one accommodation type)
+- BOOKING ──< ACCOMMODATION_SPOT (Many-to-One, NULLABLE: Booking may have assigned spot)
 - BOOKING ──── PAYMENT (One-to-One: One booking has one payment)
-- BOOKING >──< REVIEW (One-to-Many: One booking can have many reviews)
+- BOOKING >──< REVIEW (One-to-Many: One booking can have many reviews, NULLABLE)
+- BOOKING >──< PERIPHERAL_PURCHASE (One-to-Many: One booking can have multiple purchases)
+
+- USER (Table Per Hierarchy - TPH)
+  - USER discriminator "Guest" → GUEST (inheritance)
+  - USER discriminator "Admin" → ADMIN (inheritance)
+  - USER discriminator "Staff" → STAFF (inheritance)
+- USER >──< NEWSLETTER_SUBSCRIPTION (One-to-Many)
+- USER >──< REVIEW (One-to-Many: Users can write multiple reviews)
+- USER >──< EVENT_REGISTRATION (One-to-Many: Users can register for multiple events)
+
 - CAMPSITE >──< ACCOMMODATION_TYPE (One-to-Many: One campsite has many accommodation types)
-- CAMPSITE >──<< AMENITY (Many-to-Many through CAMPSITE_AMENITY)
-- ACCOMMODATION_TYPE >──<< AMENITY (Many-to-Many through ACCOMMODATION_TYPE_AMENITY)
-- ACCOMMODATION_TYPE >──< AVAILABILITY (One-to-Many: One accommodation type has many availability records)
-- ACCOMMODATION_TYPE >──< PRICING (One-to-Many: One accommodation type has many pricing records)
-- USER >──< NEWSLETTER_SUBSCRIPTION (One-to-Many: One user can have many subscriptions)
-- USER >──< NOTIFICATION (One-to-Many: One user can have many notifications)
+- CAMPSITE >──< ACCOMMODATION_SPOT (One-to-Many: One campsite has many spots)
+- CAMPSITE >──< AMENITY (One-to-Many: One campsite has many amenities)
+- CAMPSITE >──< PHOTO (One-to-Many: One campsite has many photos)
+- CAMPSITE >──< EVENT (One-to-Many: One campsite has many events)
+- CAMPSITE >──< SEASONAL_PRICINGS (One-to-Many: One campsite has many seasonal pricing rules)
+- CAMPSITE >──< STAFF (One-to-Many: One campsite has many staff members)
+- CAMPSITE >──< REVIEW (One-to-Many: One campsite has many reviews)
+- CAMPSITE >──< MAINTENANCE_TASK (One-to-Many: One campsite has many maintenance tasks)
 
-Please use standard ERD notation with:
-- Rectangles for entities
-- Diamonds or lines for relationships
-- Crow's foot notation for cardinality (one, many, zero-or-one, zero-or-many)
-- Primary keys marked with (PK)
-- Foreign keys marked with (FK)
+- ACCOMMODATION_TYPE >──< ACCOMMODATION_SPOT (One-to-Many: One type has many spots)
+- ACCOMMODATION_TYPE >──< AVAILABILITY (One-to-Many: One type has many availability records)
+- ACCOMMODATION_TYPE >──< SEASONAL_PRICINGS (One-to-Many: One type has many seasonal pricing rules)
+- ACCOMMODATION_TYPE >──< PHOTO (One-to-Many: One type has many photos)
+- ACCOMMODATION_TYPE >──< PURCHASE_OPTION (One-to-Many: One type can have many purchase options)
+- ACCOMMODATION_TYPE has Amenities (stored as TEXT field, comma-separated, NOT junction table)
 
+- ACCOMMODATION_SPOT >──< MAINTENANCE_TASK (One-to-Many: One spot can have many maintenance tasks)
+
+- EVENT >──< EVENT_REGISTRATION (One-to-Many: One event has many registrations)
+
+- NEWSLETTER >──< NEWSLETTER_ANALYTICS (One-to-One: One newsletter has one analytics record)
+
+- DISCOUNT (Standalone - no direct FK relationships, applied via application logic)
+
+IMPORTANT NOTES:
+
+1. USER Inheritance: Uses Table Per Hierarchy (TPH) pattern with discriminator column "UserType"
+   - All user types (User, Guest, Admin, Staff) stored in single Users table
+   - Discriminator values: "User", "Guest", "Admin", "Staff"
+   - Guest, Admin, Staff inherit all User attributes
+
+2. Amenities Storage: 
+   - Amenities are stored as comma-separated string in AccommodationType.Amenities field
+   - NO junction tables (CAMPSITE_AMENITY, ACCOMMODATION_TYPE_AMENITY do NOT exist)
+   - This is a denormalized approach for simplicity
+
+3. Value Objects: Some attributes use value objects (Email, Money, DateRange, BookingStatus, PaymentStatus)
+   - Stored in database as their underlying types (VARCHAR, DECIMAL, DATETIME, VARCHAR)
+   - Converted to/from value objects by EF Core converters
+
+4. Strongly-Typed IDs: All entities use strongly-typed IDs (BookingId, UserId, etc.)
+   - Stored in database as INT
+   - Converted to/from strongly-typed IDs by EF Core converters
+
+5. Table Names: Use exact table names from database
+   - SeasonalPricings (plural, not "Pricing")
+   - All other tables use singular names
+
+DIAGRAM REQUIREMENTS:
+- Use standard ERD notation (Crow's Foot / IE notation)
+- Draw rectangles for each entity
+- Draw lines connecting related entities
+- Use Crow's foot notation symbols for cardinality:
+  * | (one) - single line
+  * || (many) - crow's foot (three lines)
+  * O (optional/zero) - circle
+  * |O (zero or one) - single line with circle
+  * ||O (zero or many) - crow's foot with circle
+- Mark primary keys with (PK) label
+- Mark foreign keys with (FK) label
+- Show Table Per Hierarchy (TPH) inheritance pattern for User entity:
+  * Draw USER entity with discriminator column "UserType"
+  * Show GUEST, ADMIN, STAFF as subtypes connected to USER with inheritance arrow
+  * Label discriminator values: "User", "Guest", "Admin", "Staff"
+- Add note: "Amenities stored as comma-separated TEXT field, NOT junction tables"
+- Use different colors for different entity types (optional but helpful)
+- Group related entities together

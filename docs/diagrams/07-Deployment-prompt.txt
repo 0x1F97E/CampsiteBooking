@@ -8,7 +8,7 @@ NODES (3D boxes):
    Type: <<device>>
    OS: Windows/Linux/Mac
    Contains:
-   - <<artifact>> Visual Studio Code
+   - <<artifact>> Visual Studio Code / Visual Studio
    - <<artifact>> Docker Desktop
    - <<artifact>> Git
    Connection: Docker CLI → Docker Host
@@ -26,9 +26,10 @@ NODES (3D boxes):
    Ports: 3306
    Contains:
    - <<artifact>> MySQL Server
-   - <<database>> bookmyhome_db
+   - <<database>> CampsiteBookingDb
    Volume: mysql_data (persistent)
    Network: bookmyhome-network
+   Health Check: Enabled
 
 4. Kafka Container
    Type: <<container>>
@@ -36,11 +37,10 @@ NODES (3D boxes):
    Ports: 9092
    Contains:
    - <<artifact>> Kafka Broker
-   Topics:
-   - booking-events
-   - user-events
-   - payment-events
+   Topic: bookmyhome.events (SINGLE TOPIC for all events)
+   Note: Events published but not consumed (consumer disabled)
    Network: bookmyhome-network
+   Health Check: Enabled
 
 5. Zookeeper Container
    Type: <<container>>
@@ -51,7 +51,7 @@ NODES (3D boxes):
    Purpose: Kafka coordination
    Network: bookmyhome-network
 
-6. API Gateway Container
+6. API Gateway Container (OPTIONAL)
    Type: <<container>>
    Image: bookmyhome-gateway:latest
    Ports: 8000 (HTTP), 8001 (HTTPS)
@@ -59,40 +59,31 @@ NODES (3D boxes):
    - <<artifact>> YARP Reverse Proxy (.NET 9.0)
    - <<artifact>> appsettings.json
    Network: bookmyhome-network
+   Status: OPTIONAL - Separate project, not required
 
-7. BookMyHome API Container (Instance 1)
+7. BookMyHome API Container (Main Application)
    Type: <<container>>
    Image: bookmyhome-api:latest
-   Ports: 7001 (HTTPS)
+   Ports: 7001 (HTTPS), 5000 (HTTP)
    Contains:
    - <<artifact>> ASP.NET Core API (.NET 9.0)
    - <<artifact>> Blazor Server UI
    - <<artifact>> EF Core
-   - <<artifact>> Kafka Producer
+   - <<artifact>> Kafka Producer (ACTIVE)
+   - <<artifact>> Kafka Consumer (DISABLED - not registered)
    Network: bookmyhome-network
+   Environment: Production (when containerized)
+   Note: Single instance by default. Multiple instances possible but not default.
 
-8. BookMyHome API Container (Instance 2)
+8. Nginx Container (Optional)
    Type: <<container>>
-   Image: bookmyhome-api:latest
-   Ports: 7002 (HTTPS)
-   Contains: (Same as Instance 1)
+   Image: nginx:alpine
+   Ports: 80 (HTTP), 443 (HTTPS)
+   Contains:
+   - <<artifact>> Nginx Reverse Proxy
+   - <<artifact>> SSL/TLS Certificates
    Network: bookmyhome-network
-
-9. BookMyHome API Container (Instance 3)
-   Type: <<container>>
-   Image: bookmyhome-api:latest
-   Ports: 7003 (HTTPS)
-   Contains: (Same as Instance 1)
-   Network: bookmyhome-network
-
-10. Nginx Container (Optional)
-    Type: <<container>>
-    Image: nginx:alpine
-    Ports: 80 (HTTP), 443 (HTTPS)
-    Contains:
-    - <<artifact>> Nginx Reverse Proxy
-    - <<artifact>> SSL/TLS Certificates
-    Network: bookmyhome-network
+   Status: OPTIONAL
 
 COMMUNICATION PATHS (show with arrows):
 
@@ -100,31 +91,40 @@ COMMUNICATION PATHS (show with arrows):
    Protocol: Docker CLI
    Type: <<deploy>>
 
-2. API Gateway → BookMyHome API (all instances)
+2. [If Gateway Enabled] API Gateway → BookMyHome API
    Protocol: HTTPS
    Type: <<HTTP>>
-   Load Balancing: RoundRobin
+   Load Balancing: RoundRobin (if multiple instances)
+   Status: OPTIONAL - Show with dashed line
 
 3. BookMyHome API → MySQL
    Protocol: TCP
    Port: 3306
    Type: <<JDBC>>
-   Technology: EF Core
+   Technology: EF Core with MySQL provider
 
-4. BookMyHome API → Kafka
+4. BookMyHome API → Kafka Producer → Kafka Broker
    Protocol: TCP
    Port: 9092
    Type: <<message>>
    Technology: Confluent.Kafka
+   Topic: bookmyhome.events
+   Status: ACTIVE (events published)
 
-5. Kafka → Zookeeper
+5. [Kafka Consumer - DISABLED]
+   Kafka Broker → [Consumer would be here]
+   Show with dashed line and "DISABLED" label
+   Note: Consumer exists but not registered in DI container
+
+6. Kafka → Zookeeper
    Protocol: TCP
    Port: 2181
    Type: <<coordinate>>
 
-6. Nginx → API Gateway (if used)
+7. [If Nginx Enabled] Nginx → API Gateway or BookMyHome API
    Protocol: HTTPS
    Type: <<HTTP>>
+   Status: OPTIONAL
 
 NETWORKS:
 
@@ -140,19 +140,23 @@ Type: Named volume
 Mount: /var/lib/mysql
 Persistence: Yes
 
-kafka_data
-Type: Named volume
-Mount: /var/lib/kafka
-Persistence: Yes
-
 DEPLOYMENT SPECIFICATIONS:
 
 Add notes showing:
-- Container restart policy: always
-- Health check intervals: 30s
-- Memory limits: 512MB per API instance
-- CPU limits: 0.5 CPU per API instance
-- Environment variables: Loaded from .env file
+- Container restart policy: unless-stopped
+- Health check intervals: 10s (MySQL), 30s (Kafka)
+- Memory limits: 4GB per API instance (if specified)
+- CPU limits: 2 CPU per API instance (if specified)
+- Environment variables: Loaded from docker-compose.yml or .env file
+
+STATUS INDICATORS:
+- ✅ BookMyHome API: ACTIVE
+- ✅ Kafka Producer: ACTIVE
+- ✅ MySQL: ACTIVE
+- ✅ Kafka Broker: ACTIVE
+- ❌ Kafka Consumer: DISABLED
+- ⚠️ API Gateway: OPTIONAL
+- ⚠️ Nginx: OPTIONAL
 
 VISUAL STYLE:
 - Use 3D boxes (cubes) for all nodes
@@ -166,12 +170,22 @@ VISUAL STYLE:
 - Add stereotypes (<<container>>, <<artifact>>, <<database>>)
 - Group containers that belong to the same network
 - Show volumes as cylinders attached to containers
+- Mark optional components with dashed boxes
+- Mark disabled components with red X
 
 LEGEND:
 - <<device>> = Physical or virtual machine
 - <<container>> = Docker container
 - <<artifact>> = Software component
 - <<database>> = Database
-- Solid arrow = Synchronous communication
-- Dashed arrow = Asynchronous communication
+- Solid arrow = Active connection
+- Dashed arrow = Optional/disabled connection
+- ✅ = Active
+- ❌ = Disabled
+- ⚠️ = Optional
 
+ADDITIONAL NOTES:
+- Main application works without API Gateway
+- Kafka events are published to single topic: bookmyhome.events
+- Consumer is implemented but disabled (see Program.cs:227)
+- Single instance by default, scaling possible but not default

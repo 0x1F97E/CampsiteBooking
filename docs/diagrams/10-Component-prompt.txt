@@ -1,93 +1,139 @@
 I need a UML Component Diagram for the campsite booking system showing components and their interfaces.
 
+IMPORTANT: This diagram reflects ACTUAL implementation - monolith structure with optional gateway.
+
 COMPONENTS (use component boxes with <<component>> stereotype):
 
 1. Blazor UI Component
    Provides: IUserInterface
    Requires: IApiClient
+   Location: Components/Pages/, Components/Layout/
+   Technology: Blazor Server + MudBlazor
    
-2. API Gateway Component (YARP)
+2. API Gateway Component (YARP) - OPTIONAL
    Provides: IReverseProxy, ILoadBalancer
    Requires: IHealthCheck
+   Location: ApiGateway/ (separate project)
+   Status: OPTIONAL - Main app works without it
+   Note: Show with dashed box or "OPTIONAL" label
    
 3. Bookings API Component
    Provides: IBookingService, IBookingController
    Requires: IBookingRepository, IKafkaProducer
+   Location: Controllers/BookingsController.cs
+   Part of: Main monolith application
    
 4. Users API Component
    Provides: IUserService, IUserController
    Requires: IUserRepository, IAuthService
+   Location: Controllers/UsersController.cs
+   Part of: Main monolith application
    
-5. Auth Component
+5. Campsites API Component
+   Provides: ICampsiteService, ICampsiteController
+   Requires: ICampsiteRepository
+   Location: Controllers/CampsitesController.cs
+   Part of: Main monolith application
+   
+6. Auth Component
    Provides: IAuthService, IJwtTokenGenerator
    Requires: IUserRepository
+   Location: Controllers/AuthController.cs, Services/AuthenticationService.cs
+   Part of: Main monolith application
    
-6. Repository Component
+7. Repository Component
    Provides: IBookingRepository, IUserRepository, ICampsiteRepository
    Requires: IDbContext
+   Location: Data/Repositories/
+   Part of: Main monolith application
    
-7. EF Core Component
-   Provides: IDbContext
+8. EF Core Component
+   Provides: IDbContext (CampsiteBookingDbContext)
    Requires: IDatabaseConnection
+   Location: Data/CampsiteBookingDbContext.cs
+   Part of: Main monolith application
    
-8. Kafka Producer Component
+9. Kafka Producer Component
    Provides: IKafkaProducer
    Requires: IKafkaBroker
+   Location: Infrastructure/Kafka/KafkaProducer.cs
+   Status: ACTIVE
+   Part of: Main monolith application
    
-9. Kafka Consumer Component
-   Provides: IEventHandler
-   Requires: IKafkaBroker, IEmailService
+10. Kafka Consumer Component - DISABLED
+    Provides: IEventHandler
+    Requires: IKafkaBroker, IEmailService, ISMSService
+    Location: Infrastructure/Kafka/KafkaConsumer.cs
+    Status: DISABLED (not registered in DI)
+    Note: Show with red X or "DISABLED" label
+    Part of: Main monolith application (but not active)
+
+11. Event Handler Component
+    Provides: IEventHandler (NotificationEventHandler)
+    Requires: IDbContextFactory, IEmailService, ISMSService
+    Location: Infrastructure/EventHandlers/NotificationEventHandler.cs
+    Status: IMPLEMENTED but NOT CALLED (consumer disabled)
+    Part of: Main monolith application
+
+12. Services Component
+    Provides: IEmailService, ISMSService, IPricingService, IDashboardService
+    Location: Services/
+    Part of: Main monolith application
 
 INTERFACES (show with lollipop notation):
 
 Provided Interfaces (lollipop - circle on line):
-- IUserInterface
-- IReverseProxy
-- ILoadBalancer
-- IBookingService
-- IUserService
+- IUserInterface (Blazor UI)
+- IReverseProxy, ILoadBalancer (API Gateway - optional)
+- IBookingService, IUserService, ICampsiteService
 - IAuthService
-- IBookingRepository
+- IBookingRepository, IUserRepository, ICampsiteRepository
 - IDbContext
 - IKafkaProducer
 - IEventHandler
+- IEmailService, ISMSService
 
 Required Interfaces (socket - half-circle):
-- IApiClient
-- IHealthCheck
-- IBookingRepository
+- IApiClient (Blazor UI requires)
+- IHealthCheck (API Gateway requires)
+- IBookingRepository, IUserRepository, ICampsiteRepository
 - IKafkaProducer
 - IUserRepository
 - IAuthService
 - IDbContext
 - IDatabaseConnection
 - IKafkaBroker
-- IEmailService
+- IEmailService, ISMSService
 
 DEPENDENCIES (show with dashed arrows):
 
-Blazor UI → API Gateway
-API Gateway → Bookings API
-API Gateway → Users API
+Blazor UI → Bookings API (direct, or via optional gateway)
+[If Gateway] Blazor UI → API Gateway → Bookings API
+[If Gateway] API Gateway → Bookings API
+[If Gateway] API Gateway → Users API
+[If Gateway] API Gateway → Campsites API
 Bookings API → Repository
 Bookings API → Kafka Producer
 Users API → Repository
 Users API → Auth
+Campsites API → Repository
 Auth → Repository
 Repository → EF Core
 EF Core → MySQL Database
 Kafka Producer → Kafka Broker
-Kafka Consumer → Kafka Broker
-Kafka Consumer → Email Service
+[Kafka Consumer - DISABLED] Kafka Broker → Consumer (dashed line)
+[If Consumer Active] Kafka Consumer → Event Handler
+[If Consumer Active] Event Handler → Email Service
+[If Consumer Active] Event Handler → SMS Service
 
 PORTS (show connection points):
 
-API Gateway:
+API Gateway (Optional):
 - Port 8001 (HTTPS in)
-- Port 7001, 7002, 7003 (HTTPS out to API instances)
+- Port 7001 (HTTPS out to API)
 
 Bookings API:
-- Port 7001 (HTTPS in)
+- Port 7001 (HTTPS in - direct)
 - Port 3306 (MySQL out)
 - Port 9092 (Kafka out)
 
@@ -96,6 +142,36 @@ VISUAL STYLE:
 - Show provided interfaces as lollipops (○—)
 - Show required interfaces as sockets (—◐)
 - Use dashed arrows for dependencies
-- Group related components
+- Group related components (show monolith structure)
 - Add port numbers on connections
+- Mark optional components with dashed boxes
+- Mark disabled components with red X
+- Show that all API components are in same monolith
 
+COMPONENT GROUPING:
+Group all these in one "BookMyHome Monolith" box:
+- Bookings API
+- Users API
+- Campsites API
+- Auth
+- Repository
+- EF Core
+- Kafka Producer
+- Kafka Consumer (disabled)
+- Event Handler
+- Services
+
+Show API Gateway as separate/optional box outside monolith.
+
+LEGEND:
+- Solid box = Active component
+- Dashed box = Optional component
+- Red X = Disabled component
+- Solid arrow = Active dependency
+- Dashed arrow = Optional/disabled dependency
+
+STATUS NOTES:
+- All API components are in single monolith
+- API Gateway is separate/optional project
+- Kafka Consumer is disabled
+- Event Handler exists but not called

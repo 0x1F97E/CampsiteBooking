@@ -1,4 +1,6 @@
-I need a UML State Diagram showing the complete lifecycle of a booking in the campsite system.
+I need a UML State Diagram showing the complete lifecycle of a booking in the BookMyHome campsite booking system.
+
+CRITICAL BUSINESS RULE: Payment is handled separately via Payment entity. Booking.Confirm() method ONLY checks if AccommodationSpotId is assigned, it does NOT check payment status. Payment state is independent of booking state.
 
 Please create a state diagram with the following states and transitions:
 
@@ -10,31 +12,35 @@ STATES (use rounded rectangles):
 
 2. Pending
    Color: Yellow
-   Description: Booking created, awaiting payment
-   Entry action: Send confirmation email
-   Do activity: Reserve accommodation
+   Description: Booking created, awaiting accommodation spot assignment
+   Entry action: Raise BookingCreatedEvent
+   Do activity: Reserve accommodation type
    Exit action: None
+   Note: Payment is handled separately, not part of booking state
 
 3. Confirmed
    Color: Green
-   Description: Payment received, booking confirmed
-   Entry action: Send booking voucher email
-   Do activity: Block accommodation in calendar
+   Description: Accommodation spot assigned, booking confirmed
+   Entry action: Raise BookingConfirmedEvent
+   Do activity: Block accommodation spot in calendar
    Exit action: None
+   Note: Confirm() only checks AccommodationSpotId, not payment
 
 4. Cancelled
    Color: Red
    Description: Booking cancelled by user or admin
-   Entry action: Send cancellation email
-   Do activity: Process refund (if applicable)
-   Exit action: Release accommodation
+   Entry action: Raise BookingCancelledEvent
+   Do activity: Release accommodation spot
+   Exit action: None
+   Note: Payment refund handled separately
 
 5. Completed
    Color: Blue
    Description: Guest checked out, booking finished
-   Entry action: Send review request email
-   Do activity: Archive booking data
+   Entry action: None
+   Do activity: Mark booking as completed
    Exit action: None
+   Note: No domain event raised for Complete()
 
 6. [Final State]
    Symbol: Solid black circle with outer ring (◉)
@@ -46,36 +52,45 @@ TRANSITIONS (use arrows with labels):
    Trigger: Create booking
    Guard: None
    Action: booking.Create()
+   Note: Raises BookingCreatedEvent
    
 2. Pending → Confirmed
    Trigger: Confirm()
-   Guard: [payment.Status == Paid]
+   Guard: [AccommodationSpotId != null]
    Action: booking.Confirm()
+   Note: Only checks AccommodationSpotId, NOT payment status
+   Note: Raises BookingConfirmedEvent
    
 3. Pending → Cancelled
    Trigger: Cancel()
    Guard: [user requests cancellation OR admin cancels]
    Action: booking.Cancel()
+   Note: Raises BookingCancelledEvent
    
 4. Confirmed → Cancelled
    Trigger: Cancel()
-   Guard: [cancellation.RefundAmount > 0]
-   Action: booking.Cancel(), ProcessRefund()
+   Guard: None
+   Action: booking.Cancel()
+   Note: Raises BookingCancelledEvent
+   Note: Payment refund handled separately (Payment entity)
    
 5. Confirmed → Completed
    Trigger: Complete()
-   Guard: [currentDate >= checkOutDate]
+   Guard: [currentDate >= checkOutDate OR manually triggered]
    Action: booking.Complete()
+   Note: No domain event raised
    
 6. Cancelled → [Final]
-   Trigger: Archive
-   Guard: [archiveDate reached]
-   Action: MoveToArchive()
+   Trigger: Archive (implicit)
+   Guard: None
+   Action: None
+   Note: Cancelled bookings remain in database
    
 7. Completed → [Final]
-   Trigger: Archive
-   Guard: [archiveDate reached]
-   Action: MoveToArchive()
+   Trigger: Archive (implicit)
+   Guard: None
+   Action: None
+   Note: Completed bookings remain in database
 
 SELF-TRANSITIONS (loops back to same state):
 
@@ -83,91 +98,79 @@ SELF-TRANSITIONS (loops back to same state):
    Trigger: UpdateSpecialRequests()
    Guard: [booking.Status == Pending]
    Action: booking.UpdateSpecialRequests()
+   Note: Can update special requests while pending
 
 2. Confirmed → Confirmed
    Trigger: UpdateSpecialRequests()
    Guard: [booking.Status == Confirmed]
    Action: booking.UpdateSpecialRequests()
+   Note: Can update special requests while confirmed
 
-COMPOSITE STATES (optional - show substates):
-
-Pending state contains:
-- Substate: AwaitingPayment
-- Substate: PaymentProcessing
-
-Cancelled state contains:
-- Substate: RefundPending
-- Substate: RefundProcessed
+3. Pending → Pending
+   Trigger: AssignAccommodationSpot()
+   Guard: [booking.Status == Pending AND AccommodationSpotId == null]
+   Action: booking.AssignAccommodationSpot(spotId)
+   Note: Assigns spot but doesn't change state (must call Confirm())
 
 GUARDS (conditions in square brackets):
 
-[payment.Status == Paid]
-- Payment has been successfully processed
-- Payment gateway returned success
+[AccommodationSpotId != null]
+- Accommodation spot has been assigned to booking
+- This is the ONLY guard for Confirm() transition
+- Payment status is NOT checked
 
 [user requests cancellation OR admin cancels]
 - User clicked "Cancel Booking" button
-- OR Admin cancelled the booking
+- OR Admin cancelled the booking via admin panel
 
-[cancellation.RefundAmount > 0]
-- Booking was paid
-- Refund policy allows refund
-- Cancellation is before check-in date
-
-[currentDate >= checkOutDate]
+[currentDate >= checkOutDate OR manually triggered]
 - Current date is on or after check-out date
-- Guest has checked out
-
-[archiveDate reached]
-- Booking is older than retention period (e.g., 2 years)
-- Ready for archival
+- OR Admin manually marks booking as completed
 
 ACTIONS (what happens during transition):
 
 booking.Create()
-- Validate dates
-- Check availability
+- Validate dates (check-in < check-out)
+- Check accommodation type availability
 - Calculate total price
 - Assign booking ID
+- Set status to Pending
+- Raise BookingCreatedEvent
 
 booking.Confirm()
+- Guard: AccommodationSpotId must be assigned
 - Update status to Confirmed
-- Record payment details
-- Send confirmation email
 - Raise BookingConfirmedEvent
+- Note: Does NOT check payment status
 
 booking.Cancel()
 - Update status to Cancelled
-- Calculate refund amount
-- Send cancellation email
+- Set CancellationDate
+- Release accommodation spot (if assigned)
 - Raise BookingCancelledEvent
+- Note: Payment refund handled separately
 
 booking.Complete()
 - Update status to Completed
-- Send review request
-- Raise BookingCompletedEvent
-
-ProcessRefund()
-- Calculate refund amount based on policy
-- Initiate refund transaction
-- Update payment status
+- Note: No domain event raised
+- Note: Called manually or automatically after check-out
 
 ENTRY/EXIT ACTIONS:
 
 State: Pending
-- Entry: Log("Booking created"), SendEmail("Confirmation")
+- Entry: Raise BookingCreatedEvent
 - Exit: None
 
 State: Confirmed
-- Entry: Log("Booking confirmed"), SendEmail("Voucher")
+- Entry: Raise BookingConfirmedEvent
 - Exit: None
 
 State: Cancelled
-- Entry: Log("Booking cancelled"), SendEmail("Cancellation")
-- Exit: ReleaseAccommodation()
+- Entry: Raise BookingCancelledEvent, Set CancellationDate
+- Exit: Release Accommodation Spot (if assigned)
 
 State: Completed
-- Entry: Log("Booking completed"), SendEmail("Review request")
+- Entry: None (no domain event)
 - Exit: None
 
 VISUAL STYLE:
@@ -181,21 +184,30 @@ VISUAL STYLE:
   * Red: Cancelled
   * Blue: Completed
 - Show entry/exit actions inside state boxes
-- Use notes to explain complex guards or actions
+- Use notes to explain important guards or actions
+- Mark payment-related notes clearly
 
 NOTES TO ADD:
 
 Note near Pending → Confirmed:
-"Payment must be completed within 24 hours, otherwise booking is automatically cancelled"
+"Confirm() transition ONLY checks AccommodationSpotId != null.
+Payment is handled separately via Payment entity.
+Payment status does NOT affect booking state transition."
 
-Note near Confirmed → Cancelled:
-"Refund amount depends on cancellation policy:
-- >7 days before check-in: 100% refund
-- 3-7 days before: 50% refund
-- <3 days before: No refund"
+Note near Confirmed:
+"Booking is confirmed when accommodation spot is assigned.
+Payment may be pending, completed, or failed - this is separate."
 
-Note near Completed:
-"Booking is automatically completed at midnight on check-out date"
+Note near Cancelled:
+"Payment refund is handled separately via Payment.ProcessRefund().
+Booking cancellation does NOT automatically process refund."
+
+Note near Payment (separate entity):
+"Payment entity has its own state machine:
+- Pending → Completed (payment successful)
+- Pending → Failed (payment failed)
+- Completed → Refunded (refund processed)
+Payment state is independent of booking state."
 
 LEGEND:
 - ● = Initial state
@@ -206,4 +218,11 @@ LEGEND:
 - action() = Action
 - entry: = Entry action
 - exit: = Exit action
+- Note = Important clarification
 
+IMPORTANT CLARIFICATIONS:
+- Payment is NOT part of booking state machine
+- Confirm() only checks AccommodationSpotId, NOT payment
+- Payment has separate state machine (PaymentStatus)
+- BookingCreatedEvent, BookingConfirmedEvent, BookingCancelledEvent are raised
+- BookingCompletedEvent does NOT exist (Complete() doesn't raise event)

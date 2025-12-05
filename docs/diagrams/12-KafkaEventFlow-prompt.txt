@@ -1,5 +1,7 @@
 I need a Kafka Event Flow Diagram showing producers, topics, consumers, and event processing.
 
+IMPORTANT: Single Kafka topic "bookmyhome.events" is used for ALL events. Consumer is DISABLED.
+
 PRODUCERS (left side - blue boxes):
 
 1. BookingsController
@@ -7,70 +9,62 @@ PRODUCERS (left side - blue boxes):
    - BookingCreatedEvent
    - BookingConfirmedEvent
    - BookingCancelledEvent
-   - BookingCompletedEvent
+   Note: BookingCompletedEvent does NOT exist (Complete() doesn't raise event)
    
-2. UsersController
+2. UsersController (via User entity)
    Produces:
    - UserCreatedEvent
-   - UserUpdatedEvent
-   
-3. PaymentsController
-   Produces:
-   - PaymentProcessedEvent
-   - RefundProcessedEvent
+   - UserDeactivatedEvent
+   Note: UserUpdatedEvent does NOT exist
 
-KAFKA TOPICS (center - orange cylinders):
+3. Payment Entity
+   Note: PaymentCompletedEvent and PaymentRefundedEvent EXIST but are NEVER RAISED
+   Reason: Payment is Entity (not AggregateRoot), cannot raise events
 
-1. booking-events
-   Partitions: 3
+KAFKA TOPIC (center - orange cylinder):
+
+1. bookmyhome.events (SINGLE TOPIC for all events)
+   Partitions: 1 (default)
    Replication: 1
-   Retention: 7 days
-   Events:
+   Retention: 7 days (default)
+   Events (all in same topic):
    - BookingCreatedEvent
    - BookingConfirmedEvent
    - BookingCancelledEvent
-   - BookingCompletedEvent
-
-2. user-events
-   Partitions: 1
-   Replication: 1
-   Retention: 7 days
-   Events:
    - UserCreatedEvent
-   - UserUpdatedEvent
+   - UserDeactivatedEvent
+   - PaymentCompletedEvent (exists but never raised)
+   - PaymentRefundedEvent (exists but never raised)
+   
+   Event Type Identification:
+   - Event type stored in message key or event body
+   - Consumers filter by event type
 
-3. payment-events
-   Partitions: 2
-   Replication: 1
-   Retention: 30 days
-   Events:
-   - PaymentProcessedEvent
-   - RefundProcessedEvent
+CONSUMERS (right side - green boxes with RED X):
 
-CONSUMERS (right side - green boxes):
-
-1. EmailEventHandler
-   Subscribes to: booking-events, user-events, payment-events
-   Group ID: email-consumer-group
-   Actions:
-   - BookingCreatedEvent → Send confirmation email
-   - BookingCancelledEvent → Send cancellation email
-   - UserCreatedEvent → Send welcome email
-   - PaymentProcessedEvent → Send receipt email
-
-2. NotificationEventHandler
-   Subscribes to: booking-events, payment-events
-   Group ID: notification-consumer-group
-   Actions:
-   - BookingCreatedEvent → Create in-app notification
-   - BookingConfirmedEvent → Create in-app notification
-   - PaymentProcessedEvent → Create in-app notification
-
-3. AnalyticsEventHandler (Future)
-   Subscribes to: booking-events, payment-events
-   Group ID: analytics-consumer-group
-   Actions:
-   - All events → Store in analytics database
+1. KafkaConsumer (BackgroundService) - DISABLED
+   Status: ❌ NOT REGISTERED (commented out in Program.cs:227)
+   Would subscribe to: bookmyhome.events
+   Group ID: bookmyhome-consumer-group
+   Would handle:
+   - BookingCreatedEvent → NotificationEventHandler
+   - BookingConfirmedEvent → NotificationEventHandler
+   - BookingCancelledEvent → NotificationEventHandler
+   - UserCreatedEvent → NotificationEventHandler
+   - UserDeactivatedEvent → NotificationEventHandler
+   
+2. NotificationEventHandler - IMPLEMENTED but NOT CALLED
+   Status: ⚠️ EXISTS but NOT ACTIVE (consumer disabled)
+   Location: Infrastructure/EventHandlers/NotificationEventHandler.cs
+   Would handle:
+   - BookingCreatedEvent → Send confirmation email/SMS
+   - BookingConfirmedEvent → Send confirmation email/SMS
+   - BookingCancelledEvent → Send cancellation email/SMS
+   - UserCreatedEvent → Send welcome email/SMS
+   - PaymentCompletedEvent → Send receipt email (never raised)
+   - PaymentRefundedEvent → Send refund email (never raised)
+   
+   Note: EmailService and SMSService exist and are functional, but not called automatically
 
 EVENT STRUCTURE (show as JSON):
 
@@ -78,66 +72,103 @@ BookingCreatedEvent:
 {
   "EventId": "guid",
   "EventType": "BookingCreated",
-  "Timestamp": "2024-01-15T10:30:00Z",
-  "BookingId": "guid",
-  "GuestId": "guid",
-  "CampsiteId": "guid",
-  "CheckInDate": "2024-06-01",
-  "CheckOutDate": "2024-06-07",
-  "TotalPrice": 1500.00,
-  "GuestEmail": "guest@example.com"
+  "OccurredOn": "2025-12-05T10:30:00Z",
+  "BookingId": 123,
+  "GuestId": 456,
+  "CampsiteId": 789,
+  "CheckInDate": "2025-06-01T00:00:00Z",
+  "CheckOutDate": "2025-06-07T00:00:00Z"
+}
+
+BookingConfirmedEvent:
+{
+  "EventId": "guid",
+  "EventType": "BookingConfirmed",
+  "OccurredOn": "2025-12-05T10:35:00Z",
+  "BookingId": 123,
+  "GuestId": 456,
+  "CheckInDate": "2025-06-01T00:00:00Z",
+  "CheckOutDate": "2025-06-07T00:00:00Z"
+}
+
+BookingCancelledEvent:
+{
+  "EventId": "guid",
+  "EventType": "BookingCancelled",
+  "OccurredOn": "2025-12-05T11:00:00Z",
+  "BookingId": 123,
+  "GuestId": 456
 }
 
 UserCreatedEvent:
 {
   "EventId": "guid",
   "EventType": "UserCreated",
-  "Timestamp": "2024-01-15T10:30:00Z",
-  "UserId": "guid",
-  "Email": "user@example.com",
-  "FirstName": "John",
-  "LastName": "Doe"
+  "OccurredOn": "2025-12-05T10:30:00Z",
+  "UserId": 456,
+  "Email": "user@example.com"
+}
+
+UserDeactivatedEvent:
+{
+  "EventId": "guid",
+  "EventType": "UserDeactivated",
+  "OccurredOn": "2025-12-05T11:00:00Z",
+  "UserId": 456,
+  "Email": "user@example.com"
 }
 
 FLOW (show with arrows):
 
-1. BookingsController → booking-events topic
+1. BookingsController → KafkaProducer: PublishAsync(event)
    (Async publish, fire-and-forget)
 
-2. booking-events topic → EmailEventHandler
-   (Consumer poll, batch processing)
+2. KafkaProducer → bookmyhome.events topic: Send event
+   (Serialized JSON, event type in message key or body)
+   Topic: bookmyhome.events (SINGLE TOPIC)
 
-3. EmailEventHandler → External Email Service
-   (SMTP or API call)
+3. bookmyhome.events topic → [KafkaConsumer - DISABLED]
+   (Show with dashed line and red X)
+   Note: Consumer exists but is not registered
 
-4. booking-events topic → NotificationEventHandler
-   (Consumer poll, batch processing)
+4. [If Consumer Active] KafkaConsumer → NotificationEventHandler: HandleAsync(event)
+   (Show with dashed line - not active)
 
-5. NotificationEventHandler → Database
-   (Store notification)
+5. [If Consumer Active] NotificationEventHandler → EmailService: SendEmail()
+   (Show with dashed line - not active)
+
+6. [If Consumer Active] NotificationEventHandler → SMSService: SendSMS()
+   (Show with dashed line - not active)
 
 KAFKA BROKER (center - show as server):
 
 Kafka Broker (Port 9092)
-- Manages topics
+- Manages topic: bookmyhome.events
 - Handles partitioning
 - Ensures message ordering within partition
 - Stores messages temporarily
+- Events accumulate (not consumed)
 
 Zookeeper (Port 2181)
 - Manages Kafka cluster
-- Tracks consumer offsets
+- Would track consumer offsets (if consumer active)
 - Handles leader election
 
 CONFIGURATION:
 
-Producer Config:
-- Acks: 1 (leader acknowledgment)
-- Compression: gzip
-- Batch size: 16KB
-- Linger: 10ms
+Producer Config (KafkaProducer.cs):
+- Bootstrap servers: localhost:9092
+- Topic: bookmyhome.events
+- Acks: All (wait for all replicas to acknowledge)
+- EnableIdempotence: true (prevent duplicate messages)
+- Retries: 3
+- RetryBackoffMs: 1000
+- ClientId: bookmyhome-producer
 
-Consumer Config:
+Consumer Config (KafkaConsumer.cs - not active):
+- Bootstrap servers: localhost:9092
+- Topic: bookmyhome.events
+- Group ID: bookmyhome-consumer-group
 - Auto offset reset: earliest
 - Enable auto commit: true
 - Max poll records: 500
@@ -145,17 +176,38 @@ Consumer Config:
 
 VISUAL STYLE:
 - Use blue boxes for producers
-- Use orange cylinders for topics
-- Use green boxes for consumers
-- Use solid arrows for message flow
-- Show event types inside topics
-- Add timing/sequence numbers
+- Use orange cylinder for topic (single topic)
+- Use green boxes with RED X for disabled consumers
+- Use solid arrows for active message flow (producer → topic)
+- Use dashed arrows for disabled/inactive flow (topic → consumer)
+- Show event types inside topic
+- Add status indicators (✅ ACTIVE, ❌ DISABLED, ⚠️ NOT CALLED)
 - Group related components
+- Mark disabled components clearly
 
 LEGEND:
 - Blue = Producer (API Controllers)
 - Orange = Kafka Topic
-- Green = Consumer (Event Handlers)
-- Solid arrow = Event flow
-- Dashed arrow = External service call
+- Green with Red X = Disabled Consumer
+- Solid arrow = Active event flow
+- Dashed arrow = Disabled/inactive flow
+- ✅ = Active
+- ❌ = Disabled
+- ⚠️ = Implemented but not called
 
+STATUS SUMMARY:
+- ✅ Kafka Producer: ACTIVE (events published)
+- ✅ Kafka Broker: ACTIVE
+- ✅ bookmyhome.events topic: ACTIVE
+- ❌ Kafka Consumer: DISABLED (not registered)
+- ⚠️ NotificationEventHandler: EXISTS but NOT CALLED
+- ⚠️ EmailService: EXISTS and FUNCTIONAL but not called automatically
+- ⚠️ SMSService: EXISTS and FUNCTIONAL but not called automatically
+
+IMPORTANT NOTES:
+- Single topic: bookmyhome.events (not multiple topics)
+- Consumer is disabled (see Program.cs:227 - commented out)
+- Events are published but NOT consumed
+- Email/SMS services exist but are not called automatically
+- Payment events exist but are never raised (Payment is Entity, not AggregateRoot)
+- BookingCompletedEvent does NOT exist (Complete() doesn't raise event)

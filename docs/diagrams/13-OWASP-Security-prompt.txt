@@ -1,4 +1,11 @@
-I need an OWASP Security Diagram showing the 4 main security threats and protection layers.
+I need an OWASP Security Diagram showing the 4 main security threats and protection layers for the BookMyHome campsite booking system.
+
+SYSTEM CONTEXT:
+- .NET 9.0 ASP.NET Core application
+- Blazor Server UI with MudBlazor
+- REST API with JWT authentication
+- MySQL 8.0 database
+- Entity Framework Core with parameterized queries
 
 Create a layered defense diagram with threats on the left and protection mechanisms on the right.
 
@@ -36,27 +43,31 @@ Protection against: SQL Injection, XSS
 Mechanisms:
 ✅ InputValidator.ValidateInput()
    - Regex validation
-   - Whitelist allowed characters
+   - XSS pattern detection
    - Max length checks
    - Email format validation
+   Location: Infrastructure/Security/InputValidator.cs
 
 ✅ Strongly-Typed Value Objects
-   - Email class validates format
-   - Money class validates amount
-   - DateRange validates dates
+   - Email class validates format (normalizes to lowercase)
+   - Money class validates amount (prevents negative)
+   - DateRange validates dates (end > start)
+   - BookingStatus validates transitions
+   Location: Models/ValueObjects/
 
 ✅ EF Core Parameterized Queries
    - Automatic SQL parameterization
-   - No string concatenation
+   - No raw SQL queries (no FromSqlRaw)
    - Prevents SQL injection
+   - All queries use LINQ-to-SQL
 
 Code Example:
-// SAFE - Parameterized
+// SAFE - Parameterized (actual implementation)
 var booking = await _context.Bookings
-    .Where(b => b.BookingId == bookingId)
+    .Where(b => b.Id == bookingId)
     .FirstOrDefaultAsync();
 
-// UNSAFE - String concatenation (NOT USED)
+// UNSAFE - String concatenation (NOT USED in codebase)
 // var sql = $"SELECT * FROM Bookings WHERE Id = '{bookingId}'";
 
 LAYER 2 - OUTPUT ENCODING:
@@ -67,44 +78,69 @@ Mechanisms:
    - Automatic HTML encoding
    - Prevents script injection
    - Safe rendering of user input
+   - @variable syntax automatically encodes
 
-✅ Content Security Policy (CSP)
-   - Restrict script sources
-   - Block inline scripts
-   - Prevent XSS execution
+✅ Input Validation via Domain Model
+   - String length limits enforced
+   - Special requests validation
+   - Comment validation in Review entity
 
 Code Example:
-// Blazor automatically encodes this
+// Blazor automatically encodes this (actual implementation)
 <p>@booking.SpecialRequests</p>
+// Output: &lt;script&gt; becomes &lt;script&gt; (encoded)
+
+⚠️ Content Security Policy (CSP)
+   - Not explicitly configured in code
+   - Could be added via Nginx or middleware
 
 LAYER 3 - AUTHENTICATION & AUTHORIZATION:
 Protection against: Broken Authentication
 
 Mechanisms:
 ✅ JWT Token Authentication
-   - Secure token generation
-   - HMAC SHA256 signing
-   - Expiration (24 hours)
-   - Refresh token support
+   - Secure token generation (HMAC SHA256)
+   - Token expiration (24 hours)
+   - Issuer/Audience validation
+   - Signature verification
+   Location: Controllers/AuthController.cs, Program.cs
+
+✅ Cookie Authentication
+   - HttpOnly cookies
+   - Secure cookies (HTTPS in production)
+   - SameSite=Lax
+   - Sliding expiration (8 hours default, 30 days if Remember Me)
+   Location: Program.cs
 
 ✅ Password Hashing
-   - BCrypt algorithm
-   - Salt per password
-   - Work factor: 12
+   - ASP.NET Core Identity PasswordHasher
+   - Uses PBKDF2 algorithm (not BCrypt)
+   - Salt per password (automatic)
+   - Work factor: Default (Identity framework)
+   Location: Program.cs (PasswordHasher<User>)
 
 ✅ Role-Based Access Control (RBAC)
-   - [Authorize] attributes
-   - Role claims in JWT
-   - Least privilege principle
+   - [Authorize] attributes on controllers
+   - User type in claims (Guest, Admin, Staff)
+   - JWT token contains role claims
+   - Cookie authentication for Blazor UI
 
-Code Example:
-[Authorize(Roles = "Admin")]
-public async Task<IActionResult> DeleteBooking(Guid id)
+⚠️ Resource-Level Authorization
+   - Not fully implemented
+   - Users can access any booking (no ownership check)
+   - Future enhancement needed
 
 ✅ HTTPS Only
-   - TLS 1.2+
-   - Certificate validation
-   - Encrypted communication
+   - UseHttpsRedirection() in Program.cs
+   - HSTS enabled in production
+   - TLS 1.2+ required
+
+Code Example:
+[Authorize] // JWT required
+public class BookingsController : ControllerBase
+{
+    // All endpoints require authentication
+}
 
 LAYER 4 - CSRF PROTECTION:
 Protection against: CSRF
@@ -112,43 +148,55 @@ Protection against: CSRF
 Mechanisms:
 ✅ Anti-Forgery Tokens
    - Blazor built-in CSRF protection
-   - Unique token per session
-   - Validated on POST/PUT/DELETE
+   - Anti-forgery middleware enabled
+   - Header name: X-CSRF-TOKEN
+   - Cookie name: X-CSRF-TOKEN
+   Location: Program.cs
 
 ✅ SameSite Cookies
-   - SameSite=Strict
+   - SameSite=Lax (for cookie auth)
+   - SameSite=Strict (for CSRF token)
    - Prevents cross-site cookie sending
 
-✅ Origin Validation
-   - Check Referer header
-   - Validate request origin
+✅ HTTPS Enforcement
+   - Redirects HTTP to HTTPS
+   - Secure cookie policy
+   - HSTS headers
 
 Code Example:
 // Blazor automatically adds anti-forgery token
 <EditForm Model="@booking" OnValidSubmit="HandleSubmit">
-    <AntiforgeryToken />
+    <!-- Anti-forgery token automatically included -->
 </EditForm>
 
 ADDITIONAL SECURITY MEASURES:
 
-✅ Rate Limiting (YARP Gateway)
-   - Max 100 requests per minute per IP
-   - Prevents brute force attacks
+⚠️ Rate Limiting
+   - Not implemented in main app
+   - Could be added via YARP Gateway (optional)
+   - Future enhancement
 
 ✅ Input Sanitization
-   - Remove dangerous characters
    - Trim whitespace
-   - Normalize Unicode
+   - Domain model validation
+   - Value object validation
 
 ✅ Logging & Monitoring
-   - Log all authentication attempts
+   - ILogger framework
+   - Log authentication attempts
    - Log failed validations
-   - Alert on suspicious activity
+   - Console logging
 
 ✅ Secure Configuration
-   - Secrets in environment variables
-   - No hardcoded passwords
-   - Connection strings in appsettings
+   - Connection strings in appsettings.json
+   - JWT secret in appsettings (should be in Key Vault for production)
+   - Environment-specific configuration
+   - Generic error messages in production
+
+✅ Error Handling
+   - Generic error messages (no information leakage)
+   - Exception handling middleware
+   - Development vs Production error handling
 
 VISUAL LAYOUT:
 
@@ -159,7 +207,8 @@ Left side (Threats):
 [Broken Auth] ────────────────────> [Layer 3: Authentication]
 
 Center (Application):
-[Blazor UI] → [API Gateway] → [API] → [Database]
+[Blazor UI] → [API] → [Database]
+[Optional: API Gateway between UI and API]
 
 Right side (Protection):
 Show shields blocking arrows from threats
@@ -168,15 +217,20 @@ LEGEND:
 🔴 Red = Threat
 🟢 Green = Protection
 ✅ = Implemented
-⚠️ = Partial
+⚠️ = Partial or future enhancement
 ❌ = Not implemented
 → = Attack vector
 🛡️ = Defense mechanism
 
 OWASP TOP 10 COVERAGE:
-✅ A01:2021 - Broken Access Control (JWT + RBAC)
-✅ A02:2021 - Cryptographic Failures (HTTPS, BCrypt)
+✅ A01:2021 - Broken Access Control (JWT + Cookie auth, basic RBAC)
+⚠️ A02:2021 - Cryptographic Failures (HTTPS, Identity PasswordHasher - not BCrypt)
 ✅ A03:2021 - Injection (Parameterized queries, validation)
-✅ A05:2021 - Security Misconfiguration (Secure defaults)
-✅ A07:2021 - XSS (Output encoding, CSP)
+✅ A05:2021 - Security Misconfiguration (Secure defaults, HTTPS)
+✅ A07:2021 - XSS (Output encoding, input validation)
 
+IMPLEMENTATION NOTES:
+- Password hashing uses ASP.NET Core Identity PasswordHasher (PBKDF2), not BCrypt
+- JWT secret should be moved to Key Vault in production
+- Resource-level authorization not fully implemented
+- Rate limiting not implemented (could use YARP Gateway)

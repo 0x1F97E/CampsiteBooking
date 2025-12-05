@@ -6,14 +6,15 @@ X-AXIS (Horizontal Duplication / Cloning):
 Label: "X-Axis: Horizontal Scaling (Cloning)"
 Description: Running multiple identical instances of the application
 
-Current Implementation: ✅ IMPLEMENTED
+Current Implementation: ✅ IMPLEMENTED (Ready)
 - Show 3 identical boxes labeled:
   * "BookMyHome API Instance 1" (Port 7001)
   * "BookMyHome API Instance 2" (Port 7002)
   * "BookMyHome API Instance 3" (Port 7003)
-- Add a load balancer box above them labeled "YARP API Gateway"
+- Add a load balancer box above them labeled "YARP API Gateway (Optional)" or "Nginx"
 - Show arrows from load balancer to each instance
 - Add text: "RoundRobin Load Balancing"
+- Note: Single instance by default, multiple instances possible
 
 Benefits:
 - Increased throughput
@@ -21,35 +22,46 @@ Benefits:
 - Fault tolerance
 - Simple to implement
 
-Example: "3x API instances behind YARP load balancer"
+Example: "3x API instances behind load balancer (when scaled)"
 
 Y-AXIS (Functional Decomposition / Microservices):
 Label: "Y-Axis: Functional Scaling (Microservices)"
 Description: Splitting application by function/service
 
 Current Implementation: ⚠️ PARTIAL (Modular Monolith)
-- Show separate service boxes:
-  * "Booking Service" (handles bookings)
-  * "User Service" (handles users)
-  * "Payment Service" (handles payments)
-  * "Notification Service" (handles emails/SMS)
-  * "Campsite Service" (handles campsites)
-- Show each service with its own database
-- Add text: "Currently: Modular Monolith with separate Kafka Consumer"
+- Show single monolith box:
+  * "BookMyHome Monolith" (contains all services)
+  * Contains: Booking, User, Campsite, Payment controllers
+- Show separate service box (but note it's disabled):
+  * "Kafka Consumer Service" (DISABLED - see Program.cs:227)
+- Add text: "Currently: Modular Monolith"
+- Add text: "Kafka Consumer exists but is disabled"
+- Note: No true microservices - all in single deployment unit
 
-Benefits:
+Benefits (if implemented):
 - Independent deployment
 - Technology diversity
 - Team autonomy
 - Fault isolation
 
-Example: "Separate microservices for each domain"
+Current Status:
+- ❌ NOT true microservices
+- ✅ Modular controllers (logical separation)
+- ✅ Event-driven architecture (Kafka producer active)
+- ⚠️ Consumer disabled (not separate service)
 
 Z-AXIS (Data Partitioning / Sharding):
 Label: "Z-Axis: Data Scaling (Sharding)"
 Description: Splitting data by some attribute (e.g., region, customer)
 
 Current Implementation: ❌ NOT IMPLEMENTED
+- Show single database box:
+  * "MySQL Database" (CampsiteBookingDb)
+  * All data in single database
+- Add text: "Single database - no sharding"
+- Note: "Not needed at current scale"
+
+Potential Sharding Strategy (Future):
 - Show database sharding by region:
   * "Shard 1: Nordjylland" (Northern Denmark)
   * "Shard 2: Midtjylland" (Central Denmark)
@@ -58,13 +70,13 @@ Current Implementation: ❌ NOT IMPLEMENTED
 - Show routing logic box labeled "Shard Router"
 - Add text: "Future: Shard by campsite region"
 
-Benefits:
+Benefits (if implemented):
 - Reduced database load
 - Improved query performance
 - Geographic distribution
 - Data locality
 
-Example: "Partition bookings by campsite region"
+Example: "Partition bookings by campsite region (future enhancement)"
 
 VISUAL LAYOUT:
 - Draw a 3D cube with visible X, Y, Z axes
@@ -72,34 +84,43 @@ VISUAL LAYOUT:
 - Place Y-axis vertically (bottom to top)
 - Place Z-axis in depth (front to back)
 - Use different colors for each axis:
-  * X-axis: Green (implemented)
-  * Y-axis: Yellow (partial)
+  * X-axis: Green (implemented/ready)
+  * Y-axis: Yellow (partial - modular monolith)
   * Z-axis: Red (not implemented)
 
 CURRENT STATE SUMMARY (add as text box):
-✅ X-Axis: IMPLEMENTED
-   - 3 API instances
-   - YARP load balancer
-   - RoundRobin distribution
+✅ X-Axis: READY (can scale horizontally)
+   - Single instance by default
+   - Multiple instances possible with load balancer
+   - Stateless API (JWT authentication)
+   - Docker Compose supports scaling
 
-⚠️ Y-Axis: PARTIAL
-   - Modular monolith architecture
-   - Separate Kafka consumer service
-   - Ready for microservices split
+⚠️ Y-Axis: PARTIAL (Modular Monolith)
+   - Single deployment unit
+   - Modular controllers (logical separation)
+   - Event-driven elements (Kafka producer)
+   - Consumer disabled (not separate service)
+   - NOT true microservices
 
 ❌ Z-Axis: NOT IMPLEMENTED
    - Single MySQL database
    - No sharding
-   - Future enhancement
+   - Not needed at current scale
+   - Future enhancement if needed
 
 SCALING STRATEGY:
 Add a text box explaining the chosen strategy:
-"BookMyHome uses X-axis scaling (horizontal duplication) as the primary scaling strategy. This provides immediate benefits with minimal complexity. Y-axis scaling (microservices) is prepared through modular architecture. Z-axis scaling (sharding) is not needed at current scale but can be added when database becomes a bottleneck."
+"BookMyHome uses X-axis scaling (horizontal duplication) as the primary scaling strategy. This provides immediate benefits with minimal complexity. The application is a modular monolith with event-driven elements (Kafka producer). Y-axis scaling (microservices) is not implemented - all services are in a single deployment unit. Z-axis scaling (sharding) is not needed at current scale but can be added when database becomes a bottleneck."
 
 LEGEND:
-- ✅ Green = Implemented
+- ✅ Green = Implemented/Ready
 - ⚠️ Yellow = Partially implemented
 - ❌ Red = Not implemented
 - Arrows = Data flow / requests
 - Boxes = Services / databases
 
+ADDITIONAL NOTES:
+- Application is stateless (JWT tokens, no session state)
+- Database is shared across all instances
+- Kafka events published but not consumed (consumer disabled)
+- Scaling strategy focuses on X-axis (horizontal duplication)

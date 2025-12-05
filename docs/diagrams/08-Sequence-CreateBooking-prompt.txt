@@ -6,14 +6,16 @@ PARTICIPANTS (from left to right):
 
 1. User (actor - stick figure)
 2. Browser (Blazor UI)
-3. API Gateway (YARP)
+3. API Gateway (YARP) - OPTIONAL (show with dashed box or note)
 4. BookingsController
-5. Booking (Domain Entity)
+5. Booking (Domain Entity - AggregateRoot)
 6. BookingRepository
 7. DbContext (EF Core)
 8. MySQL Database
 9. KafkaProducer
 10. Kafka Broker
+
+NOTE: API Gateway is optional. Main application can be accessed directly on port 7001.
 
 SEQUENCE OF INTERACTIONS:
 
@@ -23,14 +25,16 @@ SEQUENCE OF INTERACTIONS:
 2. Browser → Browser: Validate input (client-side)
    (Check required fields, date format, etc.)
 
-3. Browser → API Gateway: POST /api/bookings
+3. Browser → [API Gateway] OR BookingsController: POST /api/bookings
    (HTTP request with JWT token in Authorization header)
    Body: CreateBookingRequest JSON
+   Note: If API Gateway enabled, request goes through gateway first
 
-4. API Gateway → API Gateway: Route request
-   (Load balancing - select API instance)
+4. [If Gateway] API Gateway → API Gateway: Route request
+   (Load balancing - select API instance if multiple)
+   Note: Single instance by default
 
-5. API Gateway → BookingsController: Forward POST /api/bookings
+5. [If Gateway] API Gateway → BookingsController: Forward POST /api/bookings
    (Proxied request)
 
 6. BookingsController → BookingsController: Validate JWT token
@@ -44,80 +48,91 @@ SEQUENCE OF INTERACTIONS:
 
 9. Booking → Booking: Validate business rules
    (Check dates, capacity, pricing)
-   Note: "Throws exception if invalid"
+   Note: "Throws DomainException if invalid"
 
-10. Booking → BookingsController: Return booking instance
+10. Booking → Booking: RaiseDomainEvent(BookingCreatedEvent)
+    (Add event to domain events list)
 
-11. BookingsController → BookingRepository: AddAsync(booking)
+11. Booking → BookingsController: Return booking instance
 
-12. BookingRepository → DbContext: Add(booking)
+12. BookingsController → BookingRepository: AddAsync(booking)
+
+13. BookingRepository → DbContext: Add(booking)
     (Add to change tracker)
 
-13. BookingRepository → DbContext: SaveChangesAsync()
+14. BookingRepository → DbContext: SaveChangesAsync()
     (Begin transaction)
 
-14. DbContext → MySQL: BEGIN TRANSACTION
+15. DbContext → MySQL: BEGIN TRANSACTION
 
-15. DbContext → MySQL: INSERT INTO Bookings (...)
-    (Parameterized query)
+16. DbContext → MySQL: INSERT INTO Bookings (...)
+    (Parameterized query via EF Core)
 
-16. MySQL → DbContext: Success (BookingId)
+17. MySQL → DbContext: Success (BookingId)
 
-17. DbContext → MySQL: COMMIT TRANSACTION
+18. DbContext → MySQL: COMMIT TRANSACTION
 
-18. MySQL → DbContext: Transaction committed
+19. MySQL → DbContext: Transaction committed
 
-19. DbContext → BookingRepository: Success
+20. DbContext → BookingRepository: Success
 
-20. BookingRepository → BookingsController: Success
+21. BookingRepository → BookingsController: Success
 
-21. BookingsController → Booking: GetDomainEvents()
+22. BookingsController → Booking: GetDomainEvents()
     (Retrieve BookingCreatedEvent)
 
-22. Booking → BookingsController: Return [BookingCreatedEvent]
+23. Booking → BookingsController: Return [BookingCreatedEvent]
 
-23. BookingsController → KafkaProducer: PublishAsync(BookingCreatedEvent)
-    (Async fire-and-forget)
+24. BookingsController → KafkaProducer: PublishAsync(BookingCreatedEvent)
+    (Asynchronous fire-and-forget operation)
+    Topic: bookmyhome.events (SINGLE TOPIC for all events)
+    Note: Event type stored in message key for routing
 
-24. KafkaProducer → Kafka Broker: Send event to "booking-events" topic
-    (Serialized JSON)
+25. KafkaProducer → Kafka Broker: Send event to "bookmyhome.events" topic
+    (Serialized JSON, event type in message key)
 
-25. Kafka Broker → KafkaProducer: Ack (event received)
+26. Kafka Broker → KafkaProducer: Ack (event received)
 
-26. BookingsController → BookingsController: Map to BookingDto
+27. BookingsController → BookingsController: Map to BookingDto
 
-27. BookingsController → API Gateway: 201 Created
+28. BookingsController → [API Gateway] OR Browser: 201 Created
     (Response with BookingDto JSON)
     Location header: /api/bookings/{id}
 
-28. API Gateway → Browser: 201 Created
+29. [If Gateway] API Gateway → Browser: 201 Created
     (Proxied response)
 
-29. Browser → User: Show success message
+30. Browser → User: Show success message
     (Display confirmation with booking details)
 
 ALTERNATIVE FLOWS (show with alt frame):
 
 Alt 1: Validation fails (step 7-8)
-- BookingsController → API Gateway: 400 Bad Request
-- API Gateway → Browser: 400 Bad Request
+- BookingsController → [API Gateway] OR Browser: 400 Bad Request
+- [If Gateway] API Gateway → Browser: 400 Bad Request
 - Browser → User: Show error message
 
 Alt 2: Business rule violation (step 9)
 - Booking throws DomainException
 - BookingsController catches exception
-- BookingsController → API Gateway: 400 Bad Request
-- API Gateway → Browser: 400 Bad Request
+- BookingsController → [API Gateway] OR Browser: 400 Bad Request
+- [If Gateway] API Gateway → Browser: 400 Bad Request
 - Browser → User: Show error message
 
-Alt 3: Database error (step 15-16)
+Alt 3: Database error (step 16-17)
 - MySQL → DbContext: Error
 - DbContext → MySQL: ROLLBACK TRANSACTION
 - DbContext → BookingRepository: Exception
 - BookingRepository → BookingsController: Exception
-- BookingsController → API Gateway: 500 Internal Server Error
-- API Gateway → Browser: 500 Internal Server Error
+- BookingsController → [API Gateway] OR Browser: 500 Internal Server Error
+- [If Gateway] API Gateway → Browser: 500 Internal Server Error
 - Browser → User: Show error message
+
+Alt 4: Kafka publish fails (step 25-26)
+- Kafka Broker → KafkaProducer: Error
+- KafkaProducer → BookingsController: Log error (non-blocking)
+- Note: API still returns 201 Created (event publishing is fire-and-forget)
+- BookingsController → Browser: 201 Created (booking saved, event may be retried)
 
 VISUAL ELEMENTS:
 
@@ -125,6 +140,7 @@ VISUAL ELEMENTS:
 - Use activation boxes (rectangles) to show when objects are active
 - Use solid arrows for synchronous calls
 - Use dashed arrows for return values
+- Use dashed boxes for optional components (API Gateway)
 - Use notes for important information
 - Use alt/opt frames for alternative flows
 - Number the interactions (1, 2, 3, ...)
@@ -134,15 +150,26 @@ NOTES TO ADD:
 
 Note over BookingsController: "JWT authentication ensures only logged-in users can create bookings"
 
-Note over Booking: "Domain entity enforces business rules: check-in before check-out, valid dates, capacity limits"
+Note over Booking: "Domain entity enforces business rules: check-in before check-out, valid dates, capacity limits. Raises BookingCreatedEvent."
 
 Note over DbContext, MySQL: "EF Core uses parameterized queries to prevent SQL injection"
 
-Note over KafkaProducer: "Async event publishing - doesn't block API response"
+Note over KafkaProducer: "Async event publishing - doesn't block API response. Single topic: bookmyhome.events"
+
+Note over API Gateway: "OPTIONAL - Application works without gateway. Direct access on port 7001."
+
+Note over Kafka Broker: "Events published but NOT consumed (consumer disabled). See Program.cs:227"
 
 LEGEND:
 - Solid arrow → = Synchronous call
 - Dashed arrow ← = Return value
+- Dashed box = Optional component
 - Rectangle on lifeline = Object is active
 - X at end of lifeline = Object is destroyed
 
+IMPORTANT NOTES:
+- API Gateway is optional - show with dashed box or note
+- Single Kafka topic: bookmyhome.events (not multiple topics)
+- Kafka Consumer is disabled (events published but not consumed)
+- Booking raises BookingCreatedEvent in Create() method
+- Event publishing is async and non-blocking
