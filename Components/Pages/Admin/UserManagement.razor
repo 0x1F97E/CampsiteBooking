@@ -1,15 +1,18 @@
 @page "/admin/users"
 @rendermode InteractiveServer
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = "Admin,Staff")]
 @using CampsiteBooking.Data
 @using CampsiteBooking.Models
 @using CampsiteBooking.Models.ValueObjects
 @using Microsoft.EntityFrameworkCore
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @inject IDialogService DialogService
 @inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
 @inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>User Management - Campsite Booking</PageTitle>
 
@@ -21,7 +24,14 @@
                 User Management
             </MudText>
             <MudText Typo="Typo.body1" Color="Color.Secondary">
-                Manage users and their roles (@_users.Count total)
+                @if (_isAdmin)
+                {
+                    <span>Manage users and their roles (@_users.Count total)</span>
+                }
+                else
+                {
+                    <span>View users and their roles (@_users.Count total) - Read-only access</span>
+                }
             </MudText>
         </div>
         <MudStack Row="true" Spacing="2">
@@ -40,9 +50,12 @@
                     <span>Refresh</span>
                 }
             </MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenAddUserDialog">
-                Add User
-            </MudButton>
+            @if (_isAdmin)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenAddUserDialog">
+                    Add User
+                </MudButton>
+            }
         </MudStack>
     </div>
 
@@ -179,19 +192,26 @@
                     </MudChip>
                 </MudTd>
                 <MudTd DataLabel="Actions">
-                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
-                        <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnAction="@(() => EditUser(context))">Edit</MudMenuItem>
-                        <MudMenuItem Icon="@Icons.Material.Filled.Security" OnAction="@(() => ChangeRole(context))">Change Role</MudMenuItem>
-                        @if (context.IsActive)
-                        {
-                            <MudMenuItem Icon="@Icons.Material.Filled.Block" OnAction="@(() => DeactivateUser(context))">Deactivate</MudMenuItem>
-                        }
-                        else
-                        {
-                            <MudMenuItem Icon="@Icons.Material.Filled.CheckCircle" OnAction="@(() => ActivateUser(context))">Activate</MudMenuItem>
-                        }
-                        <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnAction="@(() => DeleteUser(context))">Delete</MudMenuItem>
-                    </MudMenu>
+                    @if (_isAdmin)
+                    {
+                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
+                            <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnAction="@(() => EditUser(context))">Edit</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Security" OnAction="@(() => ChangeRole(context))">Change Role</MudMenuItem>
+                            @if (context.IsActive)
+                            {
+                                <MudMenuItem Icon="@Icons.Material.Filled.Block" OnAction="@(() => DeactivateUser(context))">Deactivate</MudMenuItem>
+                            }
+                            else
+                            {
+                                <MudMenuItem Icon="@Icons.Material.Filled.CheckCircle" OnAction="@(() => ActivateUser(context))">Activate</MudMenuItem>
+                            }
+                            <MudMenuItem Icon="@Icons.Material.Filled.Delete" OnAction="@(() => DeleteUser(context))">Delete</MudMenuItem>
+                        </MudMenu>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">View only</MudText>
+                    }
                 </MudTd>
             </RowTemplate>
             <PagerContent>
@@ -203,6 +223,7 @@
 
 @code {
     private bool _loading = false;
+    private bool _isAdmin = false;
     private string _searchText = "";
     private string _filterRole = "All";
     private string _filterStatus = "All";
@@ -211,6 +232,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Check if user is Admin
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _isAdmin = user.IsInRole("Admin");
+
         await LoadUsersAsync();
         await LoadCampsitesAsync();
     }

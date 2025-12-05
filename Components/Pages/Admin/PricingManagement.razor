@@ -15,7 +15,7 @@
             Pricing Management
         </MudText>
         <MudText Typo="Typo.body1" Color="Color.Secondary">
-            Configure accommodation base prices, purchase options, seasonal multipliers, and discounts
+            Configure accommodation base prices, purchase options, seasonal multipliers, and discounts@(_isAdmin ? "" : " (Read-only)")
         </MudText>
     </div>
 
@@ -137,16 +137,23 @@
                                         </MudChip>
                                     </MudTd>
                                     <MudTd DataLabel="Actions">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                      Color="Color.Primary"
-                                                      Size="Size.Small"
-                                                      Title="Edit purchase option"
-                                                      OnClick="@(() => EditAccommodationPeripheralPurchase(accommodation, context))" />
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                      Color="Color.Error"
-                                                      Size="Size.Small"
-                                                      Title="Delete purchase option"
-                                                      OnClick="@(() => DeleteAccommodationPeripheralPurchase(accommodation, context))" />
+                                        @if (_isAdmin)
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                          Color="Color.Primary"
+                                                          Size="Size.Small"
+                                                          Title="Edit purchase option"
+                                                          OnClick="@(() => EditAccommodationPeripheralPurchase(accommodation, context))" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                          Color="Color.Error"
+                                                          Size="Size.Small"
+                                                          Title="Delete purchase option"
+                                                          OnClick="@(() => DeleteAccommodationPeripheralPurchase(accommodation, context))" />
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">View only</MudText>
+                                        }
                                     </MudTd>
                                 </RowTemplate>
                             </MudTable>
@@ -158,13 +165,16 @@
                             </MudAlert>
                         }
 
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Primary"
-                                   Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.Add"
-                                   OnClick="@(() => AddAccommodationPeripheralPurchase(accommodation))">
-                            Add Purchase
-                        </MudButton>
+                        @if (_isAdmin)
+                        {
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       OnClick="@(() => AddAccommodationPeripheralPurchase(accommodation))">
+                                Add Purchase
+                            </MudButton>
+                        }
                     </MudCardContent>
                 </MudCard>
             }
@@ -181,9 +191,12 @@
                         </MudText>
                     </CardHeaderContent>
                     <CardHeaderActions>
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="AddPeripheralPurchase">
-                            Add Purchase
-                        </MudButton>
+                        @if (_isAdmin)
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="AddPeripheralPurchase">
+                                Add Purchase
+                            </MudButton>
+                        }
                     </CardHeaderActions>
                 </MudCardHeader>
                 <MudCardContent>
@@ -221,16 +234,23 @@
                                 </MudChip>
                             </MudTd>
                             <MudTd DataLabel="Actions">
-                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                              Color="Color.Primary"
-                                              Size="Size.Small"
-                                              Title="Edit purchase option"
-                                              OnClick="@(() => EditPeripheralPurchase(context))" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                              Color="Color.Error"
-                                              Size="Size.Small"
-                                              Title="Delete purchase option"
-                                              OnClick="@(() => DeletePeripheralPurchase(context))" />
+                                @if (_isAdmin)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                  Color="Color.Primary"
+                                                  Size="Size.Small"
+                                                  Title="Edit purchase option"
+                                                  OnClick="@(() => EditPeripheralPurchase(context))" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                  Color="Color.Error"
+                                                  Size="Size.Small"
+                                                  Title="Delete purchase option"
+                                                  OnClick="@(() => DeletePeripheralPurchase(context))" />
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">View only</MudText>
+                                }
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
@@ -249,9 +269,12 @@
                         </MudText>
                     </CardHeaderContent>
                     <CardHeaderActions>
-                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                      Color="Color.Primary"
-                                      OnClick="EditSeasonalPricing" />
+                        @if (_isAdmin)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                          Color="Color.Primary"
+                                          OnClick="EditSeasonalPricing" />
+                        }
                     </CardHeaderActions>
                 </MudCardHeader>
                 <MudCardContent>
@@ -319,6 +342,7 @@
                                                         Variant="Variant.Outlined"
                                                         Margin="Margin.Dense"
                                                         Min="0"
+                                                        ReadOnly="@(!_isAdmin)"
                                                         Adornment="Adornment.Start"
                                                         AdornmentText="$"
                                                         AdornmentColor="@(isModified ? Color.Warning : Color.Default)"
@@ -335,28 +359,31 @@
                     </MudTable>
 
                     <!-- Save Changes Button -->
-                    <div class="d-flex justify-end mt-4">
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   StartIcon="@(_isSavingPrices ? null : Icons.Material.Filled.Save)"
-                                   Disabled="@(!HasUnsavedPriceChanges || _isSavingPrices)"
-                                   OnClick="SavePriceChanges">
-                            @if (_isSavingPrices)
-                            {
-                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                <span>Saving...</span>
-                            }
-                            else
-                            {
-                                <span>Save Changes</span>
-                            }
-                        </MudButton>
-                    </div>
-                    @if (HasUnsavedPriceChanges)
+                    @if (_isAdmin)
                     {
-                        <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
-                            You have unsaved changes. Click "Save Changes" to persist your modifications.
-                        </MudAlert>
+                        <div class="d-flex justify-end mt-4">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@(_isSavingPrices ? null : Icons.Material.Filled.Save)"
+                                       Disabled="@(!HasUnsavedPriceChanges || _isSavingPrices)"
+                                       OnClick="SavePriceChanges">
+                                @if (_isSavingPrices)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                    <span>Saving...</span>
+                                }
+                                else
+                                {
+                                    <span>Save Changes</span>
+                                }
+                            </MudButton>
+                        </div>
+                        @if (HasUnsavedPriceChanges)
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                                You have unsaved changes. Click "Save Changes" to persist your modifications.
+                            </MudAlert>
+                        }
                     }
                 </MudCardContent>
             </MudCard>
@@ -373,9 +400,12 @@
                         </MudText>
                     </CardHeaderContent>
                     <CardHeaderActions>
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddDiscount">
-                            Add Discount
-                        </MudButton>
+                        @if (_isAdmin)
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddDiscount">
+                                Add Discount
+                            </MudButton>
+                        }
                     </CardHeaderActions>
                 </MudCardHeader>
                 <MudCardContent>
@@ -418,8 +448,15 @@
                                 </MudChip>
                             </MudTd>
                             <MudTd DataLabel="Actions">
-                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditDiscount(context))" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteDiscount(context))" />
+                                @if (_isAdmin)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditDiscount(context))" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteDiscount(context))" />
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">View only</MudText>
+                                }
                             </MudTd>
                         </RowTemplate>
                     </MudTable>

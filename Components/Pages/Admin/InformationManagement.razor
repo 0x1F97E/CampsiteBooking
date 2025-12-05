@@ -6,9 +6,12 @@
 @using CampsiteBooking.Models.ValueObjects
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Information & Newsletter Management - Campsite Booking</PageTitle>
 
@@ -107,37 +110,47 @@
                     </MudItem>
 
                     <MudItem xs="12">
-                        <MudStack Row="true" Spacing="2">
-                            <MudButton Variant="Variant.Outlined" 
-                                      Color="Color.Default"
-                                      StartIcon="@Icons.Material.Filled.Preview"
-                                      OnClick="PreviewNewsletter">
-                                Preview
-                            </MudButton>
-                            <MudButton Variant="Variant.Outlined" 
-                                      Color="Color.Secondary"
-                                      StartIcon="@Icons.Material.Filled.Save"
-                                      OnClick="SaveDraft">
-                                Save as Draft
-                            </MudButton>
-                            <MudSpacer />
-                            @if (_sendTestEmail)
-                            {
-                                <MudButton Variant="Variant.Filled" 
-                                          Color="Color.Info"
-                                          StartIcon="@Icons.Material.Filled.Send"
-                                          OnClick="SendTestNewsletter">
-                                    Send Test Email
+                        @if (_isAdmin)
+                        {
+                            <MudStack Row="true" Spacing="2">
+                                <MudButton Variant="Variant.Outlined"
+                                          Color="Color.Default"
+                                          StartIcon="@Icons.Material.Filled.Preview"
+                                          OnClick="PreviewNewsletter">
+                                    Preview
                                 </MudButton>
-                            }
-                            <MudButton Variant="Variant.Filled" 
-                                      Color="Color.Primary"
-                                      StartIcon="@Icons.Material.Filled.Send"
-                                      OnClick="SendNewsletter"
-                                      Disabled="@(!IsNewsletterValid())">
-                                @(_scheduledDate.HasValue ? "Schedule Newsletter" : "Send Now")
-                            </MudButton>
-                        </MudStack>
+                                <MudButton Variant="Variant.Outlined"
+                                          Color="Color.Secondary"
+                                          StartIcon="@Icons.Material.Filled.Save"
+                                          OnClick="SaveDraft">
+                                    Save as Draft
+                                </MudButton>
+                                <MudSpacer />
+                                @if (_sendTestEmail)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                              Color="Color.Info"
+                                              StartIcon="@Icons.Material.Filled.Send"
+                                              OnClick="SendTestNewsletter">
+                                        Send Test Email
+                                    </MudButton>
+                                }
+                                <MudButton Variant="Variant.Filled"
+                                          Color="Color.Primary"
+                                          StartIcon="@Icons.Material.Filled.Send"
+                                          OnClick="SendNewsletter"
+                                          Disabled="@(!IsNewsletterValid())">
+                                    @(_scheduledDate.HasValue ? "Schedule Newsletter" : "Send Now")
+                                </MudButton>
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true">
+                                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="mr-1" />
+                                Newsletter management is read-only for Staff users.
+                            </MudAlert>
+                        }
                     </MudItem>
                 </MudGrid>
             </MudPaper>
@@ -178,12 +191,15 @@
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
                             @_events.Count total events across @_eventsByCampsite.Count campsites
                         </MudText>
-                        <MudButton Variant="Variant.Filled"
-                                  Color="Color.Primary"
-                                  StartIcon="@Icons.Material.Filled.Add"
-                                  OnClick="OpenAddEventDialog">
-                            Add Event
-                        </MudButton>
+                        @if (_isAdmin)
+                        {
+                            <MudButton Variant="Variant.Filled"
+                                      Color="Color.Primary"
+                                      StartIcon="@Icons.Material.Filled.Add"
+                                      OnClick="OpenAddEventDialog">
+                                Add Event
+                            </MudButton>
+                        }
                     </div>
                 </div>
 
@@ -247,19 +263,26 @@
                                             </MudChip>
                                         </MudTd>
                                         <MudTd DataLabel="Actions">
-                                            @{ var generalEvent = context; }
-                                            <span @onclick:stopPropagation="true">
-                                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                              Color="Color.Primary"
-                                                              Size="Size.Small"
-                                                              OnClick="@(() => EditEvent(generalEvent))" />
-                                            </span>
-                                            <span @onclick:stopPropagation="true">
-                                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                              Color="Color.Error"
-                                                              Size="Size.Small"
-                                                              OnClick="@(() => DeleteEvent(generalEvent))" />
-                                            </span>
+                                            @if (_isAdmin)
+                                            {
+                                                var generalEvent = context;
+                                                <span @onclick:stopPropagation="true">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                  Color="Color.Primary"
+                                                                  Size="Size.Small"
+                                                                  OnClick="@(() => EditEvent(generalEvent))" />
+                                                </span>
+                                                <span @onclick:stopPropagation="true">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                  Color="Color.Error"
+                                                                  Size="Size.Small"
+                                                                  OnClick="@(() => DeleteEvent(generalEvent))" />
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">View only</MudText>
+                                            }
                                         </MudTd>
                                     </RowTemplate>
                                 </MudTable>
@@ -331,19 +354,26 @@
                                                 </MudChip>
                                             </MudTd>
                                             <MudTd DataLabel="Actions">
-                                                @{ var campsiteEvent = context; }
-                                                <span @onclick:stopPropagation="true">
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                                  Color="Color.Primary"
-                                                                  Size="Size.Small"
-                                                                  OnClick="@(() => EditEvent(campsiteEvent))" />
-                                                </span>
-                                                <span @onclick:stopPropagation="true">
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                                  Color="Color.Error"
-                                                                  Size="Size.Small"
-                                                                  OnClick="@(() => DeleteEvent(campsiteEvent))" />
-                                                </span>
+                                                @if (_isAdmin)
+                                                {
+                                                    var campsiteEvent = context;
+                                                    <span @onclick:stopPropagation="true">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                      Color="Color.Primary"
+                                                                      Size="Size.Small"
+                                                                      OnClick="@(() => EditEvent(campsiteEvent))" />
+                                                    </span>
+                                                    <span @onclick:stopPropagation="true">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                      Color="Color.Error"
+                                                                      Size="Size.Small"
+                                                                      OnClick="@(() => DeleteEvent(campsiteEvent))" />
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">View only</MudText>
+                                                }
                                             </MudTd>
                                         </RowTemplate>
                                     </MudTable>
@@ -373,12 +403,15 @@
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
                             @_photos.Count total photos across @_photosByCampsite.Count campsites
                         </MudText>
-                        <MudButton Variant="Variant.Filled"
-                                  Color="Color.Primary"
-                                  StartIcon="@Icons.Material.Filled.Add"
-                                  OnClick="OpenAddPhotoDialog">
-                            Add Photo
-                        </MudButton>
+                        @if (_isAdmin)
+                        {
+                            <MudButton Variant="Variant.Filled"
+                                      Color="Color.Primary"
+                                      StartIcon="@Icons.Material.Filled.Add"
+                                      OnClick="OpenAddPhotoDialog">
+                                Add Photo
+                            </MudButton>
+                        }
                     </div>
                 </div>
 
@@ -414,21 +447,24 @@
                                                     <MudText Typo="Typo.subtitle2" Class="text-truncate"><strong>@photo.Title</strong></MudText>
                                                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate">@photo.Description</MudText>
                                                 </MudCardContent>
-                                                <MudCardActions Class="pa-1 justify-end">
-                                                    @{ var generalPhoto = photo; }
-                                                    <span @onclick:stopPropagation="true">
-                                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                                      Color="Color.Primary"
-                                                                      Size="Size.Small"
-                                                                      OnClick="@(() => EditPhoto(generalPhoto))" />
-                                                    </span>
-                                                    <span @onclick:stopPropagation="true">
-                                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                                      Color="Color.Error"
-                                                                      Size="Size.Small"
-                                                                      OnClick="@(() => DeletePhoto(generalPhoto))" />
-                                                    </span>
-                                                </MudCardActions>
+                                                @if (_isAdmin)
+                                                {
+                                                    var generalPhoto = photo;
+                                                    <MudCardActions Class="pa-1 justify-end">
+                                                        <span @onclick:stopPropagation="true">
+                                                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                          Color="Color.Primary"
+                                                                          Size="Size.Small"
+                                                                          OnClick="@(() => EditPhoto(generalPhoto))" />
+                                                        </span>
+                                                        <span @onclick:stopPropagation="true">
+                                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                          Color="Color.Error"
+                                                                          Size="Size.Small"
+                                                                          OnClick="@(() => DeletePhoto(generalPhoto))" />
+                                                        </span>
+                                                    </MudCardActions>
+                                                }
                                             </MudCard>
                                         </MudItem>
                                     }
@@ -473,21 +509,24 @@
                                                         <MudText Typo="Typo.subtitle2" Class="text-truncate"><strong>@photo.Title</strong></MudText>
                                                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate">@photo.Description</MudText>
                                                     </MudCardContent>
-                                                    <MudCardActions Class="pa-1 justify-end">
-                                                        @{ var campsitePhoto = photo; }
-                                                        <span @onclick:stopPropagation="true">
-                                                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                                          Color="Color.Primary"
-                                                                          Size="Size.Small"
-                                                                          OnClick="@(() => EditPhoto(campsitePhoto))" />
-                                                        </span>
-                                                        <span @onclick:stopPropagation="true">
-                                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                                          Color="Color.Error"
-                                                                          Size="Size.Small"
-                                                                          OnClick="@(() => DeletePhoto(campsitePhoto))" />
-                                                        </span>
-                                                    </MudCardActions>
+                                                    @if (_isAdmin)
+                                                    {
+                                                        var campsitePhoto = photo;
+                                                        <MudCardActions Class="pa-1 justify-end">
+                                                            <span @onclick:stopPropagation="true">
+                                                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                              Color="Color.Primary"
+                                                                              Size="Size.Small"
+                                                                              OnClick="@(() => EditPhoto(campsitePhoto))" />
+                                                            </span>
+                                                            <span @onclick:stopPropagation="true">
+                                                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                              Color="Color.Error"
+                                                                              Size="Size.Small"
+                                                                              OnClick="@(() => DeletePhoto(campsitePhoto))" />
+                                                            </span>
+                                                        </MudCardActions>
+                                                    }
                                                 </MudCard>
                                             </MudItem>
                                         }
@@ -509,6 +548,9 @@
 </MudContainer>
 
 @code {
+    // Role-based access control
+    private bool _isAdmin = false;
+
     // Newsletter fields
     private int _selectedCampsiteId = 0;
     private string _newsletterSubject = "";
@@ -540,8 +582,20 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await CheckUserRole();
         await LoadData();
         await LoadPhotosAsync();
+    }
+
+    private async Task CheckUserRole()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var role = user.FindFirst(ClaimTypes.Role)?.Value;
+            _isAdmin = role == "Admin";
+        }
     }
 
     private async Task RefreshData()

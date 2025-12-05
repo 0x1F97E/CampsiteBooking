@@ -3,6 +3,7 @@ using CampsiteBooking.Models;
 using CampsiteBooking.Models.ValueObjects;
 using CampsiteBooking.Models.Common;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor;
 
@@ -13,12 +14,14 @@ public class PricingManagementBase : ComponentBase
     [Inject] protected IDialogService DialogService { get; set; } = default!;
     [Inject] protected ISnackbar Snackbar { get; set; } = default!;
     [Inject] protected IDbContextFactory<CampsiteBookingDbContext> DbContextFactory { get; set; } = default!;
+    [Inject] protected AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
 
     protected int _selectedCampsiteId = 1;
     protected List<CampsitePricingDto> _campsites = new();
     protected List<SeasonalMultiplierDto> _seasonalMultipliers = new();
     protected List<DiscountDto> _discounts = new();
     protected bool _loading = true;
+    protected bool _isAdmin = false;
 
     // Preview calculator
     protected int _previewCampsiteId = 0;
@@ -41,6 +44,11 @@ public class PricingManagementBase : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        // Check if user is Admin
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _isAdmin = user.IsInRole("Admin");
+
         await LoadPricingData();
         await LoadSeasonalPricing();
         await LoadDiscounts();

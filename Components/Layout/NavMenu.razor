@@ -35,11 +35,7 @@
             <MudNavLink Href="/admin/campsites" Icon="@Icons.Material.Filled.Cabin">Campsites</MudNavLink>
             <MudNavLink Href="/admin/bookings" Icon="@Icons.Material.Filled.BookOnline">Bookings</MudNavLink>
             <MudNavLink Href="/admin/pricing" Icon="@Icons.Material.Filled.AttachMoney">Pricing</MudNavLink>
-            @* Only show Users management for Admin *@
-            @if (_isAdmin)
-            {
-                <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">Users</MudNavLink>
-            }
+            <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">Users</MudNavLink>
             <MudNavLink Href="/admin/information" Icon="@Icons.Material.Filled.Newspaper">Information & Newsletter</MudNavLink>
         </MudNavGroup>
     }
