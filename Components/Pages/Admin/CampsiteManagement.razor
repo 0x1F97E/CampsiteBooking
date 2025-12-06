@@ -460,12 +460,28 @@
                                                                                                 }
                                                                                             </div>
                                                                                         </div>
-                                                                                        @if (spot.Latitude != 0 || spot.Longitude != 0)
-                                                                                        {
-                                                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                                                                📍 @spot.Latitude.ToString("F5"), @spot.Longitude.ToString("F5")
-                                                                                            </MudText>
-                                                                                        }
+                                                                                        <div class="d-flex gap-2 mt-2">
+                                                                                            <MudNumericField T="double" @bind-Value="spot.Latitude"
+                                                                                                             Label="Lat"
+                                                                                                             Variant="Variant.Outlined"
+                                                                                                             Margin="Margin.Dense"
+                                                                                                             Min="-90"
+                                                                                                             Max="90"
+                                                                                                             Step="0.00001"
+                                                                                                             Format="F5"
+                                                                                                             ReadOnly="@(!_isAdmin)"
+                                                                                                             Style="flex: 1;" />
+                                                                                            <MudNumericField T="double" @bind-Value="spot.Longitude"
+                                                                                                             Label="Lng"
+                                                                                                             Variant="Variant.Outlined"
+                                                                                                             Margin="Margin.Dense"
+                                                                                                             Min="-180"
+                                                                                                             Max="180"
+                                                                                                             Step="0.00001"
+                                                                                                             Format="F5"
+                                                                                                             ReadOnly="@(!_isAdmin)"
+                                                                                                             Style="flex: 1;" />
+                                                                                        </div>
                                                                                     </MudCard>
                                                                                 </MudItem>
                                                                             }
