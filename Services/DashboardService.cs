@@ -29,8 +29,9 @@ public class DashboardService : IDashboardService
     public async Task<List<string>> GetAvailableSeasonsAsync(CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        // Use EF.Property to access the private field since SeasonName property is ignored in EF config
         return await context.SeasonalPricings
-            .Select(sp => sp.SeasonName)
+            .Select(sp => EF.Property<string>(sp, "_seasonName"))
             .Distinct()
             .OrderBy(s => s)
             .ToListAsync(cancellationToken);
@@ -100,34 +101,44 @@ public class DashboardService : IDashboardService
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var bookings = await GetFilteredBookingsAsync(context, filter, cancellationToken);
 
-        var stays = bookings.Select(b => (b.Period.EndDate - b.Period.StartDate).Days).ToList();
+        // Define stay duration categories
+        var categoryDefinitions = new (string Name, int MinNights, int MaxNights)[]
+        {
+            ("1-2 nights", 1, 2),
+            ("3-5 nights", 3, 5),
+            ("6-7 nights", 6, 7),
+            ("8-14 nights", 8, 14),
+            ("15+ nights", 15, int.MaxValue)
+        };
 
-        var distribution = stays
-            .GroupBy(nights => GetLengthCategory(nights))
-            .Select(g => new LengthOfStayData { Category = g.Key, Count = g.Count() })
-            .OrderBy(d => GetCategoryOrder(d.Category))
+        // Calculate nights for each booking and group by category
+        var bookingDurations = bookings
+            .Select(b => (b.Period.EndDate - b.Period.StartDate).Days)
             .ToList();
+
+        var totalBookings = bookingDurations.Count;
+        var totalNights = bookingDurations.Sum();
+        var averageNights = totalBookings > 0 ? (double)totalNights / totalBookings : 0;
+
+        // Group bookings into categories
+        var categories = categoryDefinitions.Select(cat =>
+        {
+            var count = bookingDurations.Count(nights => nights >= cat.MinNights && nights <= cat.MaxNights);
+            return new LengthOfStayCategory
+            {
+                Category = cat.Name,
+                BookingCount = count,
+                Percentage = totalBookings > 0 ? (double)count / totalBookings * 100 : 0
+            };
+        }).ToList();
 
         return new LengthOfStayStats
         {
-            Distribution = distribution,
-            AverageNights = stays.Any() ? stays.Average() : 0
+            Categories = categories,
+            AverageNights = averageNights,
+            TotalBookings = totalBookings
         };
     }
-
-    private static string GetLengthCategory(int nights) => nights switch
-    {
-        <= 2 => "1-2 nights",
-        <= 5 => "3-5 nights",
-        <= 7 => "6-7 nights",
-        <= 14 => "8-14 nights",
-        _ => "15+ nights"
-    };
-
-    private static int GetCategoryOrder(string cat) => cat switch
-    {
-        "1-2 nights" => 1, "3-5 nights" => 2, "6-7 nights" => 3, "8-14 nights" => 4, _ => 5
-    };
 
     public async Task<CountryStats> GetCountryStatsAsync(DashboardFilter filter, CancellationToken cancellationToken = default)
     {
@@ -158,34 +169,6 @@ public class DashboardService : IDashboardService
         };
     }
 
-    public async Task<NewUserStats> GetNewUserStatsAsync(DashboardFilter filter, CancellationToken cancellationToken = default)
-    {
-        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var guests = await context.Guests.ToListAsync(cancellationToken);
-
-        // Filter by years client-side (JoinedDate may be mapped via private field)
-        if (filter.Years.Any())
-            guests = guests.Where(g => filter.Years.Contains(g.JoinedDate.Year)).ToList();
-
-        var monthlyData = guests
-            .GroupBy(g => new { g.JoinedDate.Year, g.JoinedDate.Month })
-            .Select(g => new NewUserMonthData
-            {
-                Year = g.Key.Year,
-                Month = g.Key.Month,
-                NewUserCount = g.Count(),
-                MonthName = MonthNames[g.Key.Month - 1]
-            })
-            .OrderBy(d => d.Year).ThenBy(d => d.Month)
-            .ToList();
-
-        return new NewUserStats
-        {
-            MonthlyData = monthlyData,
-            TotalNewUsers = monthlyData.Sum(d => d.NewUserCount)
-        };
-    }
-
     private async Task<List<Booking>> GetFilteredBookingsAsync(CampsiteBookingDbContext context, DashboardFilter filter, CancellationToken cancellationToken)
     {
         // Load all bookings first, then filter client-side (properties mapped via private fields)
@@ -199,13 +182,43 @@ public class DashboardService : IDashboardService
 
         if (filter.Seasons.Any())
         {
-            var seasonDates = await context.SeasonalPricings
-                .Where(sp => filter.Seasons.Contains(sp.SeasonName))
-                .Select(sp => new { sp.StartDate, sp.EndDate })
-                .ToListAsync(cancellationToken);
+            // Load seasonal pricing data using EF.Property to access private fields
+            var seasonalPricings = await context.SeasonalPricings.ToListAsync(cancellationToken);
 
-            bookings = bookings.Where(b => seasonDates.Any(sd =>
-                b.Period.StartDate >= sd.StartDate && b.Period.StartDate <= sd.EndDate)).ToList();
+            // Get unique season date ranges for the selected seasons (year-agnostic using month/day)
+            var seasonDateRanges = seasonalPricings
+                .Where(sp => filter.Seasons.Contains(sp.SeasonName))
+                .Select(sp => new {
+                    StartMonth = sp.StartDate.Month,
+                    StartDay = sp.StartDate.Day,
+                    EndMonth = sp.EndDate.Month,
+                    EndDay = sp.EndDate.Day
+                })
+                .Distinct()
+                .ToList();
+
+            // Filter bookings where the start date falls within any of the season date ranges (year-agnostic)
+            bookings = bookings.Where(b =>
+            {
+                var bookingMonth = b.Period.StartDate.Month;
+                var bookingDay = b.Period.StartDate.Day;
+
+                return seasonDateRanges.Any(range =>
+                {
+                    // Handle seasons that don't cross year boundary (e.g., June 1 - Aug 31)
+                    if (range.StartMonth <= range.EndMonth)
+                    {
+                        return (bookingMonth > range.StartMonth || (bookingMonth == range.StartMonth && bookingDay >= range.StartDay))
+                            && (bookingMonth < range.EndMonth || (bookingMonth == range.EndMonth && bookingDay <= range.EndDay));
+                    }
+                    // Handle seasons that cross year boundary (e.g., Nov 1 - Mar 31)
+                    else
+                    {
+                        return (bookingMonth > range.StartMonth || (bookingMonth == range.StartMonth && bookingDay >= range.StartDay))
+                            || (bookingMonth < range.EndMonth || (bookingMonth == range.EndMonth && bookingDay <= range.EndDay));
+                    }
+                });
+            }).ToList();
         }
 
         return bookings;

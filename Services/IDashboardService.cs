@@ -14,7 +14,6 @@ public interface IDashboardService
     Task<RevenueStats> GetRevenueStatsAsync(DashboardFilter filter, CancellationToken cancellationToken = default);
     Task<LengthOfStayStats> GetLengthOfStayStatsAsync(DashboardFilter filter, CancellationToken cancellationToken = default);
     Task<CountryStats> GetCountryStatsAsync(DashboardFilter filter, CancellationToken cancellationToken = default);
-    Task<NewUserStats> GetNewUserStatsAsync(DashboardFilter filter, CancellationToken cancellationToken = default);
 }
 
 public class DashboardFilter
@@ -61,14 +60,16 @@ public class RevenueMonthData : MonthlyDataPoint
 
 public class LengthOfStayStats
 {
-    public List<LengthOfStayData> Distribution { get; set; } = new();
+    public List<LengthOfStayCategory> Categories { get; set; } = new();
     public double AverageNights { get; set; }
+    public int TotalBookings { get; set; }
 }
 
-public class LengthOfStayData
+public class LengthOfStayCategory
 {
     public string Category { get; set; } = string.Empty;
-    public int Count { get; set; }
+    public int BookingCount { get; set; }
+    public double Percentage { get; set; }
 }
 
 public class CountryStats
@@ -84,14 +85,5 @@ public class CountryData
     public double Percentage { get; set; }
 }
 
-public class NewUserStats
-{
-    public List<NewUserMonthData> MonthlyData { get; set; } = new();
-    public int TotalNewUsers { get; set; }
-}
 
-public class NewUserMonthData : MonthlyDataPoint
-{
-    public int NewUserCount { get; set; }
-}
 
