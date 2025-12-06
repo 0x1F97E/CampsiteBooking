@@ -41,13 +41,24 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="3">
-                <MudSelect T="string" Label="Season" MultiSelection="true" @bind-SelectedValues="_selectedSeasons"
-                           Variant="Variant.Outlined" Placeholder="All Seasons" Clearable="true">
-                    @foreach (var season in _availableSeasons)
-                    {
-                        <MudSelectItem T="string" Value="@season">@season</MudSelectItem>
-                    }
-                </MudSelect>
+                @if (IsSeasonFilterApplicable)
+                {
+                    <MudSelect T="string" Label="Season" MultiSelection="true" @bind-SelectedValues="_selectedSeasons"
+                               Variant="Variant.Outlined" Placeholder="All Seasons" Clearable="true">
+                        @foreach (var season in _availableSeasons)
+                        {
+                            <MudSelectItem T="string" Value="@season">@season</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+                else
+                {
+                    <MudTooltip Text="Season filter only applies to Length of Stay and Guest Countries tabs">
+                        <MudSelect T="string" Label="Season" Disabled="true"
+                                   Variant="Variant.Outlined" Placeholder="N/A for this tab">
+                        </MudSelect>
+                    </MudTooltip>
+                }
             </MudItem>
             <MudItem xs="12" md="3" Class="d-flex align-center">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
@@ -124,6 +135,9 @@
     private bool _isLoading = true;
     private int _activeTab = 0;
 
+    // Season filter is only applicable for Length of Stay (tab 2) and Guest Countries (tab 3)
+    private bool IsSeasonFilterApplicable => _activeTab == 2 || _activeTab == 3;
+
     // Filter options
     private List<CampsiteInfo> _availableCampsites = new();
     private List<int> _availableYears = new();
@@ -188,18 +202,29 @@
             _isLoading = true;
             StateHasChanged();
 
-            var filter = new DashboardFilter
+            // Base filter without seasonal filtering (for Bookings and Revenue tabs)
+            var baseFilter = new DashboardFilter
             {
                 CampsiteIds = _selectedCampsiteIds.ToList(),
                 Years = _selectedYears.ToList(),
-                Seasons = _selectedSeasons.ToList()
+                Seasons = new List<string>() // No seasonal filtering for aggregate metrics
+            };
+
+            // Seasonal filter (for Length of Stay and Guest Countries tabs)
+            var seasonalFilter = new DashboardFilter
+            {
+                CampsiteIds = _selectedCampsiteIds.ToList(),
+                Years = _selectedYears.ToList(),
+                Seasons = _selectedSeasons.ToList() // Apply seasonal filtering for behavior analysis
             };
 
             // Load all data in parallel using separate task variables
-            var bookingTask = DashboardService.GetBookingStatsAsync(filter);
-            var revenueTask = DashboardService.GetRevenueStatsAsync(filter);
-            var lengthOfStayTask = DashboardService.GetLengthOfStayStatsAsync(filter);
-            var countryTask = DashboardService.GetCountryStatsAsync(filter);
+            // Bookings and Revenue use baseFilter (no seasonal filtering)
+            // Length of Stay and Guest Countries use seasonalFilter (seasonal filtering if selected)
+            var bookingTask = DashboardService.GetBookingStatsAsync(baseFilter);
+            var revenueTask = DashboardService.GetRevenueStatsAsync(baseFilter);
+            var lengthOfStayTask = DashboardService.GetLengthOfStayStatsAsync(seasonalFilter);
+            var countryTask = DashboardService.GetCountryStatsAsync(seasonalFilter);
 
             await Task.WhenAll(bookingTask, revenueTask, lengthOfStayTask, countryTask);
 
