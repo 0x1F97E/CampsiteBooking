@@ -1,3 +1,45 @@
+@rendermode InteractiveServer
+@inject IJSRuntime JSRuntime
+
 <!-- Google Translate Widget Container -->
 <div id="google_translate_element"></div>
 
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Reinitialize Google Translate widget after Blazor renders the component
+            await Task.Delay(100); // Small delay to ensure DOM is ready
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("eval", @"
+                    (function() {
+                        function initTranslate() {
+                            var container = document.getElementById('google_translate_element');
+                            if (container && typeof google !== 'undefined' && google.translate && google.translate.TranslateElement) {
+                                // Clear any existing content
+                                container.innerHTML = '';
+                                // Reinitialize the widget
+                                new google.translate.TranslateElement({
+                                    pageLanguage: 'en',
+                                    includedLanguages: 'en,da,de,sv,no,nl',
+                                    layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                                    autoDisplay: false
+                                }, 'google_translate_element');
+                            } else {
+                                // Retry if Google Translate is not loaded yet
+                                setTimeout(initTranslate, 200);
+                            }
+                        }
+                        initTranslate();
+                    })();
+                ");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing Google Translate: {ex.Message}");
+            }
+        }
+    }
+}
