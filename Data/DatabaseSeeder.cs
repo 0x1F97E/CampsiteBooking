@@ -383,7 +383,10 @@ public static class DatabaseSeeder
         // Seed Newsletters
         await SeedNewsletters(context);
 
-        // Seed Sample Bookings (must be last, after users and accommodation spots)
+        // Seed comprehensive user data for dashboard analytics (must be before bookings)
+        await SeedComprehensiveUsers(context);
+
+        // Seed Sample Bookings (must be after users and accommodation spots)
         await SeedBookings(context);
 
         // Seed Payments (after bookings)
@@ -412,63 +415,6 @@ public static class DatabaseSeeder
 
         // Seed Maintenance Tasks (after campsites and accommodation spots)
         await SeedMaintenanceTasks(context);
-
-        // Delete ALL users (they have NULL values in new columns and need to be recreated)
-        await context.Database.ExecuteSqlRawAsync("DELETE FROM Users");
-
-        // Reset auto-increment counter
-        await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users AUTO_INCREMENT = 1");
-
-        // Check if users exist using raw SQL (to avoid EF Core trying to load NULL values)
-        var userCount = await context.Database.SqlQueryRaw<int>("SELECT COUNT(*) as Value FROM Users").FirstOrDefaultAsync();
-
-        // Seed Users if none exist
-        if (userCount == 0)
-        {
-            // Get the actual campsite IDs from the database for Staff member creation
-            var campsiteIdsForUsers = await context.Database.SqlQueryRaw<int>("SELECT Id as Value FROM Campsites ORDER BY Id").ToListAsync();
-
-            // Create password hasher (ASP.NET Core Identity)
-            var passwordHasher = new PasswordHasher<User>();
-
-            // Add users one by one to avoid ID conflicts (all have ID = 0 before persistence)
-            var guest1 = Guest.Create(Email.Create("john.doe@example.com"), "John", "Doe", "+45 12 34 56 78", "Denmark");
-            guest1.SetPasswordHash(passwordHasher.HashPassword(guest1, "Password123!")); // Demo password
-            await context.Users.AddAsync(guest1);
-            await context.SaveChangesAsync();
-            context.Entry(guest1).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-
-            var guest2 = Guest.Create(Email.Create("jane.smith@example.com"), "Jane", "Smith", "+45 23 45 67 89", "Denmark");
-            guest2.SetPasswordHash(passwordHasher.HashPassword(guest2, "Password123!"));
-            await context.Users.AddAsync(guest2);
-            await context.SaveChangesAsync();
-            context.Entry(guest2).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-
-            var guest3 = Guest.Create(Email.Create("mike.johnson@example.com"), "Mike", "Johnson", "+45 34 56 78 90", "Sweden");
-            guest3.SetPasswordHash(passwordHasher.HashPassword(guest3, "Password123!"));
-            await context.Users.AddAsync(guest3);
-            await context.SaveChangesAsync();
-            context.Entry(guest3).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-
-            var admin = Admin.Create(Email.Create("admin@campsitebooking.dk"), "Admin", "User", "+45 45 67 89 01", "Denmark");
-            admin.SetPasswordHash(passwordHasher.HashPassword(admin, "Admin123!"));
-            await context.Users.AddAsync(admin);
-            await context.SaveChangesAsync();
-            context.Entry(admin).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-
-            var staff = Staff.Create(Email.Create("staff@campsitebooking.dk"), "Staff", "Member", "EMP001", CampsiteId.Create(campsiteIdsForUsers[0]), DateTime.UtcNow.AddYears(-2), "", "+45 56 78 90 12", "Denmark");
-            staff.SetPasswordHash(passwordHasher.HashPassword(staff, "Staff123!"));
-            await context.Users.AddAsync(staff);
-            await context.SaveChangesAsync();
-            context.Entry(staff).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-
-            Console.WriteLine("✅ Seeded users with hashed passwords:");
-            Console.WriteLine("   - john.doe@example.com / Password123!");
-            Console.WriteLine("   - jane.smith@example.com / Password123!");
-            Console.WriteLine("   - mike.johnson@example.com / Password123!");
-            Console.WriteLine("   - admin@campsitebooking.dk / Admin123!");
-            Console.WriteLine("   - staff@campsitebooking.dk / Staff123!");
-        }
 
         // Force re-seed photos to ensure proper data for organized gallery display
         if (await context.Photos.AnyAsync())
@@ -807,7 +753,9 @@ public static class DatabaseSeeder
 
     private static async Task SeedBookings(CampsiteBookingDbContext context)
     {
-        // Delete existing bookings
+        Console.WriteLine("🔄 Seeding comprehensive booking data for dashboard analytics...");
+
+        // Delete existing bookings and related data
         await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 0");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE Bookings");
         await context.Database.ExecuteSqlRawAsync("SET FOREIGN_KEY_CHECKS = 1");
@@ -821,169 +769,204 @@ public static class DatabaseSeeder
         }
 
         // Get all guests
-            var allGuests = await context.Guests.ToListAsync();
-            if (allGuests.Count == 0) return; // No guests to create bookings for
+        var allGuests = await context.Guests.ToListAsync();
+        if (allGuests.Count == 0)
+        {
+            Console.WriteLine("❌ No guests found. Skipping bookings seeding.");
+            return;
+        }
 
-            // Get all accommodation types
-            var allAccommodationTypes = await context.AccommodationTypes.ToListAsync();
-            if (allAccommodationTypes.Count == 0) return; // No accommodation types
+        // Get all accommodation types
+        var allAccommodationTypes = await context.AccommodationTypes.ToListAsync();
+        if (allAccommodationTypes.Count == 0)
+        {
+            Console.WriteLine("❌ No accommodation types found. Skipping bookings seeding.");
+            return;
+        }
 
-            // No longer need to synchronize ID columns since we're using the Id property directly with value converters
+        // Update AccommodationSpots.AccommodationTypeId based on the mapping
+        await context.Database.ExecuteSqlRawAsync(@"
+            UPDATE AccommodationSpots AS s
+            INNER JOIN AccommodationTypes AS t ON s.CampsiteId = t.CampsiteId
+            SET s.AccommodationTypeId = t.Id
+            WHERE s.AccommodationTypeId = 0
+            AND (
+                (s.Type = 'Cabin' AND t.Type = 'Cabin') OR
+                (s.Type = 'Tent' AND t.Type = 'Tent Site') OR
+                (s.Type = 'Caravan' AND t.Type = 'RV Spot') OR
+                (s.Type = 'Premium' AND t.Type = 'Glamping')
+            )
+        ");
 
-            // Update AccommodationSpots.AccommodationTypeId based on the mapping between spot types and accommodation types
-            // The mapping is: Cabin -> Cabin, Tent -> Tent Site, Caravan -> RV Spot, Premium -> Glamping
-            await context.Database.ExecuteSqlRawAsync(@"
-                UPDATE AccommodationSpots AS s
-                INNER JOIN AccommodationTypes AS t ON s.CampsiteId = t.CampsiteId
-                SET s.AccommodationTypeId = t.Id
-                WHERE s.AccommodationTypeId = 0
-                AND (
-                    (s.Type = 'Cabin' AND t.Type = 'Cabin') OR
-                    (s.Type = 'Tent' AND t.Type = 'Tent Site') OR
-                    (s.Type = 'Caravan' AND t.Type = 'RV Spot') OR
-                    (s.Type = 'Premium' AND t.Type = 'Glamping')
-                )
-            ");
+        // Get all accommodation spots
+        var allAccommodationSpots = await context.AccommodationSpots.ToListAsync();
+        if (allAccommodationSpots.Count == 0)
+        {
+            Console.WriteLine("❌ No accommodation spots found. Skipping bookings seeding.");
+            return;
+        }
 
-            // Get all accommodation spots
-            var allAccommodationSpots = await context.AccommodationSpots.ToListAsync();
-            if (allAccommodationSpots.Count == 0) return; // No accommodation spots
+        var random = new Random(42); // Fixed seed for reproducibility
+        var guestIds = allGuests.Select(g => g.GuestId).ToList();
+        var bookingCount = 0;
 
-            // Booking 1: John Doe - Copenhagen Beach Camp - Cabin - Confirmed
-            var guest1 = allGuests.FirstOrDefault(g => g.Email?.Value == "john.doe@example.com");
-            var cabin1 = allAccommodationTypes.FirstOrDefault(a => a.CampsiteId?.Value == 1 && a.Type == "Cabin");
-            if (guest1 != null && cabin1 != null)
+        // Status distribution: 60% Completed, 20% Confirmed, 10% Pending, 10% Cancelled
+        var statuses = new[] { "Completed", "Confirmed", "Pending", "Cancelled" };
+        var statusWeights = new[] { 60, 20, 10, 10 };
+
+        // Seasonal multipliers: More bookings in summer
+        var monthMultipliers = new Dictionary<int, double>
+        {
+            { 1, 0.3 },   // January - Low
+            { 2, 0.3 },   // February - Low
+            { 3, 0.5 },   // March - Moderate
+            { 4, 0.7 },   // April - Moderate
+            { 5, 0.9 },   // May - High
+            { 6, 1.5 },   // June - Peak
+            { 7, 2.0 },   // July - Peak
+            { 8, 1.8 },   // August - Peak
+            { 9, 0.8 },   // September - Moderate
+            { 10, 0.5 },  // October - Moderate
+            { 11, 0.3 },  // November - Low
+            { 12, 0.4 }   // December - Low (some holiday bookings)
+        };
+
+        // Length of stay distribution (in nights)
+        var stayLengths = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 10, 14, 21 };
+        var stayWeights = new[] { 5, 15, 15, 10, 10, 10, 20, 5, 5, 3, 2 };
+
+        // Generate bookings from 2022 to 2025
+        for (int year = 2022; year <= 2025; year++)
+        {
+            // Year growth factor: More bookings in recent years
+            var yearFactor = year switch
             {
-                var spot1 = allAccommodationSpots.FirstOrDefault(s => s.AccommodationTypeId.Value == cabin1.Id.Value);
-                if (spot1 != null)
-                {
-                    var booking1 = Booking.Create(
-                        GuestId.Create(guest1.GuestId),
-                        CampsiteId.Create(campsiteIds[0]),
-                        cabin1.Id,
-                        DateRange.Create(DateTime.Now.AddDays(30), DateTime.Now.AddDays(37)),
-                        Money.Create(150m, "DKK"),
-                        2,
-                        1,
-                        "Please provide extra towels"
-                    );
-                    booking1.GetType().GetMethod("AssignAccommodationSpot")?.Invoke(booking1, new object[] { spot1.Id });
-                    booking1.GetType().GetMethod("Confirm")?.Invoke(booking1, Array.Empty<object>());
-                    await context.Bookings.AddAsync(booking1);
-                    await context.SaveChangesAsync();
-                    context.Entry(booking1).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-                }
-            }
+                2022 => 0.6,
+                2023 => 0.8,
+                2024 => 1.0,
+                2025 => 1.2,
+                _ => 1.0
+            };
 
-            // Booking 2: Jane Smith - Skagen North Point - Tent Site - Pending
-            var guest2 = allGuests.FirstOrDefault(g => g.Email?.Value == "jane.smith@example.com");
-            var tent2 = allAccommodationTypes.FirstOrDefault(a => a.CampsiteId?.Value == 2 && a.Type == "Tent Site");
-            if (guest2 != null && tent2 != null)
+            for (int month = 1; month <= 12; month++)
             {
-                var spot2 = allAccommodationSpots.FirstOrDefault(s => s.AccommodationTypeId.Value == tent2.Id.Value);
-                if (spot2 != null)
-                {
-                    var booking2 = Booking.Create(
-                        GuestId.Create(guest2.GuestId),
-                        CampsiteId.Create(campsiteIds[1]),
-                        tent2.Id,
-                        DateRange.Create(DateTime.Now.AddDays(15), DateTime.Now.AddDays(18)),
-                        Money.Create(55m, "DKK"),
-                        2,
-                        0,
-                        ""
-                    );
-                    booking2.GetType().GetMethod("AssignAccommodationSpot")?.Invoke(booking2, new object[] { spot2.Id });
-                    await context.Bookings.AddAsync(booking2);
-                    await context.SaveChangesAsync();
-                    context.Entry(booking2).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-                }
-            }
+                // Skip future months in 2025
+                if (year == 2025 && month > 12) continue;
 
-            // Booking 3: Mike Johnson - Aarhus Forest Retreat - Cabin - Confirmed
-            var guest3 = allGuests.FirstOrDefault(g => g.Email?.Value == "mike.johnson@example.com");
-            var cabin3 = allAccommodationTypes.FirstOrDefault(a => a.CampsiteId?.Value == 3 && a.Type == "Cabin");
-            if (guest3 != null && cabin3 != null)
-            {
-                var spot3 = allAccommodationSpots.FirstOrDefault(s => s.AccommodationTypeId.Value == cabin3.Id.Value);
-                if (spot3 != null)
-                {
-                    var booking3 = Booking.Create(
-                        GuestId.Create(guest3.GuestId),
-                        CampsiteId.Create(campsiteIds[2]),
-                        cabin3.Id,
-                        DateRange.Create(DateTime.Now.AddDays(45), DateTime.Now.AddDays(52)),
-                        Money.Create(120m, "DKK"),
-                        2,
-                        2,
-                        "Arriving late, please keep key at reception"
-                    );
-                    booking3.GetType().GetMethod("AssignAccommodationSpot")?.Invoke(booking3, new object[] { spot3.Id });
-                    booking3.GetType().GetMethod("Confirm")?.Invoke(booking3, Array.Empty<object>());
-                    await context.Bookings.AddAsync(booking3);
-                    await context.SaveChangesAsync();
-                    context.Entry(booking3).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-                }
-            }
+                var baseBookingsPerMonth = 8; // Base number of bookings
+                var monthlyBookings = (int)(baseBookingsPerMonth * monthMultipliers[month] * yearFactor);
 
-            // Booking 4: John Doe - Copenhagen Beach Camp - Glamping - Completed (changed to future dates to avoid validation error)
-            if (guest1 != null)
-            {
-                var glamping1 = allAccommodationTypes.FirstOrDefault(a => a.CampsiteId?.Value == 1 && a.Type == "Glamping");
-                if (glamping1 != null)
+                for (int i = 0; i < monthlyBookings; i++)
                 {
-                    var spot4 = allAccommodationSpots.FirstOrDefault(s => s.AccommodationTypeId.Value == glamping1.Id.Value);
-                    if (spot4 != null)
+                    // Select random guest, campsite, accommodation type
+                    var guestId = guestIds[random.Next(guestIds.Count)];
+                    var campsiteId = campsiteIds[random.Next(campsiteIds.Count)];
+                    var accommodationType = allAccommodationTypes
+                        .Where(a => a.CampsiteId?.Value == campsiteId)
+                        .OrderBy(_ => random.Next())
+                        .FirstOrDefault();
+
+                    if (accommodationType == null) continue;
+
+                    var spot = allAccommodationSpots
+                        .Where(s => s.AccommodationTypeId.Value == accommodationType.Id.Value)
+                        .OrderBy(_ => random.Next())
+                        .FirstOrDefault();
+
+                    // Generate random start date within the month
+                    var daysInMonth = DateTime.DaysInMonth(year, month);
+                    var startDay = random.Next(1, Math.Max(1, daysInMonth - 14));
+                    var startDate = new DateTime(year, month, startDay);
+
+                    // Select length of stay using weighted random
+                    var stayLength = GetWeightedRandom(stayLengths, stayWeights, random);
+                    var endDate = startDate.AddDays(stayLength);
+
+                    // Generate price based on accommodation type and length
+                    var basePrice = accommodationType.Type switch
                     {
-                        var booking4 = Booking.Create(
-                            GuestId.Create(guest1.GuestId),
-                            CampsiteId.Create(campsiteIds[0]),
-                            glamping1.Id,
-                            DateRange.Create(DateTime.Now.AddDays(60), DateTime.Now.AddDays(65)),
-                            Money.Create(220m, "DKK"),
-                            2,
-                            0,
-                            ""
-                        );
-                        booking4.GetType().GetMethod("AssignAccommodationSpot")?.Invoke(booking4, new object[] { spot4.Id });
-                        booking4.GetType().GetMethod("Confirm")?.Invoke(booking4, Array.Empty<object>());
-                        booking4.GetType().GetMethod("Complete")?.Invoke(booking4, Array.Empty<object>());
-                        await context.Bookings.AddAsync(booking4);
-                        await context.SaveChangesAsync();
-                        context.Entry(booking4).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
-                    }
-                }
-            }
+                        "Cabin" => random.Next(800, 1500),
+                        "Glamping" => random.Next(1200, 2000),
+                        "Tent Site" => random.Next(200, 500),
+                        "RV Spot" => random.Next(400, 800),
+                        _ => random.Next(500, 1000)
+                    };
+                    var totalPrice = basePrice * stayLength;
 
-            // Booking 5: Jane Smith - Bornholm Island Camp - Cabin - Cancelled
-            if (guest2 != null)
-            {
-                var cabin5 = allAccommodationTypes.FirstOrDefault(a => a.CampsiteId?.Value == 5 && a.Type == "Cabin");
-                if (cabin5 != null)
-                {
-                    var spot5 = allAccommodationSpots.FirstOrDefault(s => s.AccommodationTypeId.Value == cabin5.Id.Value);
-                    if (spot5 != null)
+                    // Select status using weighted random
+                    var status = GetWeightedRandom(statuses, statusWeights, random);
+
+                    // Adults and children
+                    var adults = random.Next(1, 5);
+                    var children = random.Next(0, 4);
+
+                    // Created date (slightly before start date)
+                    var createdDate = startDate.AddDays(-random.Next(1, 60));
+                    if (createdDate < new DateTime(2022, 1, 1))
+                        createdDate = new DateTime(2022, 1, 1).AddDays(random.Next(0, 30));
+
+                    // Insert using raw SQL to bypass date validation
+                    // Build period in pipe-separated format (matching DateRangeConverter)
+                    var periodStr = startDate.ToString("yyyy-MM-dd") + "|" + endDate.ToString("yyyy-MM-dd");
+                    var spotIdValue = spot?.Id.Value;
+                    var cancellationDate = status == "Cancelled"
+                        ? (DateTime?)startDate.AddDays(-random.Next(1, 7))
+                        : null;
+                    var basePriceStr = basePrice + "|DKK";
+                    var totalPriceStr = totalPrice + "|DKK";
+
+                    // Use FormattableString with ExecuteSqlAsync to properly handle parameters
+                    if (spotIdValue.HasValue)
                     {
-                        var booking5 = Booking.Create(
-                            GuestId.Create(guest2.GuestId),
-                            CampsiteId.Create(campsiteIds[4]),
-                            cabin5.Id,
-                            DateRange.Create(DateTime.Now.AddDays(60), DateTime.Now.AddDays(67)),
-                            Money.Create(140m, "DKK"),
-                            2,
-                            1,
-                            ""
-                        );
-                        booking5.GetType().GetMethod("AssignAccommodationSpot")?.Invoke(booking5, new object[] { spot5.Id });
-                        booking5.GetType().GetMethod("Cancel")?.Invoke(booking5, Array.Empty<object>());
-                        await context.Bookings.AddAsync(booking5);
-                        await context.SaveChangesAsync();
-                        context.Entry(booking5).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        await context.Database.ExecuteSqlAsync(
+                            $@"INSERT INTO Bookings (
+                                GuestId, CampsiteId, AccommodationTypeId, AccommodationSpotId,
+                                Period, Status, BasePrice, TotalPrice,
+                                NumberOfAdults, NumberOfChildren, SpecialRequests,
+                                CreatedDate, LastModifiedDate, CancellationDate
+                            ) VALUES (
+                                {guestId}, {campsiteId}, {accommodationType.Id.Value}, {spotIdValue.Value},
+                                {periodStr}, {status}, {basePriceStr}, {totalPriceStr},
+                                {adults}, {children}, '',
+                                {createdDate}, {createdDate}, {cancellationDate}
+                            )");
                     }
+                    else
+                    {
+                        await context.Database.ExecuteSqlAsync(
+                            $@"INSERT INTO Bookings (
+                                GuestId, CampsiteId, AccommodationTypeId, AccommodationSpotId,
+                                Period, Status, BasePrice, TotalPrice,
+                                NumberOfAdults, NumberOfChildren, SpecialRequests,
+                                CreatedDate, LastModifiedDate, CancellationDate
+                            ) VALUES (
+                                {guestId}, {campsiteId}, {accommodationType.Id.Value}, NULL,
+                                {periodStr}, {status}, {basePriceStr}, {totalPriceStr},
+                                {adults}, {children}, '',
+                                {createdDate}, {createdDate}, {cancellationDate}
+                            )");
+                    }
+
+                    bookingCount++;
                 }
             }
+        }
 
-            // No longer need to synchronize BookingId column since we're using the Id property directly with value converters
+        Console.WriteLine($"✅ Seeded {bookingCount} historical bookings (2022-2025) for dashboard analytics");
+    }
+
+    private static T GetWeightedRandom<T>(T[] items, int[] weights, Random random)
+    {
+        var totalWeight = weights.Sum();
+        var randomValue = random.Next(totalWeight);
+        var cumulative = 0;
+        for (int i = 0; i < items.Length; i++)
+        {
+            cumulative += weights[i];
+            if (randomValue < cumulative)
+                return items[i];
+        }
+        return items[^1];
     }
 
     private static async Task SeedAccommodationSpots(CampsiteBookingDbContext context)
@@ -2040,6 +2023,129 @@ public static class DatabaseSeeder
         {
             Console.WriteLine($"   ⚠️ Could not add EventLink column: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Seeds comprehensive user data with diverse countries and varied registration dates
+    /// for dashboard analytics.
+    /// </summary>
+    private static async Task SeedComprehensiveUsers(CampsiteBookingDbContext context)
+    {
+        Console.WriteLine("🔄 Seeding comprehensive user data for dashboard analytics...");
+
+        // Delete ALL users (they need to be recreated with proper historical dates)
+        await context.Database.ExecuteSqlRawAsync("DELETE FROM Users");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users AUTO_INCREMENT = 1");
+
+        var random = new Random(42); // Fixed seed for reproducibility
+
+        // Guest data with diverse countries - prioritizing Nordic and European visitors
+        var guestData = new[]
+        {
+            // Nordic countries (most common for Danish campsite)
+            new { FirstName = "John", LastName = "Doe", Country = "Denmark", Year = 2022, Month = 1 },
+            new { FirstName = "Jane", LastName = "Smith", Country = "Denmark", Year = 2022, Month = 3 },
+            new { FirstName = "Lars", LastName = "Hansen", Country = "Denmark", Year = 2022, Month = 5 },
+            new { FirstName = "Mette", LastName = "Nielsen", Country = "Denmark", Year = 2022, Month = 8 },
+            new { FirstName = "Søren", LastName = "Christensen", Country = "Denmark", Year = 2023, Month = 2 },
+            new { FirstName = "Erik", LastName = "Johansson", Country = "Sweden", Year = 2022, Month = 4 },
+            new { FirstName = "Anna", LastName = "Lindberg", Country = "Sweden", Year = 2022, Month = 7 },
+            new { FirstName = "Knut", LastName = "Berg", Country = "Norway", Year = 2022, Month = 6 },
+            new { FirstName = "Ingrid", LastName = "Olsen", Country = "Norway", Year = 2023, Month = 4 },
+            new { FirstName = "Mikko", LastName = "Virtanen", Country = "Finland", Year = 2023, Month = 6 },
+
+            // German visitors (second largest group)
+            new { FirstName = "Hans", LastName = "Müller", Country = "Germany", Year = 2022, Month = 5 },
+            new { FirstName = "Greta", LastName = "Schmidt", Country = "Germany", Year = 2022, Month = 7 },
+            new { FirstName = "Klaus", LastName = "Weber", Country = "Germany", Year = 2023, Month = 3 },
+            new { FirstName = "Ursula", LastName = "Fischer", Country = "Germany", Year = 2023, Month = 7 },
+            new { FirstName = "Wolfgang", LastName = "Becker", Country = "Germany", Year = 2024, Month = 2 },
+
+            // Other European countries
+            new { FirstName = "Jan", LastName = "de Vries", Country = "Netherlands", Year = 2022, Month = 6 },
+            new { FirstName = "Sophie", LastName = "Bakker", Country = "Netherlands", Year = 2023, Month = 5 },
+            new { FirstName = "Pierre", LastName = "Dubois", Country = "France", Year = 2023, Month = 7 },
+            new { FirstName = "Marie", LastName = "Laurent", Country = "France", Year = 2024, Month = 4 },
+            new { FirstName = "James", LastName = "Wilson", Country = "United Kingdom", Year = 2022, Month = 8 },
+            new { FirstName = "Emma", LastName = "Thompson", Country = "United Kingdom", Year = 2024, Month = 6 },
+            new { FirstName = "Piotr", LastName = "Kowalski", Country = "Poland", Year = 2023, Month = 6 },
+            new { FirstName = "Marco", LastName = "Rossi", Country = "Italy", Year = 2024, Month = 7 },
+            new { FirstName = "Isabel", LastName = "García", Country = "Spain", Year = 2024, Month = 8 },
+            new { FirstName = "Luc", LastName = "Dupont", Country = "Belgium", Year = 2023, Month = 8 },
+
+            // Non-European visitors
+            new { FirstName = "Michael", LastName = "Johnson", Country = "United States", Year = 2024, Month = 5 },
+            new { FirstName = "Sarah", LastName = "Miller", Country = "Canada", Year = 2024, Month = 7 },
+            new { FirstName = "Yuki", LastName = "Tanaka", Country = "Japan", Year = 2024, Month = 9 },
+            new { FirstName = "Wei", LastName = "Chen", Country = "China", Year = 2025, Month = 3 },
+            new { FirstName = "Olivia", LastName = "Brown", Country = "Australia", Year = 2025, Month = 1 }
+        };
+
+        var passwordHasher = new PasswordHasher<User>();
+        var guestCount = 0;
+
+        foreach (var guest in guestData)
+        {
+            var email = $"{guest.FirstName.ToLower()}.{guest.LastName.ToLower()}@example.com"
+                .Replace(" ", "")  // Remove spaces from names like "de Vries"
+                .Replace("ø", "o").Replace("å", "a").Replace("æ", "ae")
+                .Replace("ü", "u").Replace("ö", "o").Replace("ä", "a");
+            var phone = $"+45 {random.Next(10, 99)} {random.Next(10, 99)} {random.Next(10, 99)} {random.Next(10, 99)}";
+            var joinedDate = new DateTime(guest.Year, guest.Month, random.Next(1, 28));
+            var passwordHash = passwordHasher.HashPassword(null!, "Password123!");
+
+            await context.Database.ExecuteSqlAsync(
+                $@"INSERT INTO Users (
+                    Email, FirstName, LastName, Phone, Country,
+                    PasswordHash, JoinedDate, IsActive, UserType
+                ) VALUES (
+                    {email}, {guest.FirstName}, {guest.LastName}, {phone}, {guest.Country},
+                    {passwordHash}, {joinedDate}, 1, 'Guest'
+                )");
+            guestCount++;
+        }
+
+        Console.WriteLine($"   ✅ Seeded {guestCount} guest users with diverse countries (2022-2025)");
+
+        // Add Admin user
+        var adminPasswordHash = passwordHasher.HashPassword(null!, "Admin123!");
+        var adminEmail = "admin@campsitebooking.dk";
+        var adminFirstName = "Admin";
+        var adminLastName = "User";
+        var adminPhone = "+45 45 67 89 01";
+        var adminCountry = "Denmark";
+        var adminJoinedDate = new DateTime(2022, 1, 1);
+        await context.Database.ExecuteSqlAsync(
+            $@"INSERT INTO Users (
+                Email, FirstName, LastName, Phone, Country,
+                PasswordHash, JoinedDate, IsActive, UserType
+            ) VALUES (
+                {adminEmail}, {adminFirstName}, {adminLastName}, {adminPhone}, {adminCountry},
+                {adminPasswordHash}, {adminJoinedDate}, 1, 'Admin'
+            )");
+
+        // Add Staff user (using only columns that exist in Users table)
+        var staffPasswordHash = passwordHasher.HashPassword(null!, "Staff123!");
+        var staffEmail = "staff@campsitebooking.dk";
+        var staffFirstName = "Staff";
+        var staffLastName = "Member";
+        var staffPhone = "+45 56 78 90 12";
+        var staffCountry = "Denmark";
+        var staffJoinedDate = new DateTime(2022, 6, 15);
+        await context.Database.ExecuteSqlAsync(
+            $@"INSERT INTO Users (
+                Email, FirstName, LastName, Phone, Country,
+                PasswordHash, JoinedDate, IsActive, UserType
+            ) VALUES (
+                {staffEmail}, {staffFirstName}, {staffLastName}, {staffPhone}, {staffCountry},
+                {staffPasswordHash}, {staffJoinedDate}, 1, 'Staff'
+            )");
+
+        Console.WriteLine("   ✅ Seeded Admin and Staff users");
+        Console.WriteLine("   📝 Login credentials:");
+        Console.WriteLine("      - Guests: [firstname].[lastname]@example.com / Password123!");
+        Console.WriteLine("      - Admin: admin@campsitebooking.dk / Admin123!");
+        Console.WriteLine("      - Staff: staff@campsitebooking.dk / Staff123!");
     }
 }
 
