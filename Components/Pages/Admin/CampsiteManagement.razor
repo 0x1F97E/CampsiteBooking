@@ -39,51 +39,34 @@
         }
     </div>
 
-    <!-- Campsite Search/Selector -->
+    <!-- Campsite Search/Filter Bar -->
     <MudPaper Elevation="3" Class="pa-4 mb-4">
         <MudGrid>
-            <MudItem xs="12" md="8">
-                <MudAutocomplete T="CampsiteManagementDto"
-                                 Value="_selectedCampsite"
-                                 Label="Search Campsite"
-                                 Variant="Variant.Outlined"
-                                 SearchFunc="@SearchCampsites"
-                                 ToStringFunc="@(c => c?.Name ?? "")"
-                                 ValueChanged="@OnCampsiteSelected"
-                                 Clearable="true"
-                                 Adornment="Adornment.Start"
-                                 AdornmentIcon="@Icons.Material.Filled.Search"
-                                 Immediate="true"
-                                 ResetValueOnEmptyText="true"
-                                 CoerceText="false"
-                                 CoerceValue="false">
-                    <ItemTemplate Context="campsite">
-                        <div class="d-flex align-center">
-                            <MudIcon Icon="@Icons.Material.Filled.Landscape" Class="mr-2" Color="Color.Primary" Size="Size.Small" />
-                            <div>
-                                <MudText Typo="Typo.body2"><strong>@campsite.Name</strong></MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@campsite.City - @campsite.Description</MudText>
-                            </div>
-                        </div>
-                    </ItemTemplate>
-                </MudAutocomplete>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_searchText"
+                              Label="Search Campsites"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Immediate="true"
+                              Clearable="true"
+                              Placeholder="Filter by name, city, or description..." />
             </MudItem>
-            <MudItem xs="12" md="4" Class="d-flex align-center justify-space-between">
-                <div>
-                    @if (_selectedCampsite != null)
-                    {
-                        <MudChip T="string" Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success">
-                            Selected: @_selectedCampsite.Name
-                        </MudChip>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
-                            No campsite selected
-                        </MudText>
-                    }
-                </div>
+            <MudItem xs="12" md="6" Class="d-flex align-center justify-end gap-2">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.UnfoldMore"
+                           OnClick="ExpandAllCampsites">
+                    Expand All
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Secondary"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.UnfoldLess"
+                           OnClick="CollapseAllCampsites">
+                    Collapse All
+                </MudButton>
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Info"
                            Size="Size.Small"
@@ -95,192 +78,240 @@
         </MudGrid>
     </MudPaper>
 
-    <!-- Campsite Details Section -->
-    @if (_selectedCampsite != null)
-    {
-        <MudPaper Elevation="3" Class="pa-4 mb-4">
-            <div class="d-flex justify-space-between align-center mb-4">
-                <MudText Typo="Typo.h5">
-                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
-                    Campsite Details
-                </MudText>
-            </div>
-
-            <MudGrid>
-                <!-- Description Section -->
-                <MudItem xs="12">
-                    <MudText Typo="Typo.subtitle1" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-1" />
-                        Description
-                    </MudText>
-                    <MudTextField @bind-Value="_selectedCampsite.Description"
-                                  Label="Campsite Description"
-                                  Variant="Variant.Outlined"
-                                  Lines="4"
-                                  ReadOnly="@(!_isAdmin)"
-                                  Placeholder="Enter a detailed description of the campsite..."
-                                  HelperText="Provide information about the campsite location, features, and attractions" />
-                </MudItem>
-
-                <!-- Location Coordinates Section -->
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
-                        Latitude
-                    </MudText>
-                    <MudNumericField @bind-Value="_selectedCampsite.Latitude"
-                                     Label="Latitude"
-                                     Variant="Variant.Outlined"
-                                     Min="-90"
-                                     Max="90"
-                                     Step="0.0001"
-                                     ReadOnly="@(!_isAdmin)"
-                                     Placeholder="e.g., 55.6761"
-                                     HelperText="Latitude coordinate (-90 to 90)" />
-                </MudItem>
-
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
-                        Longitude
-                    </MudText>
-                    <MudNumericField @bind-Value="_selectedCampsite.Longitude"
-                                     Label="Longitude"
-                                     Variant="Variant.Outlined"
-                                     Min="-180"
-                                     Max="180"
-                                     Step="0.0001"
-                                     ReadOnly="@(!_isAdmin)"
-                                     Placeholder="e.g., 12.5683"
-                                     HelperText="Longitude coordinate (-180 to 180)" />
-                </MudItem>
-
-                <!-- Main Image Section -->
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Small" Class="mr-1" />
-                        Main Image
-                    </MudText>
-                    <MudTextField @bind-Value="_selectedCampsite.MapImageUrl"
-                                  Label="Main Image URL"
-                                  Variant="Variant.Outlined"
-                                  ReadOnly="@(!_isAdmin)"
-                                  Placeholder="https://example.com/campsite-image.jpg"
-                                  HelperText="URL for the main campsite image" />
-                    @if (!string.IsNullOrWhiteSpace(_selectedCampsite.MapImageUrl))
-                    {
-                        <MudImage Src="@_selectedCampsite.MapImageUrl"
-                                  Alt="Campsite Main Image"
-                                  Class="mt-2 rounded"
-                                  ObjectFit="ObjectFit.Cover"
-                                  Height="200"
-                                  Style="width: 100%;" />
-                    }
-                </MudItem>
-
-                <!-- Gallery Images Section -->
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle1" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Size="Size.Small" Class="mr-1" />
-                        Image Gallery
-                    </MudText>
-                    @if (_isAdmin)
-                    {
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.PhotoLibrary"
-                                   FullWidth="true"
-                                   OnClick="@(() => OpenCampsiteGalleryDialog(_selectedCampsite))">
-                            Manage Photo Gallery (@(_selectedCampsite.GalleryImages?.Count ?? 0) images)
-                        </MudButton>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            @(_selectedCampsite.GalleryImages?.Count ?? 0) images in gallery
-                        </MudText>
-                    }
-                </MudItem>
-
-                <!-- Active Status Section -->
-                <MudItem xs="12">
-                    <MudDivider Class="my-4" />
-                    <MudText Typo="Typo.subtitle1" Class="mb-3">
-                        <MudIcon Icon="@Icons.Material.Filled.ToggleOn" Size="Size.Small" Class="mr-1" />
-                        Campsite Status
-                    </MudText>
-                </MudItem>
-
-                <MudItem xs="12" md="6">
-                    <MudPaper Elevation="1" Class="pa-4" Style="@($"background-color: {(_selectedCampsite.IsActive ? "#e8f5e9" : "#fff3e0")};")">
-                        <div class="d-flex align-center justify-space-between">
+    <!-- Collapsible Campsite Panels -->
+    <MudExpansionPanels MultiExpansion="true" @ref="_expansionPanels">
+        @foreach (var campsite in FilteredCampsites)
+        {
+            <MudExpansionPanel @key="campsite.Id" IsExpanded="@IsCampsiteExpanded(campsite.Id)" IsExpandedChanged="@((bool expanded) => SetCampsiteExpanded(campsite.Id, expanded))">
+                <TitleContent>
+                    <div class="d-flex align-center justify-space-between" style="width: 100%;">
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Terrain" Class="mr-3" Color="Color.Primary" />
                             <div>
-                                <MudText Typo="Typo.subtitle1">
-                                    <MudIcon Icon="@(_selectedCampsite.IsActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
-                                             Color="@(_selectedCampsite.IsActive ? Color.Success : Color.Warning)"
-                                             Size="Size.Small" Class="mr-1" />
-                                    @(_selectedCampsite.IsActive ? "Active" : "Inactive (Off Season)")
-                                </MudText>
+                                <MudText Typo="Typo.h6">@campsite.Name</MudText>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @(_selectedCampsite.IsActive
-                                        ? "Campsite is visible in search results and available for booking"
-                                        : "Campsite is hidden from search and shown as 'Off Season' on information page")
+                                    <MudIcon Icon="@Icons.Material.Filled.LocationCity" Size="Size.Small" Class="mr-1" />
+                                    @campsite.City
                                 </MudText>
                             </div>
-                            <MudSwitch @bind-Value="_selectedCampsite.IsActive"
-                                       Color="Color.Success"
-                                       UnCheckedColor="Color.Warning"
-                                       Disabled="@(!_isAdmin)"
-                                       Label="@(_selectedCampsite.IsActive ? "Active" : "Inactive")" />
                         </div>
-                    </MudPaper>
-                </MudItem>
-
-                <MudItem xs="12" md="6">
-                    @if (!_selectedCampsite.IsActive)
-                    {
-                        <MudPaper Elevation="1" Class="pa-4" Style="background-color: #e3f2fd;">
-                            <MudText Typo="Typo.subtitle2" Class="mb-2">
-                                <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Class="mr-1" />
-                                Season Opening Date
+                        <div class="d-flex align-center gap-2" @onclick:stopPropagation="true">
+                            <MudChip T="string" Size="Size.Small"
+                                     Color="@(campsite.IsActive ? Color.Success : Color.Warning)"
+                                     Icon="@(campsite.IsActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)">
+                                @(campsite.IsActive ? "Active" : "Off Season")
+                            </MudChip>
+                            @if (_isAdmin)
+                            {
+                                <MudTooltip Text="Edit Campsite">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   OnClick="@(() => OpenEditCampsiteDialog(campsite))" />
+                                </MudTooltip>
+                                <MudTooltip Text="Delete Campsite">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => DeleteCampsite(campsite))" />
+                                </MudTooltip>
+                            }
+                            <MudTooltip Text="View Accommodation Types">
+                                <MudIconButton Icon="@Icons.Material.Filled.Cabin"
+                                               Size="Size.Small"
+                                               Color="Color.Info"
+                                               OnClick="@(() => SelectCampsiteForAccommodations(campsite))" />
+                            </MudTooltip>
+                        </div>
+                    </div>
+                </TitleContent>
+                <ChildContent>
+                    <!-- Expanded Campsite Details -->
+                    <MudGrid Class="pa-2">
+                        <!-- Description Section -->
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-1" />
+                                Description
                             </MudText>
-                            <MudDatePicker @bind-Date="_selectedCampsite.SeasonOpeningDate"
-                                           Label="Expected Opening Date"
-                                           Variant="Variant.Outlined"
-                                           Placeholder="Select opening date"
-                                           ReadOnly="@(!_isAdmin)"
-                                           MinDate="DateTime.Today"
-                                           HelperText="When will this campsite open for the new season?" />
-                        </MudPaper>
-                    }
-                    else
-                    {
-                        <MudPaper Elevation="1" Class="pa-4" Style="background-color: #f5f5f5;">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <MudTextField @bind-Value="campsite.Description"
+                                          Label="Campsite Description"
+                                          Variant="Variant.Outlined"
+                                          Lines="3"
+                                          ReadOnly="@(!_isAdmin)"
+                                          Placeholder="Enter a detailed description of the campsite..." />
+                        </MudItem>
+
+                        <!-- Contact Information -->
+                        <MudItem xs="12">
+                            <MudDivider Class="my-2" />
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.ContactPhone" Size="Size.Small" Class="mr-1" />
+                                Contact Information
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField Value="@campsite.Email"
+                                          Label="Email"
+                                          Variant="Variant.Outlined"
+                                          ReadOnly="true"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Email" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField Value="@campsite.PhoneNumber"
+                                          Label="Phone"
+                                          Variant="Variant.Outlined"
+                                          ReadOnly="true"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Phone" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField Value="@campsite.WebsiteUrl"
+                                          Label="Website"
+                                          Variant="Variant.Outlined"
+                                          ReadOnly="true"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Language" />
+                        </MudItem>
+
+                        <!-- Address Details -->
+                        <MudItem xs="12">
+                            <MudDivider Class="my-2" />
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
+                                Address Details
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField Value="@campsite.StreetAddress"
+                                          Label="Street Address"
+                                          Variant="Variant.Outlined"
+                                          ReadOnly="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="3">
+                            <MudTextField Value="@campsite.City"
+                                          Label="City"
+                                          Variant="Variant.Outlined"
+                                          ReadOnly="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="3">
+                            <MudTextField Value="@campsite.PostalCode"
+                                          Label="Postal Code"
+                                          Variant="Variant.Outlined"
+                                          ReadOnly="true" />
+                        </MudItem>
+
+                        <!-- Coordinates -->
+                        <MudItem xs="12" md="6">
+                            <MudNumericField @bind-Value="campsite.Latitude"
+                                             Label="Latitude"
+                                             Variant="Variant.Outlined"
+                                             Min="-90"
+                                             Max="90"
+                                             Step="0.0001"
+                                             ReadOnly="@(!_isAdmin)"
+                                             Format="F4" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudNumericField @bind-Value="campsite.Longitude"
+                                             Label="Longitude"
+                                             Variant="Variant.Outlined"
+                                             Min="-180"
+                                             Max="180"
+                                             Step="0.0001"
+                                             ReadOnly="@(!_isAdmin)"
+                                             Format="F4" />
+                        </MudItem>
+
+                        <!-- Additional Details -->
+                        <MudItem xs="12">
+                            <MudDivider Class="my-2" />
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">
                                 <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
-                                Season opening date is only applicable when the campsite is set to inactive/off-season.
+                                Additional Details
                             </MudText>
-                        </MudPaper>
-                    }
-                </MudItem>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField Value="@campsite.Attractiveness"
+                                          Label="Attractiveness"
+                                          Variant="Variant.Outlined"
+                                          ReadOnly="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField Value="@(campsite.SeasonOpeningDate?.ToString("dd MMM yyyy") ?? "Not set")"
+                                          Label="Season Opening Date"
+                                          Variant="Variant.Outlined"
+                                          ReadOnly="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudPaper Elevation="1" Class="pa-3" Style="@($"background-color: {(campsite.IsActive ? "#e8f5e9" : "#fff3e0")};")">
+                                <div class="d-flex align-center justify-space-between">
+                                    <MudText Typo="Typo.body2">
+                                        <MudIcon Icon="@(campsite.IsActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                                 Color="@(campsite.IsActive ? Color.Success : Color.Warning)"
+                                                 Size="Size.Small" Class="mr-1" />
+                                        @(campsite.IsActive ? "Active" : "Off Season")
+                                    </MudText>
+                                    @if (_isAdmin)
+                                    {
+                                        <MudSwitch @bind-Value="campsite.IsActive"
+                                                   Color="Color.Success"
+                                                   UnCheckedColor="Color.Warning"
+                                                   Size="Size.Small" />
+                                    }
+                                </div>
+                            </MudPaper>
+                        </MudItem>
 
-                <!-- Save Button -->
-                @if (_isAdmin)
-                {
-                    <MudItem xs="12" Class="d-flex justify-end">
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Success"
-                                   StartIcon="@Icons.Material.Filled.Save"
-                                   OnClick="@(() => SaveCampsiteDetails(_selectedCampsite))">
-                            Save Campsite Details
-                        </MudButton>
-                    </MudItem>
-                }
-            </MudGrid>
-        </MudPaper>
+                        <!-- Gallery and Actions -->
+                        <MudItem xs="12">
+                            <MudDivider Class="my-2" />
+                        </MudItem>
+                        <MudItem xs="12" Class="d-flex gap-2 flex-wrap">
+                            @if (_isAdmin)
+                            {
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.PhotoLibrary"
+                                           OnClick="@(() => OpenCampsiteGalleryDialog(campsite))">
+                                    Photo Gallery (@(campsite.GalleryImages?.Count ?? 0))
+                                </MudButton>
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Success"
+                                           StartIcon="@Icons.Material.Filled.Save"
+                                           OnClick="@(() => SaveCampsiteDetails(campsite))">
+                                    Save Changes
+                                </MudButton>
+                            }
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Info"
+                                       StartIcon="@Icons.Material.Filled.Cabin"
+                                       OnClick="@(() => SelectCampsiteForAccommodations(campsite))">
+                                Manage Accommodations
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </ChildContent>
+            </MudExpansionPanel>
+        }
+    </MudExpansionPanels>
+
+    @if (!FilteredCampsites.Any())
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            @if (_campsites.Any())
+            {
+                <span>No campsites match your search criteria. Try a different search term.</span>
+            }
+            else
+            {
+                <span>No campsites found.@(_isAdmin ? " Click \"Add New Campsite\" to create one." : "")</span>
+            }
+        </MudAlert>
     }
 
-    <!-- Accommodation Types Tree View -->
+    <!-- Accommodation Types Section (shown when a campsite is selected for accommodation management) -->
     @if (_selectedCampsite != null)
     {
         <MudPaper Elevation="3" Class="pa-4">
@@ -684,6 +715,128 @@
     private List<AmenityLookup> _availableAmenities = new();
     private bool _loading = false;
     private bool _isAdmin = false;
+    private string _searchText = "";
+    private HashSet<int> _expandedCampsites = new();
+    private MudExpansionPanels? _expansionPanels;
+
+    // Filtered campsites based on search text
+    private IEnumerable<CampsiteManagementDto> FilteredCampsites => string.IsNullOrWhiteSpace(_searchText)
+        ? _campsites
+        : _campsites.Where(c =>
+            c.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+            c.City.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+            (c.Description?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private bool IsCampsiteExpanded(int campsiteId) => _expandedCampsites.Contains(campsiteId);
+
+    private void SetCampsiteExpanded(int campsiteId, bool expanded)
+    {
+        if (expanded)
+            _expandedCampsites.Add(campsiteId);
+        else
+            _expandedCampsites.Remove(campsiteId);
+    }
+
+    private void ExpandAllCampsites()
+    {
+        _expandedCampsites = _campsites.Select(c => c.Id).ToHashSet();
+        StateHasChanged();
+    }
+
+    private void CollapseAllCampsites()
+    {
+        _expandedCampsites.Clear();
+        StateHasChanged();
+    }
+
+    private async Task SelectCampsiteForAccommodations(CampsiteManagementDto campsite)
+    {
+        _selectedCampsite = campsite;
+        await LoadAccommodationTypes(campsite.Id);
+        StateHasChanged();
+    }
+
+    private async Task OpenEditCampsiteDialog(CampsiteManagementDto campsite)
+    {
+        // Convert CampsiteManagementDto to CampsiteFormDto for the dialog
+        var campsiteForm = new CampsiteFormDto
+        {
+            Id = campsite.Id,
+            Name = campsite.Name,
+            StreetAddress = campsite.StreetAddress,
+            City = campsite.City,
+            PostalCode = campsite.PostalCode,
+            Description = campsite.Description,
+            Attractiveness = campsite.Attractiveness,
+            PhoneNumber = campsite.PhoneNumber,
+            Email = campsite.Email,
+            WebsiteUrl = campsite.WebsiteUrl,
+            Latitude = campsite.Latitude,
+            Longitude = campsite.Longitude,
+            IsActive = campsite.IsActive,
+            SeasonOpeningDate = campsite.SeasonOpeningDate
+        };
+
+        var parameters = new DialogParameters<AddCampsiteDialog>
+        {
+            { x => x.Campsite, campsiteForm },
+            { x => x.IsEdit, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<AddCampsiteDialog>("Edit Campsite", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadCampsites();
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteCampsite(CampsiteManagementDto campsite)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete the campsite \"{campsite.Name}\"? This action cannot be undone and will also delete all associated accommodation types.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                using var context = await DbContextFactory.CreateDbContextAsync();
+                var campsiteId = CampsiteId.Create(campsite.Id);
+                var entity = await context.Campsites.FirstOrDefaultAsync(c => c.Id == campsiteId);
+                if (entity != null)
+                {
+                    context.Campsites.Remove(entity);
+                    await context.SaveChangesAsync();
+                    await LoadCampsites();
+
+                    if (_selectedCampsite?.Id == campsite.Id)
+                    {
+                        _selectedCampsite = null;
+                        _accommodationTypes.Clear();
+                    }
+
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting campsite: {ex.Message}");
+                await DialogService.ShowMessageBox("Error", $"Failed to delete campsite: {ex.Message}");
+            }
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -699,18 +852,6 @@
 
         // Debug: Query database to see what's actually stored
         await QueryDatabaseState();
-
-        // Auto-select the first campsite to show data immediately
-        if (_campsites.Any())
-        {
-            _selectedCampsite = _campsites.First();
-            Console.WriteLine($"🔵 Auto-selected campsite: {_selectedCampsite.Name} (ID: {_selectedCampsite.Id})");
-            await LoadAccommodationTypes(_selectedCampsite.Id);
-        }
-        else
-        {
-            Console.WriteLine("🔴 No campsites found to auto-select");
-        }
     }
 
     private async Task QueryDatabaseState()
