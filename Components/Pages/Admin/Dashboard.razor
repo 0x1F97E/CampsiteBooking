@@ -1,334 +1,387 @@
 @page "/admin/dashboard"
 @rendermode InteractiveServer
 @attribute [Authorize(Roles = "Admin,Staff")]
-@inject IDbContextFactory<CampsiteBookingDbContext> DbContextFactory
+@inject IDashboardService DashboardService
 @inject ISnackbar Snackbar
-@using CampsiteBooking.Data
-@using CampsiteBooking.Models
-@using CampsiteBooking.Models.ValueObjects
-@using Microsoft.EntityFrameworkCore
+@inject IJSRuntime JS
+@using CampsiteBooking.Services
 @using Microsoft.AspNetCore.Authorization
+@using ClosedXML.Excel
 
-<PageTitle>Admin Dashboard - Campsite Booking</PageTitle>
+<PageTitle>Analytics Dashboard - Campsite Booking</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h3" GutterBottom="true">
-        <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
-        Admin Dashboard
+        <MudIcon Icon="@Icons.Material.Filled.Analytics" Class="mr-2" />
+        Analytics Dashboard
     </MudText>
-    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-6">
-        Overview of your campsite booking system
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+        View and export campsite booking analytics
     </MudText>
 
-    <!-- Key Metrics Cards -->
-    <MudGrid>
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="3">
-                <MudCardContent>
-                    <div class="d-flex justify-space-between align-center">
-                        <div>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Total Bookings</MudText>
-                            <MudText Typo="Typo.h4">@_totalBookings</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Success">
-                                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" />
-                                +12% vs last year
-                            </MudText>
-                        </div>
-                        <MudIcon Icon="@Icons.Material.Filled.BookOnline" Color="Color.Primary" Size="Size.Large" />
-                    </div>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="3">
-                <MudCardContent>
-                    <div class="d-flex justify-space-between align-center">
-                        <div>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Revenue (This Month)</MudText>
-                            <MudText Typo="Typo.h4">$@_revenue.ToString("N0")</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Success">
-                                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" />
-                                +8% vs last year
-                            </MudText>
-                        </div>
-                        <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Success" Size="Size.Large" />
-                    </div>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="3">
-                <MudCardContent>
-                    <div class="d-flex justify-space-between align-center">
-                        <div>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Occupancy Rate</MudText>
-                            <MudText Typo="Typo.h4">@_occupancyRate%</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Info">
-                                <MudIcon Icon="@Icons.Material.Filled.TrendingFlat" Size="Size.Small" />
-                                Same as last year
-                            </MudText>
-                        </div>
-                        <MudIcon Icon="@Icons.Material.Filled.Hotel" Color="Color.Info" Size="Size.Large" />
-                    </div>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="3">
-                <MudCardContent>
-                    <div class="d-flex justify-space-between align-center">
-                        <div>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Active Campsites</MudText>
-                            <MudText Typo="Typo.h4">@_activeCampsites</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Default">
-                                <MudIcon Icon="@Icons.Material.Filled.Landscape" Size="Size.Small" />
-                                Across Denmark
-                            </MudText>
-                        </div>
-                        <MudIcon Icon="@Icons.Material.Filled.Terrain" Color="Color.Warning" Size="Size.Large" />
-                    </div>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
-
-    <!-- Charts and Recent Activity -->
-    <MudGrid Class="mt-6">
-        <!-- Booking Trends Chart -->
-        <MudItem xs="12" md="8">
-            <MudCard Elevation="3">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">Booking Trends (Last 6 Months)</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    @if (_bookingTrendsData.Any())
+    <!-- Filter Controls -->
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudSelect T="int" Label="Campsite" MultiSelection="true" @bind-SelectedValues="_selectedCampsiteIds"
+                           Variant="Variant.Outlined" Placeholder="All Campsites" Clearable="true">
+                    @foreach (var campsite in _availableCampsites)
                     {
-                        <MudChart ChartType="ChartType.Line"
-                                  ChartSeries="@_chartSeries"
-                                  XAxisLabels="@_xAxisLabels"
-                                  Width="100%"
-                                  Height="300px"
-                                  ChartOptions="@_chartOptions">
-                        </MudChart>
+                        <MudSelectItem T="int" Value="@campsite.Id">@campsite.Name</MudSelectItem>
                     }
-                    else
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudSelect T="int" Label="Years" MultiSelection="true" @bind-SelectedValues="_selectedYears"
+                           Variant="Variant.Outlined" Placeholder="Select years">
+                    @foreach (var year in _availableYears)
                     {
-                        <div style="height: 300px; display: flex; align-items: center; justify-content: center; background: #f5f5f5; border-radius: 4px;">
-                            <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                <MudIcon Icon="@Icons.Material.Filled.ShowChart" Class="mr-2" />
-                                No booking data available for the last 6 months
-                            </MudText>
-                        </div>
+                        <MudSelectItem T="int" Value="@year">@year</MudSelectItem>
                     }
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudSelect T="string" Label="Season" MultiSelection="true" @bind-SelectedValues="_selectedSeasons"
+                           Variant="Variant.Outlined" Placeholder="All Seasons" Clearable="true">
+                    @foreach (var season in _availableSeasons)
+                    {
+                        <MudSelectItem T="string" Value="@season">@season</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="3" Class="d-flex align-center">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="ApplyFilters" Disabled="@_isLoading" FullWidth="true">
+                    @if (_isLoading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                    Apply
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
 
-        <!-- Quick Stats -->
-        <MudItem xs="12" md="4">
-            <MudCard Elevation="3">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">Quick Stats</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudList T="string" Dense="true">
-                        <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="Color.Success">
-                            <MudText>Confirmed: <strong>@_confirmedBookings</strong></MudText>
-                        </MudListItem>
-                        <MudListItem T="string" Icon="@Icons.Material.Filled.Pending" IconColor="Color.Warning">
-                            <MudText>Pending: <strong>@_pendingBookings</strong></MudText>
-                        </MudListItem>
-                        <MudListItem T="string" Icon="@Icons.Material.Filled.Cancel" IconColor="Color.Error">
-                            <MudText>Cancelled: <strong>@_cancelledBookings</strong></MudText>
-                        </MudListItem>
-                        <MudDivider Class="my-2" />
-                        <MudListItem T="string" Icon="@Icons.Material.Filled.People" IconColor="Color.Primary">
-                            <MudText>Total Users: <strong>@_totalUsers</strong></MudText>
-                        </MudListItem>
-                        <MudListItem T="string" Icon="@Icons.Material.Filled.PersonAdd" IconColor="Color.Info">
-                            <MudText>New This Month: <strong>@_newUsers</strong></MudText>
-                        </MudListItem>
-                    </MudList>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
+    <!-- Metric Tabs -->
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4" @bind-ActivePanelIndex="_activeTab">
+        <MudTabPanel Text="Bookings" Icon="@Icons.Material.Filled.BookOnline" />
+        <MudTabPanel Text="Revenue" Icon="@Icons.Material.Filled.AttachMoney" />
+        <MudTabPanel Text="Length of Stay" Icon="@Icons.Material.Filled.Schedule" />
+        <MudTabPanel Text="Guest Countries" Icon="@Icons.Material.Filled.Public" />
+        <MudTabPanel Text="New Users" Icon="@Icons.Material.Filled.PersonAdd" />
+    </MudTabs>
 
+    <!-- Chart Display Area -->
+    <MudPaper Elevation="2" Class="pa-4">
+        <div class="d-flex justify-space-between align-center mb-4">
+            <MudText Typo="Typo.h6">@GetCurrentTabTitle()</MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Download"
+                       OnClick="DownloadExcel" Disabled="@_isLoading">
+                Download Excel
+            </MudButton>
+        </div>
 
-
+        @if (_isLoading)
+        {
+            <div class="d-flex justify-center pa-8">
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+            </div>
+        }
+        else
+        {
+            @switch (_activeTab)
+            {
+                case 0: <!-- Bookings -->
+                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_bookingChartSeries" XAxisLabels="@_chartXAxisLabels"
+                              Width="100%" Height="400px" ChartOptions="@_chartOptions" />
+                    <MudText Typo="Typo.body2" Class="mt-2" Color="Color.Secondary">
+                        Total: @_bookingStats?.TotalBookings.ToString("N0") bookings
+                    </MudText>
+                    break;
+                case 1: <!-- Revenue -->
+                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_revenueChartSeries" XAxisLabels="@_chartXAxisLabels"
+                              Width="100%" Height="400px" ChartOptions="@_chartOptions" />
+                    <MudText Typo="Typo.body2" Class="mt-2" Color="Color.Secondary">
+                        Total: @_revenueStats?.TotalRevenue.ToString("C0")
+                    </MudText>
+                    break;
+                case 2: <!-- Length of Stay -->
+                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_lengthOfStayChartSeries" XAxisLabels="@_lengthOfStayXAxisLabels"
+                              Width="100%" Height="400px" ChartOptions="@_chartOptions" />
+                    <MudText Typo="Typo.body2" Class="mt-2" Color="Color.Secondary">
+                        Average: @(_lengthOfStayStats?.AverageNights.ToString("F1") ?? "0") nights
+                    </MudText>
+                    break;
+                case 3: <!-- Guest Countries (Pillar chart - single series) -->
+                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_countryChartSeries" XAxisLabels="@_countryXAxisLabels"
+                              Width="100%" Height="400px" ChartOptions="@_chartOptions" />
+                    <MudText Typo="Typo.body2" Class="mt-2" Color="Color.Secondary">
+                        Total guests: @_countryStats?.TotalGuests.ToString("N0")
+                    </MudText>
+                    break;
+                case 4: <!-- New Users -->
+                    <MudChart ChartType="ChartType.Bar" ChartSeries="@_newUserChartSeries" XAxisLabels="@_chartXAxisLabels"
+                              Width="100%" Height="400px" ChartOptions="@_chartOptions" />
+                    <MudText Typo="Typo.body2" Class="mt-2" Color="Color.Secondary">
+                        Total: @_newUserStats?.TotalNewUsers.ToString("N0") new users
+                    </MudText>
+                    break;
+            }
+        }
+    </MudPaper>
 </MudContainer>
 
 @code {
     private bool _isLoading = true;
+    private int _activeTab = 0;
 
-    // Metrics loaded from database
-    private int _totalBookings = 0;
-    private decimal _revenue = 0;
-    private int _occupancyRate = 0;
-    private int _activeCampsites = 0;
-    private int _confirmedBookings = 0;
-    private int _pendingBookings = 0;
-    private int _cancelledBookings = 0;
-    private int _totalUsers = 0;
-    private int _newUsers = 0;
+    // Filter options
+    private List<CampsiteInfo> _availableCampsites = new();
+    private List<int> _availableYears = new();
+    private List<string> _availableSeasons = new();
 
-    // Booking trends chart data
-    private List<ChartSeries> _chartSeries = new();
-    private string[] _xAxisLabels = Array.Empty<string>();
-    private Dictionary<string, int> _bookingTrendsData = new();
-    private ChartOptions _chartOptions = new ChartOptions
-    {
-        YAxisTicks = 10,
-        MaxNumYAxisTicks = 10,
-        YAxisLines = true,
-        XAxisLines = false,
-        LineStrokeWidth = 3
-    };
+    // Selected filters
+    private IEnumerable<int> _selectedCampsiteIds = new List<int>();
+    private IEnumerable<int> _selectedYears = new List<int>();
+    private IEnumerable<string> _selectedSeasons = new List<string>();
+
+    // Stats data
+    private BookingStats? _bookingStats;
+    private RevenueStats? _revenueStats;
+    private LengthOfStayStats? _lengthOfStayStats;
+    private CountryStats? _countryStats;
+    private NewUserStats? _newUserStats;
+
+    // Chart data
+    private List<ChartSeries> _bookingChartSeries = new();
+    private List<ChartSeries> _revenueChartSeries = new();
+    private List<ChartSeries> _lengthOfStayChartSeries = new();
+    private List<ChartSeries> _countryChartSeries = new();
+    private List<ChartSeries> _newUserChartSeries = new();
+
+    private string[] _chartXAxisLabels = Array.Empty<string>();
+    private string[] _lengthOfStayXAxisLabels = Array.Empty<string>();
+    private string[] _countryXAxisLabels = Array.Empty<string>();
+
+    private static readonly string[] MonthLabels = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+    private ChartOptions _chartOptions = new() { YAxisTicks = 5, MaxNumYAxisTicks = 10, YAxisLines = true, XAxisLines = false };
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDashboardMetrics();
-        await LoadBookingTrends();
-        _isLoading = false;
+        await LoadFilterOptionsAsync();
+        await LoadDashboardDataAsync();
     }
 
-    private async Task LoadDashboardMetrics()
+    private async Task LoadFilterOptionsAsync()
     {
         try
         {
-            using var context = await DbContextFactory.CreateDbContextAsync();
+            _availableCampsites = await DashboardService.GetCampsitesAsync();
+            _availableYears = await DashboardService.GetAvailableYearsAsync();
+            _availableSeasons = await DashboardService.GetAvailableSeasonsAsync();
 
-            // Load all bookings
-            var allBookings = await context.Bookings.ToListAsync();
-            _totalBookings = allBookings.Count;
-
-            // Calculate revenue (sum of all booking amounts)
-            _revenue = allBookings.Sum(b => b.TotalPrice?.Amount ?? 0m);
-
-            // Count bookings by status
-            _confirmedBookings = allBookings.Count(b => b.Status == BookingStatus.Confirmed);
-            _pendingBookings = allBookings.Count(b => b.Status == BookingStatus.Pending);
-            _cancelledBookings = allBookings.Count(b => b.Status == BookingStatus.Cancelled);
-
-            // Count active campsites (load all first for client-side evaluation)
-            var allCampsites = await context.Campsites.ToListAsync();
-            _activeCampsites = allCampsites.Count(c => c.IsActive);
-
-            // Count total users
-            _totalUsers = await context.Users.CountAsync();
-
-            // Count new users this month (load all users first for client-side evaluation)
-            var startOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-            var allUsers = await context.Users.ToListAsync();
-            _newUsers = allUsers.Count(u => u.JoinedDate >= startOfMonth);
-
-            // Calculate occupancy rate
-            // Total accommodation types * 30 days = total available spot-days
-            var totalAccommodationTypes = await context.AccommodationTypes.CountAsync();
-            var totalAvailableSpotDays = totalAccommodationTypes * 30;
-
-            // Total booked days this month
-            var startOfThisMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-            var endOfThisMonth = startOfThisMonth.AddMonths(1);
-
-            var bookingsThisMonth = allBookings
-                .Where(b => b.Period != null &&
-                           b.Period.StartDate < endOfThisMonth &&
-                           b.Period.EndDate > startOfThisMonth &&
-                           (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Pending))
-                .ToList();
-
-            var totalBookedDays = bookingsThisMonth.Sum(b =>
-            {
-                var start = b.Period!.StartDate < startOfThisMonth ? startOfThisMonth : b.Period.StartDate;
-                var end = b.Period.EndDate > endOfThisMonth ? endOfThisMonth : b.Period.EndDate;
-                return (end - start).Days;
-            });
-
-            _occupancyRate = totalAvailableSpotDays > 0
-                ? (int)((totalBookedDays / (double)totalAvailableSpotDays) * 100)
-                : 0;
-
-            Console.WriteLine($"✅ Dashboard metrics loaded:");
-            Console.WriteLine($"   Total Bookings: {_totalBookings}");
-            Console.WriteLine($"   Revenue: ${_revenue:N2}");
-            Console.WriteLine($"   Occupancy Rate: {_occupancyRate}%");
-            Console.WriteLine($"   Active Campsites: {_activeCampsites}");
-            Console.WriteLine($"   Confirmed: {_confirmedBookings}, Pending: {_pendingBookings}, Cancelled: {_cancelledBookings}");
-            Console.WriteLine($"   Total Users: {_totalUsers}, New This Month: {_newUsers}");
+            // Default to current year
+            var currentYear = DateTime.Now.Year;
+            if (_availableYears.Contains(currentYear))
+                _selectedYears = new List<int> { currentYear };
+            else if (_availableYears.Any())
+                _selectedYears = new List<int> { _availableYears.First() };
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading dashboard metrics: {ex.Message}");
-            Snackbar.Add($"Error loading dashboard metrics: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading filters: {ex.Message}", Severity.Error);
         }
     }
 
-    private async Task LoadBookingTrends()
+    private async Task LoadDashboardDataAsync()
     {
         try
         {
-            using var context = await DbContextFactory.CreateDbContextAsync();
+            _isLoading = true;
+            StateHasChanged();
 
-            // Get bookings from the last 6 months
-            var sixMonthsAgo = DateTime.Now.AddMonths(-6);
-            var allBookings = await context.Bookings
-                .Where(b => b.CreatedDate >= sixMonthsAgo)
-                .ToListAsync();
-
-            // Group bookings by month and count them
-            _bookingTrendsData = allBookings
-                .GroupBy(b => new DateTime(b.CreatedDate.Year, b.CreatedDate.Month, 1))
-                .OrderBy(g => g.Key)
-                .ToDictionary(
-                    g => g.Key.ToString("MMM yyyy"),
-                    g => g.Count()
-                );
-
-            // Fill in missing months with 0 bookings
-            var currentMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-            var filledData = new Dictionary<string, int>();
-
-            for (int i = 5; i >= 0; i--)
+            var filter = new DashboardFilter
             {
-                var month = currentMonth.AddMonths(-i);
-                var monthKey = month.ToString("MMM yyyy");
-                filledData[monthKey] = _bookingTrendsData.ContainsKey(monthKey) ? _bookingTrendsData[monthKey] : 0;
-            }
-
-            _bookingTrendsData = filledData;
-
-            // Prepare chart data
-            _xAxisLabels = _bookingTrendsData.Keys.ToArray();
-            var bookingCounts = _bookingTrendsData.Values.Select(v => (double)v).ToArray();
-
-            _chartSeries = new List<ChartSeries>
-            {
-                new ChartSeries
-                {
-                    Name = "Bookings",
-                    Data = bookingCounts
-                }
+                CampsiteIds = _selectedCampsiteIds.ToList(),
+                Years = _selectedYears.ToList(),
+                Seasons = _selectedSeasons.ToList()
             };
 
-            Console.WriteLine($"✅ Booking trends loaded: {_bookingTrendsData.Count} months of data");
-            foreach (var kvp in _bookingTrendsData)
-            {
-                Console.WriteLine($"   {kvp.Key}: {kvp.Value} bookings");
-            }
+            // Load all data in parallel using separate task variables
+            var bookingTask = DashboardService.GetBookingStatsAsync(filter);
+            var revenueTask = DashboardService.GetRevenueStatsAsync(filter);
+            var lengthOfStayTask = DashboardService.GetLengthOfStayStatsAsync(filter);
+            var countryTask = DashboardService.GetCountryStatsAsync(filter);
+            var newUserTask = DashboardService.GetNewUserStatsAsync(filter);
+
+            await Task.WhenAll(bookingTask, revenueTask, lengthOfStayTask, countryTask, newUserTask);
+
+            _bookingStats = bookingTask.Result;
+            _revenueStats = revenueTask.Result;
+            _lengthOfStayStats = lengthOfStayTask.Result;
+            _countryStats = countryTask.Result;
+            _newUserStats = newUserTask.Result;
+
+            PrepareCharts();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading booking trends: {ex.Message}");
-            Snackbar.Add($"Error loading booking trends: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
         }
     }
-}
 
+    private void PrepareCharts()
+    {
+        _chartXAxisLabels = MonthLabels;
+
+        // Bookings - comparative by year
+        _bookingChartSeries = _selectedYears.OrderBy(y => y).Select(year => new ChartSeries
+        {
+            Name = year.ToString(),
+            Data = MonthLabels.Select((_, i) => (double)(_bookingStats?.MonthlyData
+                .Where(d => d.Year == year && d.Month == i + 1)
+                .Sum(d => d.BookingCount) ?? 0)).ToArray()
+        }).ToList();
+
+        // Revenue - comparative by year
+        _revenueChartSeries = _selectedYears.OrderBy(y => y).Select(year => new ChartSeries
+        {
+            Name = year.ToString(),
+            Data = MonthLabels.Select((_, i) => (double)(_revenueStats?.MonthlyData
+                .Where(d => d.Year == year && d.Month == i + 1)
+                .Sum(d => d.Revenue) ?? 0)).ToArray()
+        }).ToList();
+
+        // Length of Stay - non-comparative
+        _lengthOfStayXAxisLabels = _lengthOfStayStats?.Distribution.Select(d => d.Category).ToArray() ?? Array.Empty<string>();
+        _lengthOfStayChartSeries = new List<ChartSeries>
+        {
+            new() { Name = "Bookings", Data = _lengthOfStayStats?.Distribution.Select(d => (double)d.Count).ToArray() ?? Array.Empty<double>() }
+        };
+
+        // Countries - pillar chart (single series, not comparative)
+        _countryXAxisLabels = _countryStats?.Distribution.Select(d => d.Country).ToArray() ?? Array.Empty<string>();
+        _countryChartSeries = new List<ChartSeries>
+        {
+            new() { Name = "Guests", Data = _countryStats?.Distribution.Select(d => (double)d.Count).ToArray() ?? Array.Empty<double>() }
+        };
+
+        // New Users - comparative by year
+        _newUserChartSeries = _selectedYears.OrderBy(y => y).Select(year => new ChartSeries
+        {
+            Name = year.ToString(),
+            Data = MonthLabels.Select((_, i) => (double)(_newUserStats?.MonthlyData
+                .Where(d => d.Year == year && d.Month == i + 1)
+                .Sum(d => d.NewUserCount) ?? 0)).ToArray()
+        }).ToList();
+    }
+
+    private async Task ApplyFilters() => await LoadDashboardDataAsync();
+
+    private string GetCurrentTabTitle() => _activeTab switch
+    {
+        0 => "Bookings by Month",
+        1 => "Revenue by Month",
+        2 => "Length of Stay Distribution",
+        3 => "Guest Countries",
+        4 => "New User Registrations",
+        _ => "Analytics"
+    };
+
+    private async Task DownloadExcel()
+    {
+        try
+        {
+            using var workbook = new XLWorkbook();
+            var filterDesc = $"Years: {string.Join(", ", _selectedYears)}";
+
+            switch (_activeTab)
+            {
+                case 0: AddBookingsSheet(workbook); break;
+                case 1: AddRevenueSheet(workbook); break;
+                case 2: AddLengthOfStaySheet(workbook); break;
+                case 3: AddCountrySheet(workbook); break;
+                case 4: AddNewUsersSheet(workbook); break;
+            }
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var fileName = $"Dashboard_{GetCurrentTabTitle().Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.xlsx";
+
+            await JS.InvokeVoidAsync("downloadFileFromStream", fileName, Convert.ToBase64String(stream.ToArray()));
+            Snackbar.Add("Excel file downloaded!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating Excel: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void AddBookingsSheet(XLWorkbook wb)
+    {
+        var ws = wb.Worksheets.Add("Bookings");
+        ws.Cell(1, 1).Value = "Year"; ws.Cell(1, 2).Value = "Month"; ws.Cell(1, 3).Value = "Bookings";
+        var row = 2;
+        foreach (var d in _bookingStats?.MonthlyData ?? new())
+        {
+            ws.Cell(row, 1).Value = d.Year; ws.Cell(row, 2).Value = d.MonthName; ws.Cell(row, 3).Value = d.BookingCount;
+            row++;
+        }
+        ws.Columns().AdjustToContents();
+    }
+
+    private void AddRevenueSheet(XLWorkbook wb)
+    {
+        var ws = wb.Worksheets.Add("Revenue");
+        ws.Cell(1, 1).Value = "Year"; ws.Cell(1, 2).Value = "Month"; ws.Cell(1, 3).Value = "Revenue";
+        var row = 2;
+        foreach (var d in _revenueStats?.MonthlyData ?? new())
+        {
+            ws.Cell(row, 1).Value = d.Year; ws.Cell(row, 2).Value = d.MonthName; ws.Cell(row, 3).Value = d.Revenue;
+            row++;
+        }
+        ws.Columns().AdjustToContents();
+    }
+
+    private void AddLengthOfStaySheet(XLWorkbook wb)
+    {
+        var ws = wb.Worksheets.Add("Length of Stay");
+        ws.Cell(1, 1).Value = "Category"; ws.Cell(1, 2).Value = "Count";
+        var row = 2;
+        foreach (var d in _lengthOfStayStats?.Distribution ?? new())
+        {
+            ws.Cell(row, 1).Value = d.Category; ws.Cell(row, 2).Value = d.Count;
+            row++;
+        }
+        ws.Columns().AdjustToContents();
+    }
+
+    private void AddCountrySheet(XLWorkbook wb)
+    {
+        var ws = wb.Worksheets.Add("Countries");
+        ws.Cell(1, 1).Value = "Country"; ws.Cell(1, 2).Value = "Guests"; ws.Cell(1, 3).Value = "Percentage";
+        var row = 2;
+        foreach (var d in _countryStats?.Distribution ?? new())
+        {
+            ws.Cell(row, 1).Value = d.Country; ws.Cell(row, 2).Value = d.Count; ws.Cell(row, 3).Value = $"{d.Percentage:F1}%";
+            row++;
+        }
+        ws.Columns().AdjustToContents();
+    }
+
+    private void AddNewUsersSheet(XLWorkbook wb)
+    {
+        var ws = wb.Worksheets.Add("New Users");
+        ws.Cell(1, 1).Value = "Year"; ws.Cell(1, 2).Value = "Month"; ws.Cell(1, 3).Value = "New Users";
+        var row = 2;
+        foreach (var d in _newUserStats?.MonthlyData ?? new())
+        {
+            ws.Cell(row, 1).Value = d.Year; ws.Cell(row, 2).Value = d.MonthName; ws.Cell(row, 3).Value = d.NewUserCount;
+            row++;
+        }
+        ws.Columns().AdjustToContents();
+    }
+}

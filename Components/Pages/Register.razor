@@ -8,6 +8,7 @@
 @using CampsiteBooking.Models
 @using CampsiteBooking.Models.ValueObjects
 @using Microsoft.EntityFrameworkCore
+@using CampsiteBooking.Helpers
 
 <PageTitle>Register - Campsite Booking</PageTitle>
 
@@ -59,14 +60,19 @@
                                   AdornmentIcon="@Icons.Material.Filled.Phone" />
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudSelect T="string" @bind-Value="_country" Label="Country" Variant="Variant.Outlined" Required="true">
-                        <MudSelectItem T="string" Value="@("Denmark")">Denmark</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("Sweden")">Sweden</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("Norway")">Norway</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("Germany")">Germany</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("Netherlands")">Netherlands</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("Other")">Other</MudSelectItem>
-                    </MudSelect>
+                    <MudAutocomplete T="string"
+                                     @bind-Value="_country"
+                                     Label="Country"
+                                     Variant="Variant.Outlined"
+                                     Required="true"
+                                     RequiredError="Country is required"
+                                     SearchFunc="@SearchCountries"
+                                     MaxItems="20"
+                                     Dense="false"
+                                     CoerceText="true"
+                                     CoerceValue="true"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.Public" />
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudTextField @bind-Value="_password"
@@ -194,6 +200,16 @@
             _confirmPasswordInputType = InputType.Password;
             _confirmPasswordIcon = Icons.Material.Filled.VisibilityOff;
         }
+    }
+
+    private Task<IEnumerable<string>> SearchCountries(string value, CancellationToken cancellationToken)
+    {
+        // If the text is empty, return all countries
+        if (string.IsNullOrEmpty(value))
+            return Task.FromResult<IEnumerable<string>>(CountryList.Countries);
+
+        // Return countries that contain the search text (case-insensitive)
+        return Task.FromResult(CountryList.Search(value));
     }
 
     private string ValidateEmail(string email)

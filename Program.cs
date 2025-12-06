@@ -223,6 +223,9 @@ builder.Services.AddSingleton<IKafkaProducer, KafkaProducer>();
 // TEMPORARILY DISABLED: Kafka consumer causing errors with invalid GuestId=0 in old events
 // builder.Services.AddHostedService<KafkaConsumer>();
 
+// Register Dashboard Service
+builder.Services.AddScoped<CampsiteBooking.Services.IDashboardService, CampsiteBooking.Services.DashboardService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

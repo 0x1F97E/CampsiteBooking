@@ -48,6 +48,10 @@
               "target": "Package",
               "version": "[4.13.8, )"
             },
+            "ClosedXML": {
+              "target": "Package",
+              "version": "[0.105.0, )"
+            },
             "Confluent.Kafka": {
               "target": "Package",
               "version": "[2.3.0, )"

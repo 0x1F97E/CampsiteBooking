@@ -168,3 +168,11 @@
 /Users/pc/CampsiteBooking-1/Tests/obj/Debug/net9.0/CampsiteBooking.Tests.pdb
 /Users/pc/CampsiteBooking-1/Tests/obj/Debug/net9.0/CampsiteBooking.Tests.genruntimeconfig.cache
 /Users/pc/CampsiteBooking-1/Tests/obj/Debug/net9.0/ref/CampsiteBooking.Tests.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/ClosedXML.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/ClosedXML.Parser.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/DocumentFormat.OpenXml.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/DocumentFormat.OpenXml.Framework.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/ExcelNumberFormat.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/RBush.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/SixLabors.Fonts.dll
+/Users/pc/CampsiteBooking-1/Tests/bin/Debug/net9.0/System.IO.Packaging.dll

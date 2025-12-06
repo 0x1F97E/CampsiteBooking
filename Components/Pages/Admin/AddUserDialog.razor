@@ -2,6 +2,7 @@
 @using CampsiteBooking.Models.ValueObjects
 @using System.ComponentModel.DataAnnotations
 @using static CampsiteBooking.Components.Pages.Admin.UserManagement
+@using CampsiteBooking.Helpers
 
 <MudDialog>
     <DialogContent>
@@ -39,10 +40,17 @@
                                   Placeholder="+45 12 34 56 78" />
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudTextField @bind-Value="_userDto.Country" 
-                                  Label="Country" 
-                                  Variant="Variant.Outlined"
-                                  Placeholder="Denmark" />
+                    <MudAutocomplete T="string"
+                                     @bind-Value="_userDto.Country"
+                                     Label="Country"
+                                     Variant="Variant.Outlined"
+                                     SearchFunc="@SearchCountries"
+                                     MaxItems="20"
+                                     Dense="false"
+                                     CoerceText="true"
+                                     CoerceValue="true"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.Public" />
                 </MudItem>
                 <MudItem xs="12">
                     <MudSelect @bind-Value="_userDto.Role" 
@@ -147,6 +155,16 @@
             _userDto.Name = $"{_userDto.FirstName} {_userDto.LastName}";
             MudDialog.Close(DialogResult.Ok(_userDto));
         }
+    }
+
+    private Task<IEnumerable<string>> SearchCountries(string value, CancellationToken cancellationToken)
+    {
+        // If the text is empty, return all countries
+        if (string.IsNullOrEmpty(value))
+            return Task.FromResult<IEnumerable<string>>(CountryList.Countries);
+
+        // Return countries that contain the search text (case-insensitive)
+        return Task.FromResult(CountryList.Search(value));
     }
 
     public class CampsiteDto

@@ -1,5 +1,6 @@
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
+@using CampsiteBooking.Helpers
 
 <MudDialog>
     <DialogContent>
@@ -43,11 +44,19 @@
                 </MudItem>
                 
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_country"
-                                  Label="Country"
-                                  Variant="Variant.Outlined"
-                                  Margin="Margin.Dense"
-                                  HelperText="Optional" />
+                    <MudAutocomplete T="string"
+                                     @bind-Value="_country"
+                                     Label="Country"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense"
+                                     SearchFunc="@SearchCountries"
+                                     MaxItems="20"
+                                     Dense="true"
+                                     CoerceText="true"
+                                     CoerceValue="true"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.Public"
+                                     HelperText="Optional" />
                 </MudItem>
                 
                 <MudItem xs="12">
@@ -195,6 +204,16 @@
             return "Please enter a valid email address";
 
         return null;
+    }
+
+    private Task<IEnumerable<string>> SearchCountries(string value, CancellationToken cancellationToken)
+    {
+        // If the text is empty, return all countries
+        if (string.IsNullOrEmpty(value))
+            return Task.FromResult<IEnumerable<string>>(CountryList.Countries);
+
+        // Return countries that contain the search text (case-insensitive)
+        return Task.FromResult(CountryList.Search(value));
     }
 
     // DTO for update profile result
