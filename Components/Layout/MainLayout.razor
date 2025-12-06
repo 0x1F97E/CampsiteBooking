@@ -8,6 +8,22 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @implements IDisposable
 
+<!-- Video Background -->
+<div class="video-background-container">
+    <video autoplay muted loop playsinline class="video-background">
+        <source src="sunlight-shines.mp4" type="video/mp4" />
+    </video>
+    <div class="video-overlay"></div>
+</div>
+
+<!-- Video Background -->
+<div class="video-background">
+    <video autoplay muted loop playsinline>
+        <source src="sunlight-shines.mp4" type="video/mp4">
+    </video>
+</div>
+<div class="video-background-overlay"></div>
+
 <MudLayout>
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />

@@ -10,27 +10,41 @@ body {
     position: relative;
     min-height: 100vh;
     overflow-x: hidden;
-
-    /* Tree pattern background applied directly to body */
-    background-color: #f5f5f5;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cdefs%3E%3Cstyle%3E.tree%7Bfill:%231B5E20;opacity:0.15%7D.tree-light%7Bfill:%232E7D32;opacity:0.12%7D%3C/style%3E%3C/defs%3E%3C!-- Pine tree 1 --%3E%3Cpath class='tree' d='M30,80 L15,80 L22.5,65 L17,65 L22.5,50 L19,50 L25,35 L31,50 L27.5,50 L33,65 L27.5,65 L35,80 Z'/%3E%3Crect class='tree' x='23' y='80' width='4' height='8'/%3E%3C!-- Pine tree 2 --%3E%3Cpath class='tree-light' d='M75,90 L55,90 L65,70 L58,70 L65,50 L60,50 L70,30 L80,50 L75,50 L82,70 L75,70 L85,90 Z'/%3E%3Crect class='tree-light' x='67' y='90' width='6' height='12'/%3E%3C!-- Small pine 3 --%3E%3Cpath class='tree' d='M140,85 L130,85 L135,75 L131,75 L137,60 L143,75 L139,75 L145,85 Z'/%3E%3Crect class='tree' x='135' y='85' width='4' height='6'/%3E%3C!-- Deciduous tree 1 --%3E%3Cellipse class='tree-light' cx='170' cy='55' rx='15' ry='20'/%3E%3Crect class='tree-light' x='167' y='72' width='6' height='15'/%3E%3C!-- Pine tree 4 --%3E%3Cpath class='tree' d='M100,180 L80,180 L90,155 L82,155 L92,130 L86,130 L95,105 L104,130 L98,130 L108,155 L100,155 L110,180 Z'/%3E%3Crect class='tree' x='92' y='180' width='6' height='12'/%3E%3C!-- Small bush/shrub --%3E%3Cellipse class='tree-light' cx='45' cy='145' rx='12' ry='8'/%3E%3C!-- Pine tree 5 --%3E%3Cpath class='tree-light' d='M175,160 L160,160 L167.5,140 L162,140 L170,120 L178,140 L172.5,140 L180,160 Z'/%3E%3Crect class='tree-light' x='167' y='160' width='5' height='10'/%3E%3C!-- Small accent tree --%3E%3Cpath class='tree' d='M15,155 L8,155 L12,145 L9,145 L14,135 L19,145 L16,145 L20,155 Z'/%3E%3Crect class='tree' x='12' y='155' width='3' height='5'/%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 250px 250px;
-    background-position: center;
-    background-attachment: fixed;
+    background-color: #1a1a1a;
 }
 
-/* Responsive adjustments for the pattern */
-@media (max-width: 768px) {
-    body {
-        background-size: 180px 180px;
-    }
+/* Video background styles */
+.video-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+    overflow: hidden;
 }
 
-@media (max-width: 480px) {
-    body {
-        background-size: 140px 140px;
-    }
+.video-background video {
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    object-fit: cover;
+}
+
+/* Semi-transparent overlay for better readability */
+.video-background-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background: rgba(255, 255, 255, 0.75);
 }
 
 /* Make the entire app wrapper transparent */
