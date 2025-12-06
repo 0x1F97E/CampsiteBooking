@@ -116,12 +116,6 @@
                                                    OnClick="@(() => DeleteCampsite(campsite))" />
                                 </MudTooltip>
                             }
-                            <MudTooltip Text="View Accommodation Types">
-                                <MudIconButton Icon="@Icons.Material.Filled.Cabin"
-                                               Size="Size.Small"
-                                               Color="Color.Info"
-                                               OnClick="@(() => SelectCampsiteForAccommodations(campsite))" />
-                            </MudTooltip>
                         </div>
                     </div>
                 </TitleContent>
@@ -284,12 +278,291 @@
                                     Save Changes
                                 </MudButton>
                             }
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Info"
-                                       StartIcon="@Icons.Material.Filled.Cabin"
-                                       OnClick="@(() => SelectCampsiteForAccommodations(campsite))">
-                                Manage Accommodations
-                            </MudButton>
+                        </MudItem>
+
+                        <!-- Nested Accommodation Types Section -->
+                        <MudItem xs="12">
+                            <MudDivider Class="my-3" />
+                            <MudExpansionPanels MultiExpansion="true">
+                                <MudExpansionPanel IsExpanded="@IsAccommodationSectionExpanded(campsite.Id)"
+                                                   IsExpandedChanged="@((bool expanded) => SetAccommodationSectionExpanded(campsite.Id, expanded))">
+                                    <TitleContent>
+                                        <div class="d-flex align-center justify-space-between" style="width: 100%;">
+                                            <div class="d-flex align-center">
+                                                <MudIcon Icon="@Icons.Material.Filled.Cabin" Class="mr-2" Color="Color.Info" />
+                                                <MudText Typo="Typo.subtitle1">
+                                                    Accommodation Types (@GetAccommodationTypesForCampsite(campsite.Id).Count)
+                                                </MudText>
+                                            </div>
+                                            @if (_isAdmin)
+                                            {
+                                                <div @onclick:stopPropagation="true">
+                                                    <MudButton Variant="Variant.Filled"
+                                                               Color="Color.Primary"
+                                                               Size="Size.Small"
+                                                               StartIcon="@Icons.Material.Filled.Add"
+                                                               OnClick="@(() => OpenAddAccommodationTypeDialogForCampsite(campsite.Id))">
+                                                        Add Type
+                                                    </MudButton>
+                                                </div>
+                                            }
+                                        </div>
+                                    </TitleContent>
+                                    <ChildContent>
+                                        @{
+                                            var accommodationTypes = GetAccommodationTypesForCampsite(campsite.Id);
+                                        }
+                                        @if (!accommodationTypes.Any())
+                                        {
+                                            <MudAlert Severity="Severity.Info" Class="my-2">
+                                                No accommodation types defined for this campsite.
+                                                @if (_isAdmin)
+                                                {
+                                                    <span> Click "Add Type" to create one.</span>
+                                                }
+                                            </MudAlert>
+                                        }
+                                        else
+                                        {
+                                            <MudExpansionPanels MultiExpansion="true" Class="mt-2">
+                                                @foreach (var accType in accommodationTypes)
+                                                {
+                                                    <MudExpansionPanel @key="accType.Id"
+                                                                       IsExpanded="@IsAccommodationTypeExpanded(accType.Id)"
+                                                                       IsExpandedChanged="@((bool expanded) => SetAccommodationTypeExpanded(accType.Id, expanded))">
+                                                        <TitleContent>
+                                                            <div class="d-flex align-center justify-space-between" style="width: 100%;">
+                                                                <div class="d-flex align-center gap-3">
+                                                                    <MudIcon Icon="@Icons.Material.Filled.Hotel" Size="Size.Small" />
+                                                                    <MudText Typo="Typo.body1"><strong>@accType.Type</strong></MudText>
+                                                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">
+                                                                        @accType.PricePerNight.ToString("C") / night
+                                                                    </MudChip>
+                                                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary">
+                                                                        Max @accType.MaxCapacity guests
+                                                                    </MudChip>
+                                                                    <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                                                                        @accType.Spots.Count units
+                                                                    </MudChip>
+                                                                </div>
+                                                                <div class="d-flex align-center gap-2" @onclick:stopPropagation="true">
+                                                                    <MudSwitch T="bool" @bind-Value="accType.IsActive"
+                                                                               Color="Color.Success"
+                                                                               Label="@(accType.IsActive ? "Active" : "Inactive")"
+                                                                               Disabled="@(!_isAdmin)" />
+                                                                    @if (_isAdmin)
+                                                                    {
+                                                                        <MudTooltip Text="Delete Accommodation Type">
+                                                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                                           Size="Size.Small"
+                                                                                           Color="Color.Error"
+                                                                                           OnClick="@(() => DeleteAccommodationType(accType))" />
+                                                                        </MudTooltip>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        </TitleContent>
+                                                        <ChildContent>
+                                                            <!-- Accommodation Type Details -->
+                                                            <MudGrid Class="pa-2">
+                                                                <!-- Basic Info -->
+                                                                <MudItem xs="12" md="6">
+                                                                    <MudTextField @bind-Value="accType.Type"
+                                                                                  Label="Type Name"
+                                                                                  Variant="Variant.Outlined"
+                                                                                  ReadOnly="@(!_isAdmin)" />
+                                                                </MudItem>
+                                                                <MudItem xs="12" md="6">
+                                                                    <MudNumericField @bind-Value="accType.PricePerNight"
+                                                                                     Label="Price per Night (DKK)"
+                                                                                     Variant="Variant.Outlined"
+                                                                                     Min="0"
+                                                                                     ReadOnly="@(!_isAdmin)" />
+                                                                </MudItem>
+                                                                <MudItem xs="12">
+                                                                    <MudTextField @bind-Value="accType.Description"
+                                                                                  Label="Description"
+                                                                                  Variant="Variant.Outlined"
+                                                                                  Lines="2"
+                                                                                  ReadOnly="@(!_isAdmin)" />
+                                                                </MudItem>
+                                                                <MudItem xs="6" md="3">
+                                                                    <MudNumericField @bind-Value="accType.MaxCapacity"
+                                                                                     Label="Max Capacity"
+                                                                                     Variant="Variant.Outlined"
+                                                                                     Min="1"
+                                                                                     ReadOnly="@(!_isAdmin)" />
+                                                                </MudItem>
+                                                                <MudItem xs="6" md="3">
+                                                                    <MudNumericField @bind-Value="accType.AvailableUnits"
+                                                                                     Label="Available Units"
+                                                                                     Variant="Variant.Outlined"
+                                                                                     Min="0"
+                                                                                     ReadOnly="@(!_isAdmin)" />
+                                                                </MudItem>
+                                                                <MudItem xs="6" md="3">
+                                                                    <MudNumericField @bind-Value="accType.AreaSquareMeters"
+                                                                                     Label="Area (m²)"
+                                                                                     Variant="Variant.Outlined"
+                                                                                     Min="0"
+                                                                                     ReadOnly="@(!_isAdmin)" />
+                                                                </MudItem>
+                                                                <MudItem xs="6" md="3">
+                                                                    <MudTextField @bind-Value="accType.UnitNamingPrefix"
+                                                                                  Label="Unit Prefix"
+                                                                                  Variant="Variant.Outlined"
+                                                                                  Placeholder="e.g., Cabin, Tent"
+                                                                                  ReadOnly="@(!_isAdmin)" />
+                                                                </MudItem>
+
+                                                                <!-- Spots Section -->
+                                                                <MudItem xs="12">
+                                                                    <MudDivider Class="my-2" />
+                                                                    <div class="d-flex justify-space-between align-center mb-2">
+                                                                        <MudText Typo="Typo.subtitle1">
+                                                                            <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Class="mr-1" />
+                                                                            Spots/Units (@accType.Spots.Count)
+                                                                        </MudText>
+                                                                        @if (_isAdmin)
+                                                                        {
+                                                                            <MudButton Variant="Variant.Outlined"
+                                                                                       Color="Color.Primary"
+                                                                                       Size="Size.Small"
+                                                                                       StartIcon="@Icons.Material.Filled.Add"
+                                                                                       OnClick="@(() => AddSpotForCampsite(accType, campsite))">
+                                                                                Add Spot
+                                                                            </MudButton>
+                                                                        }
+                                                                    </div>
+                                                                    @if (accType.Spots.Any())
+                                                                    {
+                                                                        <MudGrid>
+                                                                            @foreach (var spot in accType.Spots)
+                                                                            {
+                                                                                <MudItem xs="12" sm="6" md="4">
+                                                                                    <MudCard Outlined="true" Class="pa-2">
+                                                                                        <div class="d-flex justify-space-between align-center">
+                                                                                            <MudText Typo="Typo.body2">
+                                                                                                <strong>@spot.SpotNumber</strong>
+                                                                                            </MudText>
+                                                                                            <div class="d-flex align-center gap-1">
+                                                                                                <MudSwitch T="bool" @bind-Value="spot.IsUnderMaintenance"
+                                                                                                           Color="Color.Warning"
+                                                                                                           Size="Size.Small"
+                                                                                                           Label="@(spot.IsUnderMaintenance ? "Maintenance" : "")"
+                                                                                                           Disabled="@(!_isAdmin)" />
+                                                                                                @if (_isAdmin)
+                                                                                                {
+                                                                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                                                                   Size="Size.Small"
+                                                                                                                   Color="Color.Error"
+                                                                                                                   OnClick="@(() => RemoveSpotFromType(accType, spot))" />
+                                                                                                }
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        @if (spot.Latitude != 0 || spot.Longitude != 0)
+                                                                                        {
+                                                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                                                📍 @spot.Latitude.ToString("F5"), @spot.Longitude.ToString("F5")
+                                                                                            </MudText>
+                                                                                        }
+                                                                                    </MudCard>
+                                                                                </MudItem>
+                                                                            }
+                                                                        </MudGrid>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                                            No spots defined yet.
+                                                                        </MudText>
+                                                                    }
+                                                                </MudItem>
+
+                                                                <!-- Amenities Section -->
+                                                                <MudItem xs="12">
+                                                                    <MudDivider Class="my-2" />
+                                                                    <MudText Typo="Typo.subtitle1" Class="mb-2">
+                                                                        <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Class="mr-1" />
+                                                                        Amenities
+                                                                    </MudText>
+                                                                    <MudSelect T="string" Label="Select Amenities"
+                                                                               MultiSelection="true"
+                                                                               SelectedValues="@(accType.Amenities)"
+                                                                               SelectedValuesChanged="@((IEnumerable<string> values) => UpdateAmenitiesForType(accType, values))"
+                                                                               Variant="Variant.Outlined"
+                                                                               Disabled="@(!_isAdmin)">
+                                                                        @foreach (var amenity in _availableAmenities)
+                                                                        {
+                                                                            <MudSelectItem T="string" Value="@amenity.Name">
+                                                                                <MudIcon Icon="@(string.IsNullOrEmpty(amenity.IconClass) ? Icons.Material.Filled.CheckCircle : amenity.IconClass)" Size="Size.Small" Class="mr-2" />
+                                                                                @amenity.DisplayName
+                                                                            </MudSelectItem>
+                                                                        }
+                                                                    </MudSelect>
+                                                                </MudItem>
+
+                                                                <!-- Photo Gallery -->
+                                                                <MudItem xs="12">
+                                                                    <MudDivider Class="my-2" />
+                                                                    <div class="d-flex justify-space-between align-center mb-2">
+                                                                        <MudText Typo="Typo.subtitle1">
+                                                                            <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Size="Size.Small" Class="mr-1" />
+                                                                            Photos (@accType.GalleryImages.Count)
+                                                                        </MudText>
+                                                                        @if (_isAdmin)
+                                                                        {
+                                                                            <MudButton Variant="Variant.Outlined"
+                                                                                       Color="Color.Primary"
+                                                                                       Size="Size.Small"
+                                                                                       StartIcon="@Icons.Material.Filled.PhotoLibrary"
+                                                                                       OnClick="@(() => ManageGallery(accType))">
+                                                                                Manage Photos
+                                                                            </MudButton>
+                                                                        }
+                                                                    </div>
+                                                                    @if (accType.GalleryImages.Any())
+                                                                    {
+                                                                        <div class="d-flex gap-2 flex-wrap">
+                                                                            @foreach (var image in accType.GalleryImages.Take(4))
+                                                                            {
+                                                                                <MudImage Src="@image"
+                                                                                          Width="80"
+                                                                                          Height="60"
+                                                                                          ObjectFit="ObjectFit.Cover"
+                                                                                          Class="rounded" />
+                                                                            }
+                                                                            @if (accType.GalleryImages.Count > 4)
+                                                                            {
+                                                                                <MudChip T="string" Size="Size.Small">
+                                                                                    +@(accType.GalleryImages.Count - 4) more
+                                                                                </MudChip>
+                                                                            }
+                                                                        </div>
+                                                                    }
+                                                                </MudItem>
+
+                                                                <!-- Save Button -->
+                                                                @if (_isAdmin)
+                                                                {
+                                                                    <MudItem xs="12">
+                                                                        <MudButton Variant="Variant.Filled"
+                                                                                   Color="Color.Primary"
+                                                                                   StartIcon="@Icons.Material.Filled.Save"
+                                                                                   OnClick="@(() => SaveAccommodationTypeForCampsite(accType, campsite.Id))">
+                                                                            Save Changes
+                                                                        </MudButton>
+                                                                    </MudItem>
+                                                                }
+                                                            </MudGrid>
+                                                        </ChildContent>
+                                                    </MudExpansionPanel>
+                                                }
+                                            </MudExpansionPanels>
+                                        }
+                                    </ChildContent>
+                                </MudExpansionPanel>
+                            </MudExpansionPanels>
                         </MudItem>
                     </MudGrid>
                 </ChildContent>
@@ -310,413 +583,19 @@
             }
         </MudAlert>
     }
-
-    <!-- Accommodation Types Section (shown when a campsite is selected for accommodation management) -->
-    @if (_selectedCampsite != null)
-    {
-        <MudPaper Elevation="3" Class="pa-4">
-            <div class="d-flex justify-space-between align-center mb-4">
-                <MudText Typo="Typo.h5">
-                    <MudIcon Icon="@Icons.Material.Filled.Cabin" Class="mr-2" />
-                    Accommodation Types - @_selectedCampsite.Name
-                </MudText>
-                @if (_isAdmin)
-                {
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                               OnClick="OpenAddAccommodationTypeDialog">
-                        Add Accommodation Type
-                    </MudButton>
-                }
-            </div>
-
-            @if (_loading)
-            {
-                <div class="d-flex justify-center pa-8">
-                    <MudProgressCircular Indeterminate="true" />
-                </div>
-            }
-            else if (!_accommodationTypes.Any())
-            {
-                <MudAlert Severity="Severity.Info" Class="my-4">
-                    No accommodation types found for this campsite.@(_isAdmin ? " Click \"Add Accommodation Type\" to create one." : "")
-                </MudAlert>
-            }
-            else
-            {
-                <!-- Grid of Accommodation Type Cards -->
-                <MudGrid>
-                    @foreach (var accType in _accommodationTypes.OrderBy(a => a.Type))
-                    {
-                        <MudItem xs="12">
-                            <MudCard Elevation="2" Class="mb-3">
-                                <!-- Card Header -->
-                                <MudCardHeader>
-                                    <CardHeaderContent>
-                                        <div class="d-flex align-center justify-space-between" style="width: 100%;">
-                                            <div class="d-flex align-center">
-                                                <MudIcon Icon="@GetAccommodationIcon(accType)" Class="mr-3" Color="Color.Primary" Size="Size.Large" />
-                                                <div>
-                                                    <MudText Typo="Typo.h5">@accType.Type</MudText>
-                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                        @accType.Spots.Count spots • Max @accType.MaxCapacity guests • @(accType.AreaSquareMeters.HasValue ? $"{accType.AreaSquareMeters:N0} m²" : "Size not set")
-                                                    </MudText>
-                                                </div>
-                                            </div>
-                                            <div class="d-flex align-center gap-2">
-                                                <MudTooltip Text="@(accType.IsActive ? "Click to deactivate - will hide from search results" : "Click to activate - will show in search results")">
-                                                    <MudSwitch @bind-Value="accType.IsActive"
-                                                               Color="Color.Success"
-                                                               UnCheckedColor="Color.Default"
-                                                               Size="Size.Small"
-                                                               Disabled="@(!_isAdmin)"
-                                                               Label="@(accType.IsActive ? "Active" : "Inactive")"
-                                                               LabelPosition="LabelPosition.Start" />
-                                                </MudTooltip>
-                                                @if (_isAdmin)
-                                                {
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                                                                   OnClick="@(() => DeleteAccommodationType(accType))" />
-                                                }
-                                            </div>
-                                        </div>
-                                    </CardHeaderContent>
-                                </MudCardHeader>
-
-                                <!-- Card Content -->
-                                <MudCardContent>
-                                    <MudGrid>
-                                            <!-- Description Section -->
-                                            <MudItem xs="12">
-                                                <MudText Typo="Typo.subtitle1" Class="mb-2">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-1" />
-                                                    Description
-                                                </MudText>
-                                                <MudTextField @bind-Value="accType.Description"
-                                                              Label="Description"
-                                                              Variant="Variant.Outlined"
-                                                              Lines="3"
-                                                              ReadOnly="@(!_isAdmin)"
-                                                              FullWidth="true" />
-                                            </MudItem>
-
-                                            <!-- Icon Selection -->
-                                            <MudItem xs="12">
-                                                <MudText Typo="Typo.subtitle1" Class="mb-2">
-                                                    <MudIcon Icon="@Icons.Material.Filled.EmojiSymbols" Size="Size.Small" Class="mr-1" />
-                                                    Icon
-                                                </MudText>
-                                                <MudGrid>
-                                                    <MudItem xs="12" sm="6">
-                                                        <MudSelect T="string" @bind-Value="accType.Icon"
-                                                                   Label="Select Icon"
-                                                                   Variant="Variant.Outlined"
-                                                                   Clearable="true"
-                                                                   Disabled="@(!_isAdmin)"
-                                                                   HelperText="Choose an icon to represent this accommodation type">
-                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Cabin">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@Icons.Material.Filled.Cabin" Class="mr-2" />
-                                                                    <span>Cabin</span>
-                                                                </div>
-                                                            </MudSelectItem>
-                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Landscape">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@Icons.Material.Filled.Landscape" Class="mr-2" />
-                                                                    <span>Tent / Landscape</span>
-                                                                </div>
-                                                            </MudSelectItem>
-                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.RvHookup">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@Icons.Material.Filled.RvHookup" Class="mr-2" />
-                                                                    <span>RV / Caravan</span>
-                                                                </div>
-                                                            </MudSelectItem>
-                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.NightShelter">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@Icons.Material.Filled.NightShelter" Class="mr-2" />
-                                                                    <span>Glamping / Shelter</span>
-                                                                </div>
-                                                            </MudSelectItem>
-                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Home">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@Icons.Material.Filled.Home" Class="mr-2" />
-                                                                    <span>Home / House</span>
-                                                                </div>
-                                                            </MudSelectItem>
-                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Cottage">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@Icons.Material.Filled.Cottage" Class="mr-2" />
-                                                                    <span>Cottage</span>
-                                                                </div>
-                                                            </MudSelectItem>
-                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.House">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@Icons.Material.Filled.House" Class="mr-2" />
-                                                                    <span>House</span>
-                                                                </div>
-                                                            </MudSelectItem>
-                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Villa">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@Icons.Material.Filled.Villa" Class="mr-2" />
-                                                                    <span>Villa</span>
-                                                                </div>
-                                                            </MudSelectItem>
-                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Apartment">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@Icons.Material.Filled.Apartment" Class="mr-2" />
-                                                                    <span>Apartment</span>
-                                                                </div>
-                                                            </MudSelectItem>
-                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Bungalow">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@Icons.Material.Filled.Bungalow" Class="mr-2" />
-                                                                    <span>Bungalow</span>
-                                                                </div>
-                                                            </MudSelectItem>
-                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Houseboat">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@Icons.Material.Filled.Houseboat" Class="mr-2" />
-                                                                    <span>Houseboat</span>
-                                                                </div>
-                                                            </MudSelectItem>
-                                                            <MudSelectItem T="string" Value="@Icons.Material.Filled.Park">
-                                                                <div class="d-flex align-center">
-                                                                    <MudIcon Icon="@Icons.Material.Filled.Park" Class="mr-2" />
-                                                                    <span>Park</span>
-                                                                </div>
-                                                            </MudSelectItem>
-                                                        </MudSelect>
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="6" Class="d-flex align-center">
-                                                        <MudAlert Severity="Severity.Info" Dense="true" Class="flex-grow-1">
-                                                            Current icon: <MudIcon Icon="@GetAccommodationIcon(accType)" Class="ml-2" />
-                                                        </MudAlert>
-                                                    </MudItem>
-                                                </MudGrid>
-                                            </MudItem>
-
-                                            <!-- Spots Management -->
-                                            <MudItem xs="12">
-                                                <div class="d-flex justify-space-between align-center mb-2">
-                                                    <MudText Typo="Typo.subtitle1">
-                                                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
-                                                        Accommodation Spots (@accType.Spots.Count)
-                                                    </MudText>
-                                                    @if (_isAdmin)
-                                                    {
-                                                        <MudButton Variant="Variant.Filled"
-                                                                   Color="Color.Primary"
-                                                                   Size="Size.Small"
-                                                                   StartIcon="@Icons.Material.Filled.Add"
-                                                                   OnClick="@(() => AddSpot(accType))">
-                                                            Add Spot
-                                                        </MudButton>
-                                                    }
-                                                </div>
-
-                                                @if (accType.Spots.Any())
-                                                {
-                                                    <MudPaper Elevation="0" Class="pa-3" Style="background-color: #f5f5f5; max-height: 400px; overflow-y: auto;">
-                                                        <MudGrid Spacing="2">
-                                                            @foreach (var spot in accType.Spots.OrderBy(s => int.TryParse(s.SpotNumber, out var num) ? num : 0))
-                                                            {
-                                                                <MudItem xs="12" sm="6" md="4">
-                                                                    <MudPaper Elevation="2" Class="pa-3">
-                                                                        <div class="d-flex justify-space-between align-center mb-2">
-                                                                            <MudText Typo="Typo.subtitle2">
-                                                                                <MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" Color="Color.Primary" />
-                                                                                Spot #@spot.SpotNumber
-                                                                            </MudText>
-                                                                            @if (_isAdmin)
-                                                                            {
-                                                                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                                                               Size="Size.Small"
-                                                                                               Color="Color.Error"
-                                                                                               OnClick="@(() => RemoveSpot(accType, spot))" />
-                                                                            }
-                                                                        </div>
-                                                                        <MudNumericField @bind-Value="spot.Latitude"
-                                                                                         Label="Latitude"
-                                                                                         Variant="Variant.Outlined"
-                                                                                         Margin="Margin.Dense"
-                                                                                         Min="-90"
-                                                                                         Max="90"
-                                                                                         Step="0.0001"
-                                                                                         ReadOnly="@(!_isAdmin)"
-                                                                                         Format="F4" />
-                                                                        <MudNumericField @bind-Value="spot.Longitude"
-                                                                                         Label="Longitude"
-                                                                                         Variant="Variant.Outlined"
-                                                                                         Margin="Margin.Dense"
-                                                                                         Min="-180"
-                                                                                         Max="180"
-                                                                                         Step="0.0001"
-                                                                                         ReadOnly="@(!_isAdmin)"
-                                                                                         Format="F4"
-                                                                                         Class="mt-2" />
-                                                                        <MudPaper Elevation="0" Class="pa-2 mt-2" Style="@($"background-color: {(spot.IsUnderMaintenance ? "#fff3e0" : "#e8f5e9")};")">
-                                                                            <div class="d-flex align-center justify-space-between">
-                                                                                <MudText Typo="Typo.caption">
-                                                                                    <MudIcon Icon="@(spot.IsUnderMaintenance ? Icons.Material.Filled.Build : Icons.Material.Filled.CheckCircle)"
-                                                                                             Color="@(spot.IsUnderMaintenance ? Color.Warning : Color.Success)"
-                                                                                             Size="Size.Small" Class="mr-1" />
-                                                                                    @(spot.IsUnderMaintenance ? "Under Maintenance" : "Available")
-                                                                                </MudText>
-                                                                                <MudSwitch @bind-Value="spot.IsUnderMaintenance"
-                                                                                           Color="Color.Warning"
-                                                                                           UnCheckedColor="Color.Success"
-                                                                                           Size="Size.Small"
-                                                                                           Disabled="@(!_isAdmin)"
-                                                                                           T="bool" />
-                                                                            </div>
-                                                                        </MudPaper>
-                                                                    </MudPaper>
-                                                                </MudItem>
-                                                            }
-                                                        </MudGrid>
-                                                    </MudPaper>
-                                                }
-                                                else
-                                                {
-                                                    <MudAlert Severity="Severity.Info" Dense="true">
-                                                        No spots added yet.@(_isAdmin ? " Click \"Add Spot\" to create the first spot." : "")
-                                                    </MudAlert>
-                                                }
-                                            </MudItem>
-
-                                            <!-- Configuration Section -->
-                                            <MudItem xs="12">
-                                                <MudText Typo="Typo.subtitle1" Class="mb-2">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-1" />
-                                                    Configuration
-                                                </MudText>
-                                                <MudGrid>
-                                                    <MudItem xs="12" sm="4">
-                                                        <MudNumericField T="int" @bind-Value="accType.MaxCapacity"
-                                                                         Label="Max Guests"
-                                                                         Variant="Variant.Outlined"
-                                                                         Min="1"
-                                                                         ReadOnly="@(!_isAdmin)"
-                                                                         HelperText="Maximum number of guests" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="4">
-                                                        <MudNumericField T="decimal?" @bind-Value="accType.AreaSquareMeters"
-                                                                         Label="Area (m²)"
-                                                                         Variant="Variant.Outlined"
-                                                                         Min="0m"
-                                                                         Step="0.1m"
-                                                                         Format="N1"
-                                                                         Clearable="true"
-                                                                         ReadOnly="@(!_isAdmin)"
-                                                                         HelperText="Optional - size in square meters" />
-                                                    </MudItem>
-                                                    <MudItem xs="12" sm="4">
-                                                        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
-                                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
-                                                            Base pricing is managed in
-                                                            <MudLink Href="/admin/pricing" Color="Color.Primary">Pricing Management</MudLink>
-                                                        </MudAlert>
-                                                    </MudItem>
-                                                </MudGrid>
-                                            </MudItem>
-
-                                            <!-- Pictures Section -->
-                                            <MudItem xs="12">
-                                                <MudText Typo="Typo.subtitle1" Class="mb-2">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Small" Class="mr-1" />
-                                                    Photo Gallery
-                                                </MudText>
-                                                <MudGrid>
-                                                    @if (accType.GalleryImages.Any())
-                                                    {
-                                                        <MudItem xs="12">
-                                                            <div class="d-flex flex-wrap gap-2">
-                                                                @foreach (var (imageUrl, index) in accType.GalleryImages.Take(4).Select((url, i) => (url, i)))
-                                                                {
-                                                                    <MudImage Src="@imageUrl" Alt="@($"{accType.Type} image {index + 1}")"
-                                                                              Height="100" Width="100" ObjectFit="ObjectFit.Cover" Class="rounded" />
-                                                                }
-                                                                @if (accType.GalleryImages.Count > 4)
-                                                                {
-                                                                    <MudPaper Class="d-flex align-center justify-center rounded"
-                                                                              Style="width: 100px; height: 100px; background-color: var(--mud-palette-background-grey);">
-                                                                        <MudText Typo="Typo.body1" Color="Color.Primary">+@(accType.GalleryImages.Count - 4)</MudText>
-                                                                    </MudPaper>
-                                                                }
-                                                            </div>
-                                                        </MudItem>
-                                                    }
-                                                    @if (_isAdmin)
-                                                    {
-                                                        <MudItem xs="12">
-                                                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
-                                                                       StartIcon="@Icons.Material.Filled.AddPhotoAlternate"
-                                                                       OnClick="@(() => ManageGallery(accType))">
-                                                                Manage Photo Gallery (@accType.GalleryImages.Count images)
-                                                            </MudButton>
-                                                        </MudItem>
-                                                    }
-                                                    else
-                                                    {
-                                                        <MudItem xs="12">
-                                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                                @accType.GalleryImages.Count images in gallery
-                                                            </MudText>
-                                                        </MudItem>
-                                                    }
-                                                </MudGrid>
-                                            </MudItem>
-
-                                            <!-- Amenities Section -->
-                                            <MudItem xs="12">
-                                                <MudText Typo="Typo.subtitle1" Class="mb-2">
-                                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
-                                                    Amenities
-                                                </MudText>
-                                                <MudGrid>
-                                                    @foreach (var amenity in _availableAmenities)
-                                                    {
-                                                        <MudItem xs="12" sm="6" md="4">
-                                                            <MudCheckBox Value="@GetAmenityValue(accType, amenity.Name)"
-                                                                         Label="@amenity.DisplayName"
-                                                                         Disabled="@(!_isAdmin)"
-                                                                         ValueChanged="@((bool val) => UpdateAmenity(accType, amenity.Name, val))" />
-                                                        </MudItem>
-                                                    }
-                                                </MudGrid>
-                                            </MudItem>
-
-                                            <!-- Save Button -->
-                                            @if (_isAdmin)
-                                            {
-                                                <MudItem xs="12">
-                                                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                                                               StartIcon="@Icons.Material.Filled.Save"
-                                                               OnClick="@(() => SaveAccommodationType(accType))">
-                                                        Save Changes
-                                                    </MudButton>
-                                                </MudItem>
-                                            }
-                                        </MudGrid>
-                                </MudCardContent>
-                            </MudCard>
-                        </MudItem>
-                    }
-                </MudGrid>
-            }
-        </MudPaper>
-    }
 </MudContainer>
 
 @code {
     private CampsiteManagementDto? _selectedCampsite;
     private List<CampsiteManagementDto> _campsites = new();
-    private List<AccommodationTypeDto> _accommodationTypes = new();
+    private Dictionary<int, List<AccommodationTypeDto>> _accommodationTypesByCampsite = new();
     private List<AmenityLookup> _availableAmenities = new();
     private bool _loading = false;
     private bool _isAdmin = false;
     private string _searchText = "";
     private HashSet<int> _expandedCampsites = new();
+    private HashSet<int> _expandedAccommodationSections = new(); // Track which campsites have expanded accommodation sections
+    private HashSet<int> _expandedAccommodationTypes = new(); // Track which accommodation types are expanded
     private MudExpansionPanels? _expansionPanels;
 
     // Filtered campsites based on search text
@@ -737,6 +616,31 @@
             _expandedCampsites.Remove(campsiteId);
     }
 
+    private bool IsAccommodationSectionExpanded(int campsiteId) => _expandedAccommodationSections.Contains(campsiteId);
+
+    private void SetAccommodationSectionExpanded(int campsiteId, bool expanded)
+    {
+        if (expanded)
+            _expandedAccommodationSections.Add(campsiteId);
+        else
+            _expandedAccommodationSections.Remove(campsiteId);
+    }
+
+    private bool IsAccommodationTypeExpanded(int accTypeId) => _expandedAccommodationTypes.Contains(accTypeId);
+
+    private void SetAccommodationTypeExpanded(int accTypeId, bool expanded)
+    {
+        if (expanded)
+            _expandedAccommodationTypes.Add(accTypeId);
+        else
+            _expandedAccommodationTypes.Remove(accTypeId);
+    }
+
+    private List<AccommodationTypeDto> GetAccommodationTypesForCampsite(int campsiteId)
+    {
+        return _accommodationTypesByCampsite.TryGetValue(campsiteId, out var types) ? types : new List<AccommodationTypeDto>();
+    }
+
     private void ExpandAllCampsites()
     {
         _expandedCampsites = _campsites.Select(c => c.Id).ToHashSet();
@@ -746,6 +650,8 @@
     private void CollapseAllCampsites()
     {
         _expandedCampsites.Clear();
+        _expandedAccommodationSections.Clear();
+        _expandedAccommodationTypes.Clear();
         StateHasChanged();
     }
 
@@ -824,8 +730,10 @@
                     if (_selectedCampsite?.Id == campsite.Id)
                     {
                         _selectedCampsite = null;
-                        _accommodationTypes.Clear();
                     }
+
+                    // Remove accommodation types for deleted campsite
+                    _accommodationTypesByCampsite.Remove(campsite.Id);
 
                     StateHasChanged();
                 }
@@ -848,7 +756,8 @@
         Console.WriteLine("🔵 OnInitializedAsync called");
         await LoadCampsites();
         await LoadAvailableAmenities();
-        Console.WriteLine($"🔵 Loaded {_campsites.Count} campsites");
+        await LoadAllAccommodationTypes(); // Load all accommodation types upfront
+        Console.WriteLine($"🔵 Loaded {_campsites.Count} campsites with {_accommodationTypesByCampsite.Values.Sum(v => v.Count)} accommodation types");
 
         // Debug: Query database to see what's actually stored
         await QueryDatabaseState();
@@ -959,6 +868,88 @@
         }
     }
 
+    private async Task LoadAllAccommodationTypes()
+    {
+        try
+        {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+
+            // Load ALL accommodation types, spots, and photos upfront
+            var allEntities = await context.AccommodationTypes.ToListAsync();
+            var allSpots = await context.AccommodationSpots.ToListAsync();
+            var allPhotos = await context.Photos.ToListAsync();
+
+            Console.WriteLine($"📊 LoadAllAccommodationTypes: Loaded {allEntities.Count} types, {allSpots.Count} spots, {allPhotos.Count} photos");
+
+            // Group by campsite and convert to DTOs
+            _accommodationTypesByCampsite.Clear();
+
+            foreach (var campsite in _campsites)
+            {
+                var entities = allEntities.Where(a => a.CampsiteId?.Value == campsite.Id).ToList();
+
+                var types = entities.Select(e => {
+                    var typeSpots = allSpots
+                        .Where(s => s.AccommodationTypeId?.Value == e.Id?.Value)
+                        .Select(s => new AccommodationSpotDto
+                        {
+                            Id = s.Id?.Value ?? 0,
+                            SpotNumber = s.SpotIdentifier,
+                            Latitude = s.Latitude,
+                            Longitude = s.Longitude,
+                            IsUnderMaintenance = s.IsUnderMaintenance
+                        })
+                        .ToList();
+
+                    var galleryImages = allPhotos
+                        .Where(p => p.AccommodationTypeId?.Value == e.Id?.Value)
+                        .OrderBy(p => p.DisplayOrder)
+                        .Select(p => p.Url)
+                        .ToList();
+
+                    var mainImageUrl = !string.IsNullOrWhiteSpace(e.ImageUrl)
+                        ? e.ImageUrl
+                        : (galleryImages.FirstOrDefault() ?? "");
+
+                    return new AccommodationTypeDto
+                    {
+                        Id = e.Id?.Value ?? 0,
+                        CampsiteId = e.CampsiteId?.Value ?? 0,
+                        Type = e.Type ?? "",
+                        Description = e.Description ?? "",
+                        MaxCapacity = e.MaxCapacity,
+                        PricePerNight = e.BasePrice?.Amount ?? 0m,
+                        ImageUrl = mainImageUrl,
+                        Icon = "",
+                        Amenities = e.GetAmenitiesList(),
+                        Spots = typeSpots,
+                        GalleryImages = galleryImages,
+                        IsActive = e.IsActive,
+                        AvailableUnits = e.AvailableUnits,
+                        UnitNamingPrefix = e.UnitNamingPrefix ?? "",
+                        UnitNamingPattern = e.UnitNamingPattern ?? "Numbers",
+                        AreaSquareMeters = e.AreaSquareMeters
+                    };
+                }).ToList();
+
+                _accommodationTypesByCampsite[campsite.Id] = types;
+                Console.WriteLine($"   🏕️ Campsite {campsite.Id} ({campsite.Name}): {types.Count} accommodation types");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading all accommodation types: {ex.Message}");
+            _accommodationTypesByCampsite.Clear();
+        }
+    }
+
+    private async Task RefreshAccommodationTypesForCampsite(int campsiteId)
+    {
+        // Reload accommodation types for a specific campsite after changes
+        await LoadAllAccommodationTypes();
+        StateHasChanged();
+    }
+
     private async Task<IEnumerable<CampsiteManagementDto>> SearchCampsites(string value, CancellationToken token)
     {
         await Task.Delay(100, token); // Simulate API delay
@@ -1006,7 +997,7 @@
             Console.WriteLine($"📊 Loaded {allPhotos.Count} total photos from database");
 
             // Convert entities to DTOs with null-safe access
-            _accommodationTypes = entities.Select(e => {
+            var types = entities.Select(e => {
                 // Get spots for this accommodation type
                 var typeSpots = allSpots
                     .Where(s => s.AccommodationTypeId?.Value == e.Id?.Value)
@@ -1059,7 +1050,8 @@
                 };
             }).ToList();
 
-            Console.WriteLine($"✅ Loaded {_accommodationTypes.Count} accommodation types for campsite {campsiteId}");
+            _accommodationTypesByCampsite[campsiteId] = types;
+            Console.WriteLine($"✅ Loaded {types.Count} accommodation types for campsite {campsiteId}");
         }
         catch (Exception ex)
         {
@@ -1070,7 +1062,7 @@
                 Console.WriteLine($"   Inner exception: {ex.InnerException.Message}");
             }
             Snackbar.Add($"Error loading accommodation types: {ex.Message}", Severity.Error);
-            _accommodationTypes = new List<AccommodationTypeDto>();
+            _accommodationTypesByCampsite[campsiteId] = new List<AccommodationTypeDto>();
         }
         finally
         {
@@ -1084,10 +1076,6 @@
         if (campsite != null)
         {
             await LoadAccommodationTypes(campsite.Id);
-        }
-        else
-        {
-            _accommodationTypes.Clear();
         }
         StateHasChanged();
     }
@@ -1338,6 +1326,95 @@
         {
             Snackbar.Add($"Error adding accommodation type: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task OpenAddAccommodationTypeDialogForCampsite(int campsiteId)
+    {
+        try
+        {
+            var campsite = _campsites.FirstOrDefault(c => c.Id == campsiteId);
+            if (campsite == null) return;
+
+            var parameters = new DialogParameters
+            {
+                ["CampsiteName"] = campsite.Name,
+                ["AccommodationType"] = new AccommodationTypeDto { CampsiteId = campsiteId },
+                ["IsEdit"] = false
+            };
+
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true
+            };
+
+            var dialog = await DialogService.ShowAsync<CampsiteAccommodationDialog>("Add Accommodation Type", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled && result.Data is AccommodationTypeDto newAccType)
+            {
+                // Save to database
+                await SaveAccommodationTypeToDatabase(newAccType);
+
+                // Reload accommodation types
+                await LoadAllAccommodationTypes();
+
+                Snackbar.Add($"Accommodation type '{newAccType.Type}' added successfully!", Severity.Success);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding accommodation type: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveAccommodationTypeForCampsite(AccommodationTypeDto accType, int campsiteId)
+    {
+        try
+        {
+            await SaveAccommodationType(accType);
+            await LoadAllAccommodationTypes();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving accommodation type: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void AddSpotForCampsite(AccommodationTypeDto accType, CampsiteManagementDto campsite)
+    {
+        // Use campsite coordinates as default for new spots
+        var nextSpotNumber = accType.Spots.Count + 1;
+        var prefix = string.IsNullOrWhiteSpace(accType.UnitNamingPrefix) ? "" : accType.UnitNamingPrefix + " ";
+
+        accType.Spots.Add(new AccommodationSpotDto
+        {
+            SpotNumber = $"{prefix}{nextSpotNumber}",
+            Latitude = campsite.Latitude,
+            Longitude = campsite.Longitude,
+            IsUnderMaintenance = false
+        });
+
+        StateHasChanged();
+    }
+
+    private IEnumerable<string> GetAmenitiesBindingForType(AccommodationTypeDto accType)
+    {
+        return accType.Amenities ?? new List<string>();
+    }
+
+    private void UpdateAmenitiesForType(AccommodationTypeDto accType, IEnumerable<string> values)
+    {
+        accType.Amenities = values.ToList();
+    }
+
+    private void RemoveSpotFromType(AccommodationTypeDto accType, AccommodationSpotDto spot)
+    {
+        accType.Spots.Remove(spot);
+        StateHasChanged();
     }
 
     private async Task SaveAccommodationTypeToDatabase(AccommodationTypeDto dto)
@@ -1594,7 +1671,10 @@
                 await context.SaveChangesAsync();
 
                 // Remove from in-memory list
-                _accommodationTypes.Remove(accType);
+                if (_accommodationTypesByCampsite.TryGetValue(accType.CampsiteId, out var types))
+                {
+                    types.Remove(accType);
+                }
 
                 Console.WriteLine($"✅ Accommodation type '{accType.Type}' deleted successfully");
                 Snackbar.Add($"Accommodation type '{accType.Type}' deleted successfully!", Severity.Success);
