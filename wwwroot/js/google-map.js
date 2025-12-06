@@ -28,10 +28,10 @@ window.initMapWithData = function(campsiteData) {
         homePageMarkers = [];
     }
 
-    // Create map centered on Denmark, shifted right to cut off water on left
+    // Create map centered on Denmark, zoomed out to show all of Denmark
     map = new google.maps.Map(mapContainer, {
-        center: { lat: 56.2639, lng: 12.0 },
-        zoom: 6.5,
+        center: { lat: 56.0, lng: 10.5 },
+        zoom: 5.5,
         mapTypeId: 'satellite'
     });
 
