@@ -1,0 +1,40 @@
+# Build results
+bin/
+obj/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# User-specific files
+*.rsuser
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build logs
+*.log
+msbuild*.log
+
+# NuGet Packages
+*.nupkg
+**/packages/*
+
+# Test Results
+TestResults/
+
+# Rider
+.idea/
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# appsettings overrides (keep templates, ignore local)
+appsettings.*.local.json
+
