@@ -1124,8 +1124,8 @@ public static class DatabaseSeeder
         Console.WriteLine($"✅ Seeded {totalSpotsCreated} accommodation spots");
 
         // Synchronize strongly-typed ID columns with auto-increment ID columns
-        await context.Database.ExecuteSqlRawAsync("UPDATE AccommodationTypes SET AccommodationTypeId = Id");
-        await context.Database.ExecuteSqlRawAsync("UPDATE Campsites SET CampsiteId = Id");
+        // Note: AccommodationTypeId and CampsiteId columns were removed from their respective tables
+        // The Id column is now used directly
         await context.Database.ExecuteSqlRawAsync(@"
             UPDATE AccommodationSpots AS s
             INNER JOIN AccommodationTypes AS t ON s.Type = t.Type AND s.CampsiteId = t.CampsiteId
